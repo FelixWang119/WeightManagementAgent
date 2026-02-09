@@ -12,10 +12,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from models.database import init_db, get_async_engine, async_session
+from models.database import init_db, engine, AsyncSessionLocal
 from config.settings import fastapi_settings
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import text
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +36,7 @@ async def create_initial_data():
     """创建初始数据"""
     logger.info("正在创建初始数据...")
     
-    async with async_session() as session:
+    async with AsyncSessionLocal() as session:
         try:
             # 这里可以添加初始数据的创建逻辑
             # 例如：创建默认的系统配置、助手风格等
@@ -55,10 +54,9 @@ async def check_database():
     logger.info("正在检查数据库...")
     
     try:
-        engine = get_async_engine()
         async with engine.connect() as conn:
             # 测试连接
-            result = await conn.execute("SELECT 1")
+            result = await conn.execute(text("SELECT 1"))
             test = result.scalar()
             if test == 1:
                 logger.info("✅ 数据库连接正常")
@@ -67,10 +65,10 @@ async def check_database():
                 return False
                 
         # 检查表是否存在（通过查询系统表）
-        async with async_session() as session:
+        async with AsyncSessionLocal() as session:
             try:
                 # 尝试查询一个表
-                result = await session.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                result = await session.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
                 tables = result.fetchall()
                 logger.info(f"📊 数据库中有 {len(tables)} 个表")
                 for table in tables[:10]:  # 只显示前10个表
