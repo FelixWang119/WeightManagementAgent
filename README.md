@@ -20,7 +20,23 @@ cp .env.example .env
 # 特别是 OPENAI_API_KEY（从 https://platform.openai.com/api-keys 获取）
 ```
 
-### 3. 启动应用
+### 3. 数据库初始化
+
+应用使用SQLite数据库，首次运行时会自动创建数据库文件。
+
+#### 自动初始化（推荐）
+直接启动应用，数据库会自动创建：
+```bash
+python main_new.py
+```
+
+#### 手动初始化
+如果需要手动初始化数据库：
+```bash
+python scripts/init_database.py
+```
+
+### 4. 启动应用
 
 #### 方法一：使用启动脚本（推荐）
 
@@ -111,6 +127,39 @@ pytest
 
 - [完整设计文档](./docs/plans/2025-02-07-weight-management-design.md)
 - [PDF 版本](./docs/plans/2025-02-07-weight-management-design.pdf)
+- [数据库结构文档](./docs/database_schema.md)
+
+## ❓ 常见问题
+
+### 数据库相关问题
+
+**Q: 数据库文件在哪里？**
+A: 数据库文件 `weight_management.db` 在项目根目录下创建。该文件在 `.gitignore` 中排除，不会提交到版本控制。
+
+**Q: 如何重置数据库？**
+A: 删除 `weight_management.db` 文件，然后重新启动应用或运行 `python scripts/init_database.py`。
+
+**Q: 数据库会自动备份吗？**
+A: 目前需要手动备份。建议定期备份数据库文件：
+```bash
+cp weight_management.db weight_management_backup_$(date +%Y%m%d).db
+```
+
+**Q: 如何查看数据库内容？**
+A: 可以使用SQLite命令行工具或SQLite浏览器：
+```bash
+sqlite3 weight_management.db
+.tables  # 查看所有表
+.schema users  # 查看用户表结构
+SELECT * FROM users LIMIT 5;  # 查看前5条用户数据
+```
+
+**Q: 数据库迁移如何处理？**
+A: 目前使用SQLAlchemy的自动建表功能。如需迁移，可以：
+1. 备份当前数据库
+2. 修改模型定义
+3. 删除旧数据库文件
+4. 重新启动应用创建新数据库
 
 ## 📄 许可证
 
