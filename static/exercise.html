@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运动打卡 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        .exercise-page {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .exercise-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        
+        /* 打卡面板 */
+        .checkin-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .form-col {
+            flex: 1;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: white;
+            transition: border-color var(--transition-fast);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .form-control.select {
+            cursor: pointer;
+        }
+        
+        /* 快速选项 */
+        .quick-options {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .quick-option {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            background: white;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: 0.875rem;
+        }
+        
+        .quick-option:hover {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.05);
+        }
+        
+        .quick-option.active {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.1);
+            color: var(--primary-color);
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        /* 打卡历史 */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        
+        .history-table th {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        
+        .history-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+        
+        .history-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .history-table tr:hover {
+            background: var(--background);
+        }
+        
+        /* 日历视图 */
+        .calendar-container {
+            margin-top: 24px;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        
+        .calendar-day {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .calendar-day.weekday {
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: default;
+        }
+        
+        .calendar-day.empty {
+            background: transparent;
+            cursor: default;
+        }
+        
+        .calendar-day.checkin {
+            background: rgba(46, 204, 113, 0.2);
+            color: var(--success-color);
+            font-weight: 600;
+        }
+        
+        .calendar-day.today {
+            border: 2px solid var(--primary-color);
+        }
+        
+        /* 强度标签 */
+        .intensity-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .intensity-low {
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--success-color);
+        }
+        
+        .intensity-medium {
+            background: rgba(241, 196, 15, 0.1);
+            color: var(--warning-color);
+        }
+        
+        .intensity-high {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+        }
+        
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(52, 152, 219, 0.3);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .form-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .history-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="page-header">
+            <div class="header-brand">
+                <button class="menu-toggle" onclick="history.back()" style="margin-right: 12px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <span class="header-brand-icon">🏃</span>
+                <span>运动打卡</span>
+            </div>
+            <div class="header-actions">
+                <button class="menu-toggle" id="menu-toggle" title="打开菜单"><span></span></button>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info"><div class="user-name">加载中...</div><div class="user-status">在线</div></div>
+                </div>
+                <nav class="sidebar-nav">
+                    <div class="nav-section"><div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li><a href="index.html" class="nav-item"><span class="nav-item-icon">🤖</span><span class="nav-item-text">AI助手</span></a></li>
+                            <li><a href="weight.html" class="nav-item"><span class="nav-item-icon">⚖️</span><span class="nav-item-text">体重记录</span></a></li>
+                            <li><a href="meal.html" class="nav-item"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">饮食记录</span></a></li>
+                            <li><a href="exercise.html" class="nav-item active"><span class="nav-item-icon">🏃</span><span class="nav-item-text">运动记录</span></a></li>
+                        </ul>
+                    </div>
+                                        <div class="nav-section"><div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li><a href="water.html" class="nav-item"><span class="nav-item-icon">💧</span><span class="nav-item-text">饮水记录</span></a></li>
+                            <li><a href="sleep.html" class="nav-item"><span class="nav-item-icon">😴</span><span class="nav-item-text">睡眠记录</span></a></li>
+                            <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
+                            <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
+                            <li><a href="calculator.html" class="nav-item"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+                            <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">个人设置</span></a>
+                    <button class="logout-btn" onclick="Auth.logout()"><span>🚪</span><span>退出登录</span></button>
+                </div>
+            </aside>
+
+            <main class="page-main">
+                <div class="exercise-page">
+                    <!-- 打卡统计 -->
+                    <div class="exercise-section">
+                        <h2 class="section-title">📊 打卡统计</h2>
+                        <div class="stats-grid" id="stats-grid">
+                            <div class="loading">
+                                <div class="loading-spinner"></div>
+                                <span>加载中...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 快速打卡 -->
+                    <div class="exercise-section">
+                        <h2 class="section-title">🏃 快速打卡</h2>
+                        <div class="checkin-panel">
+                            <div class="form-group">
+                                <label class="form-label">运动类型</label>
+                                <div class="quick-options" id="exercise-types">
+                                    <!-- 动态加载 -->
+                                    <div class="loading">
+                                        <div class="loading-spinner"></div>
+                                        <span>加载运动类型...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label class="form-label">时长（分钟）</label>
+                                    <div class="quick-options" id="duration-options">
+                                        <button class="quick-option active" onclick="setDuration(30)">30分钟</button>
+                                        <button class="quick-option" onclick="setDuration(45)">45分钟</button>
+                                        <button class="quick-option" onclick="setDuration(60)">60分钟</button>
+                                        <div class="input-with-button" style="display: flex; gap: 8px;">
+                                            <input type="number" id="custom-duration" class="form-control" placeholder="自定义" min="5" max="300" style="flex: 1;">
+                                            <button class="btn btn-secondary" onclick="setCustomDuration()">确定</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-col">
+                                    <label class="form-label">运动强度</label>
+                                    <div class="quick-options" id="intensity-options">
+                                        <button class="quick-option" onclick="setIntensity('low')">低强度</button>
+                                        <button class="quick-option active" onclick="setIntensity('medium')">中等强度</button>
+                                        <button class="quick-option" onclick="setIntensity('high')">高强度</button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">消耗热量估算</label>
+                                <div id="calorie-estimate" style="font-size: 1.125rem; color: var(--text-primary);">
+                                    约 0 千卡
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-primary btn-lg" onclick="submitCheckin()" id="checkin-btn" style="width: 100%;">
+                                ✅ 完成打卡
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 打卡历史 -->
+                    <div class="exercise-section">
+                        <h2 class="section-title">📅 打卡历史</h2>
+                        <div class="calendar-container">
+                            <div class="calendar-header">
+                                <button class="btn btn-secondary" onclick="prevMonth()">‹ 上个月</button>
+                                <h3 id="current-month" style="font-weight: 600; color: var(--text-primary);"></h3>
+                                <button class="btn btn-secondary" onclick="nextMonth()">下个月 ›</button>
+                            </div>
+                            <div class="calendar-grid" id="calendar-grid">
+                                <!-- 动态生成日历 -->
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 32px;">
+                            <h3 class="section-title">📝 最近打卡记录</h3>
+                            <div class="history-table-container">
+                                <table class="history-table" id="history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>日期</th>
+                                            <th>运动类型</th>
+                                            <th>时长</th>
+                                            <th>强度</th>
+                                            <th>消耗热量</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="history-tbody">
+                                        <tr>
+                                            <td colspan="5" style="text-align: center; padding: 40px;">
+                                                <div class="loading">
+                                                    <div class="loading-spinner"></div>
+                                                    <span>加载历史记录...</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        // 全局变量
+        let currentMonth = new Date();
+        let exerciseTypes = [];
+        let selectedExercise = null;
+        let selectedDuration = 30;
+        let selectedIntensity = 'medium';
+        let checkinHistory = [];
+        let currentStats = null;
+        
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', () => {
+        // 检查登录状态
+        if (!Auth.check()) {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // 加载用户信息
+        const user = Auth.getUser();
+        if (user) {
+            const userNameEl = document.querySelector('.user-name');
+            const userAvatarEl = document.querySelector('.user-avatar');
+            if (userNameEl) userNameEl.textContent = user.nickname || user.name || '用户';
+            if (userAvatarEl) userAvatarEl.textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+        }
+
+            loadExerciseTypes();
+            loadCheckinStats();
+            loadCheckinHistory();
+            renderCalendar(currentMonth);
+        });
+        
+        // 加载运动类型
+        async function loadExerciseTypes() {
+            try {
+                const response = await fetch(`${API.base}/api/exercise/types`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    exerciseTypes = result.data;
+                    renderExerciseTypes();
+                }
+            } catch (error) {
+                console.error('加载运动类型失败:', error);
+                document.getElementById('exercise-types').innerHTML = 
+                    '<div class="alert alert-error">加载失败，请刷新重试</div>';
+            }
+        }
+        
+        // 渲染运动类型选项
+        function renderExerciseTypes() {
+            const container = document.getElementById('exercise-types');
+            
+            if (!exerciseTypes.length) {
+                container.innerHTML = '<div class="alert alert-info">暂无运动类型数据</div>';
+                return;
+            }
+            
+            container.innerHTML = exerciseTypes.map((type, index) => `
+                <button class="quick-option ${index === 0 ? 'active' : ''}" 
+                        onclick="selectExercise('${type.type}')"
+                        data-type="${type.type}">
+                    ${type.type}
+                </button>
+            `).join('');
+            
+            if (exerciseTypes.length > 0) {
+                selectedExercise = exerciseTypes[0].type;
+                updateCalorieEstimate();
+            }
+        }
+        
+        // 选择运动类型
+        function selectExercise(type) {
+            selectedExercise = type;
+            
+            // 更新UI
+            document.querySelectorAll('#exercise-types .quick-option').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === type);
+            });
+            
+            updateCalorieEstimate();
+        }
+        
+        // 设置时长
+        function setDuration(minutes) {
+            selectedDuration = minutes;
+            
+            // 更新UI
+            document.querySelectorAll('#duration-options .quick-option').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.querySelectorAll('#duration-options .quick-option').forEach(btn => {
+                if (btn.textContent.includes(`${minutes}分钟`)) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            updateCalorieEstimate();
+        }
+        
+        // 设置自定义时长
+        function setCustomDuration() {
+            const input = document.getElementById('custom-duration');
+            const minutes = parseInt(input.value);
+            
+            if (minutes && minutes >= 5 && minutes <= 300) {
+                selectedDuration = minutes;
+                updateCalorieEstimate();
+                input.value = '';
+            } else {
+                Utils.toast('请输入5-300分钟之间的有效时长', 'error');
+            }
+        }
+        
+        // 设置强度
+        function setIntensity(intensity) {
+            selectedIntensity = intensity;
+            
+            // 更新UI
+            document.querySelectorAll('#intensity-options .quick-option').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            document.querySelectorAll('#intensity-options .quick-option').forEach(btn => {
+                if (btn.textContent.includes({
+                    'low': '低强度',
+                    'medium': '中等强度', 
+                    'high': '高强度'
+                }[intensity])) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            updateCalorieEstimate();
+        }
+        
+        // 更新热量估算
+        function updateCalorieEstimate() {
+            if (!selectedExercise) return;
+            
+            const type = exerciseTypes.find(t => t.type === selectedExercise);
+            if (!type) return;
+            
+            // 基础热量（每小时）
+            const baseCalories = type.calories_per_hour || 200;
+            
+            // 强度系数
+            const intensityFactor = {
+                'low': 0.8,
+                'medium': 1.0,
+                'high': 1.2
+            }[selectedIntensity] || 1.0;
+            
+            // 计算总热量
+            const calories = Math.round(baseCalories * selectedDuration / 60 * intensityFactor);
+            
+            document.getElementById('calorie-estimate').innerHTML = 
+                `约 <strong>${calories}</strong> 千卡`;
+        }
+        
+        // 提交打卡
+        async function submitCheckin() {
+            if (!selectedExercise) {
+                Utils.toast('请选择运动类型', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('checkin-btn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner" style="width: 20px; height: 20px; margin-right: 8px;"></span> 打卡中...';
+            
+            try {
+                const response = await fetch(`${API.base}/api/exercise/checkin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    },
+                    body: JSON.stringify({
+                        exercise_type: selectedExercise,
+                        duration_minutes: selectedDuration,
+                        intensity: selectedIntensity
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    Utils.toast('打卡成功！继续坚持哦~', 'success');
+                    
+                    // 刷新数据
+                    loadCheckinStats();
+                    loadCheckinHistory();
+                    renderCalendar(currentMonth);
+                    
+                    // 重置表单（保留选择）
+                    selectedDuration = 30;
+                    setDuration(30);
+                    selectedIntensity = 'medium';
+                    setIntensity('medium');
+                    
+                    // 更新UI
+                    document.querySelectorAll('#duration-options .quick-option').forEach(btn => {
+                        btn.classList.toggle('active', btn.textContent.includes('30分钟'));
+                    });
+                    document.querySelectorAll('#intensity-options .quick-option').forEach(btn => {
+                        btn.classList.toggle('active', btn.textContent.includes('中等强度'));
+                    });
+                    
+                } else {
+                    throw new Error(result.message || '打卡失败');
+                }
+            } catch (error) {
+                console.error('打卡失败:', error);
+                Utils.toast('打卡失败，请重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+        
+        // 加载打卡统计
+        async function loadCheckinStats() {
+            try {
+                const response = await fetch(`${API.base}/api/exercise/checkins?limit=1`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentStats = result.stats;
+                    renderStats();
+                }
+            } catch (error) {
+                console.error('加载统计失败:', error);
+            }
+        }
+        
+        // 渲染统计卡片
+        function renderStats() {
+            const container = document.getElementById('stats-grid');
+            
+            if (!currentStats) {
+                container.innerHTML = '<div class="alert alert-error">加载统计失败</div>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${currentStats.current_streak || 0}</div>
+                    <div class="stat-label">连续打卡天数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${currentStats.total_checkins || 0}</div>
+                    <div class="stat-label">总打卡次数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${currentStats.last_checkin ? '✓' : '--'}</div>
+                    <div class="stat-label">${currentStats.last_checkin ? '今日已打卡' : '今日未打卡'}</div>
+                </div>
+            `;
+        }
+        
+        // 加载打卡历史
+        async function loadCheckinHistory() {
+            try {
+                const response = await fetch(`${API.base}/api/exercise/checkins?limit=10`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    checkinHistory = result.data;
+                    renderHistory();
+                }
+            } catch (error) {
+                console.error('加载历史失败:', error);
+            }
+        }
+        
+        // 渲染历史记录
+        function renderHistory() {
+            const tbody = document.getElementById('history-tbody');
+            
+            if (!checkinHistory.length) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            🏃 还没有打卡记录，快来完成第一次打卡吧！
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = checkinHistory.map(record => {
+                const date = new Date(record.checkin_date || record.created_at);
+                const dateStr = date.toLocaleDateString('zh-CN');
+                
+                const intensityClass = {
+                    'low': 'intensity-low',
+                    'medium': 'intensity-medium',
+                    'high': 'intensity-high'
+                }[record.intensity] || 'intensity-medium';
+                
+                const intensityText = {
+                    'low': '低强度',
+                    'medium': '中等强度',
+                    'high': '高强度'
+                }[record.intensity] || '中等强度';
+                
+                return `
+                    <tr>
+                        <td>${dateStr}</td>
+                        <td>${record.exercise_type}</td>
+                        <td>${record.duration_minutes}分钟</td>
+                        <td><span class="intensity-badge ${intensityClass}">${intensityText}</span></td>
+                        <td>${record.calories_burned}千卡</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 日历功能
+        function renderCalendar(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            
+            // 更新月份显示
+            document.getElementById('current-month').textContent = 
+                `${year}年${month + 1}月`;
+            
+            // 获取当月第一天和最后一天
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            
+            // 获取第一天是星期几（0=周日, 1=周一, ...）
+            const firstDayOfWeek = firstDay.getDay();
+            
+            // 生成日历网格
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+            
+            // 添加星期标题
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            weekdays.forEach(day => {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day weekday';
+                dayEl.textContent = day;
+                grid.appendChild(dayEl);
+            });
+            
+            // 添加空白格子（上个月）
+            for (let i = 0; i < firstDayOfWeek; i++) {
+                const emptyEl = document.createElement('div');
+                emptyEl.className = 'calendar-day empty';
+                grid.appendChild(emptyEl);
+            }
+            
+            // 添加当月日期
+            const today = new Date();
+            const todayStr = today.toDateString();
+            
+            // 获取当月的打卡日期
+            const checkinDates = checkinHistory
+                .filter(record => record.checkin_date)
+                .map(record => {
+                    const d = new Date(record.checkin_date);
+                    return d.toDateString();
+                });
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day';
+                dayEl.textContent = day;
+                
+                const currentDate = new Date(year, month, day);
+                const currentDateStr = currentDate.toDateString();
+                
+                // 标记今天
+                if (currentDateStr === todayStr) {
+                    dayEl.classList.add('today');
+                }
+                
+                // 标记打卡日
+                if (checkinDates.includes(currentDateStr)) {
+                    dayEl.classList.add('checkin');
+                    dayEl.title = '已打卡';
+                }
+                
+                grid.appendChild(dayEl);
+            }
+        }
+        
+        // 上个月
+        function prevMonth() {
+            currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+            renderCalendar(currentMonth);
+        }
+        
+        // 下个月
+        function nextMonth() {
+            currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
+            renderCalendar(currentMonth);
+        }
+    </script>
+</body>
+</html>

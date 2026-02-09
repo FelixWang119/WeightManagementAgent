@@ -1,0 +1,430 @@
+# 用户画像问题库配置
+# 可根据业务需求修改，无需重启服务
+
+# 基础信息类问题
+basic:
+  # 第一个问题：关键基础数据（身高体重年龄性别）
+  - id: "basic_0"
+    question: "👋 先简单了解一下你~"
+    type: "form"
+    fields:
+      - name: "gender"
+        label: "性别"
+        input_type: "select"
+        options:
+          - value: "male"
+            text: "👨 男"
+            emoji: "👨"
+          - value: "female"
+            text: "👩 女"
+            emoji: "👩"
+      - name: "age"
+        label: "年龄"
+        input_type: "number"
+        placeholder: "请输入年龄"
+        unit: "岁"
+        min: 10
+        max: 100
+      - name: "height"
+        label: "身高"
+        input_type: "number"
+        placeholder: "请输入身高"
+        unit: "cm"
+        min: 100
+        max: 250
+      - name: "weight"
+        label: "当前体重"
+        input_type: "number"
+        placeholder: "请输入体重"
+        unit: "kg"
+        min: 30
+        max: 300
+    tags: ["基础", "关键数据"]
+    priority: 100
+
+  # 第二个问题：作息类型
+  - id: "basic_1"
+    question: "🌅 你平时是早起鸟还是夜猫子？"
+    options:
+      - value: "early_bird"
+        text: "🌅 早起鸟（6-8点起床）"
+        emoji: "🌅"
+      - value: "normal"
+        text: "☀️ 正常作息（8-9点起床）"
+        emoji: "☀️"
+      - value: "night_owl"
+        text: "🌙 夜猫子（9点后起床）"
+        emoji: "🌙"
+      - value: "irregular"
+        text: "😴 作息不规律"
+        emoji: "😴"
+    tags: ["作息", "生活习惯"]
+
+  # 第三个问题：早餐习惯
+  - id: "basic_2"
+    question: "🍳 早餐对你来说是？"
+    options:
+      - value: "must_have"
+        text: "⭕ 必须吃，不吃没精神"
+        emoji: "⭕"
+      - value: "sometimes"
+        text: "🍞 看情况，有时间就吃"
+        emoji: "🍞"
+      - value: "skip"
+        text: "❌ 经常跳过，直接 lunch"
+        emoji: "❌"
+      - value: "coffee_only"
+        text: "☕ 只喝咖啡/奶茶"
+        emoji: "☕"
+    tags: ["饮食", "早餐"]
+
+  # 第四个问题：工作性质
+  - id: "basic_3"
+    question: "💼 你的工作性质是？"
+    options:
+      - value: "office"
+        text: "🏢 久坐办公（程序员/文员等）"
+        emoji: "🏢"
+      - value: "standing"
+        text: "🧍 久站工作（教师/销售等）"
+        emoji: "🧍"
+      - value: "physical"
+        text: "💪 体力劳动（工人/服务员等）"
+        emoji: "💪"
+      - value: "mixed"
+        text: "🔄 动静结合（经常走动）"
+        emoji: "🔄"
+      - value: "wfh"
+        text: "🏠 居家办公/自由职业"
+        emoji: "🏠"
+    tags: ["工作", "活动量"]
+
+# 饮食偏好类问题
+diet:
+  - id: "diet_1"
+    question: "🍚 你平时更偏爱哪种主食？"
+    options:
+      - value: "rice"
+        text: "🍚 米饭党（南方胃）"
+        emoji: "🍚"
+      - value: "noodle"
+        text: "🍜 面食党（北方胃）"
+        emoji: "🍜"
+      - value: "bread"
+        text: "🍞 面包/轻食派"
+        emoji: "🍞"
+      - value: "potato"
+        text: "🥔 薯类/粗粮控"
+        emoji: "🥔"
+      - value: "low_carb"
+        text: "🥗 低碳/控糖中"
+        emoji: "🥗"
+    tags: ["饮食偏好", "主食"]
+
+  - id: "diet_2"
+    question: "🥘 下班累了，你更倾向于？"
+    options:
+      - value: "home_cook"
+        text: "🍳 自己做饭（健康但费时）"
+        emoji: "🍳"
+      - value: "meal_prep"
+        text: "🍱 meal prep（周末备餐）"
+        emoji: "🍱"
+      - value: "takeout"
+        text: "📱 外卖解决（方便快捷）"
+        emoji: "📱"
+      - value: "restaurant"
+        text: "🍽️ 下馆子（偶尔享受）"
+        emoji: "🍽️"
+      - value: "family"
+        text: "👨‍👩‍👧 回家吃/家人做"
+        emoji: "👨‍👩‍👧"
+    tags: ["饮食方式", "生活习惯"]
+
+  - id: "diet_3"
+    question: "🍰 甜食对你来说意味着什么？"
+    options:
+      - value: "daily"
+        text: "😋 每天必吃，快乐源泉"
+        emoji: "😋"
+      - value: "occasional"
+        text: "🎉 偶尔奖励，庆祝专用"
+        emoji: "🎉"
+      - value: "control"
+        text: "⚠️ 想吃但刻意控制"
+        emoji: "⚠️"
+      - value: "indifferent"
+        text: "😐 可有可无，不馋"
+        emoji: "😐"
+      - value: "avoid"
+        text: "🚫 基本不吃，自律ing"
+        emoji: "🚫"
+    tags: ["饮食习惯", "糖分"]
+
+  - id: "diet_4"
+    question: "🍗 蛋白质来源，你更喜欢？"
+    options:
+      - value: "meat"
+        text: "🥩 无肉不欢（猪肉/牛肉）"
+        emoji: "🥩"
+      - value: "poultry"
+        text: "🍗 鸡鸭鱼肉（白肉为主）"
+        emoji: "🍗"
+      - value: "seafood"
+        text: "🐟 海鲜控（鱼/虾/贝）"
+        emoji: "🐟"
+      - value: "egg_dairy"
+        text: "🥚 蛋奶素"
+        emoji: "🥚"
+      - value: "vegetarian"
+        text: "🌱 纯素食"
+        emoji: "🌱"
+    tags: ["饮食偏好", "蛋白质"]
+
+  - id: "diet_5"
+    question: "🥤 平时喝什么最多？"
+    options:
+      - value: "water"
+        text: "💧 白开水/矿泉水"
+        emoji: "💧"
+      - value: "tea"
+        text: "🍵 无糖茶饮"
+        emoji: "🍵"
+      - value: "coffee"
+        text: "☕ 咖啡（不加糖）"
+        emoji: "☕"
+      - value: "sugar_drink"
+        text: "🥤 含糖饮料/奶茶"
+        emoji: "🥤"
+      - value: "juice"
+        text: "🧃 果汁/饮料"
+        emoji: "🧃"
+    tags: ["饮水", "饮食习惯"]
+
+# 运动习惯类问题
+exercise:
+  - id: "exercise_1"
+    question: "🏃 你现在的运动频率是？"
+    options:
+      - value: "daily"
+        text: "💪 每天运动，已成习惯"
+        emoji: "💪"
+      - value: "3_5_times"
+        text: "📅 一周3-5次，坚持派"
+        emoji: "📅"
+      - value: "1_2_times"
+        text: "🕐 一周1-2次，佛系运动"
+        emoji: "🕐"
+      - value: "occasional"
+        text: "🌧️ 偶尔动动，三分钟热度"
+        emoji: "🌧️"
+      - value: "never"
+        text: "🛋️ 能躺就躺，运动绝缘体"
+        emoji: "🛋️"
+    tags: ["运动频率", "习惯"]
+
+  - id: "exercise_2"
+    question: "⏰ 你一般什么时间段运动？"
+    options:
+      - value: "morning"
+        text: "🌅 早上（6-9点），晨型人"
+        emoji: "🌅"
+      - value: "noon"
+        text: "☀️ 中午（12-14点），午休时间"
+        emoji: "☀️"
+      - value: "evening"
+        text: "🌙 晚上（18-22点），下班后"
+        emoji: "🌙"
+      - value: "night"
+        text: "🌃 深夜（22点后），夜猫专属"
+        emoji: "🌃"
+      - value: "flexible"
+        text: "🔄 不固定，有空就动"
+        emoji: "🔄"
+    tags: ["运动时间", "作息"]
+
+  - id: "exercise_3"
+    question: "🏋️ 你更喜欢哪种运动方式？"
+    options:
+      - value: "running"
+        text: "🏃 跑步/快走，简单有效"
+        emoji: "🏃"
+      - value: "gym"
+        text: "🏋️ 健身房/器械训练"
+        emoji: "🏋️"
+      - value: "home"
+        text: "🧘 居家运动/瑜伽/帕梅拉"
+        emoji: "🧘"
+      - value: "outdoor"
+        text: "🚴 户外骑行/登山/羽毛球"
+        emoji: "🚴"
+      - value: "sports"
+        text: "⚽ 球类运动（篮球/足球等）"
+        emoji: "⚽"
+    tags: ["运动类型", "偏好"]
+
+# 睡眠休息类问题
+sleep:
+  - id: "sleep_1"
+    question: "😴 你的睡眠质量怎么样？"
+    options:
+      - value: "great"
+        text: "💤 一觉到天亮，精神饱满"
+        emoji: "💤"
+      - value: "good"
+        text: "😄 总体还行，偶尔醒"
+        emoji: "😄"
+      - value: "average"
+        text: "😐 多梦/易醒，凑合睡"
+        emoji: "😐"
+      - value: "poor"
+        text: "😫 经常失眠/睡不好"
+        emoji: "😫"
+      - value: "very_poor"
+        text: "🥱 睡眠障碍，很痛苦"
+        emoji: "🥱"
+    tags: ["睡眠", "健康"]
+
+  - id: "sleep_2"
+    question: "⌛ 你每天大概睡几个小时？"
+    options:
+      - value: "less_5"
+        text: "🔴 不足5小时，严重睡眠不足"
+        emoji: "🔴"
+      - value: "5_6"
+        text: "🟠 5-6小时，有点少"
+        emoji: "🟠"
+      - value: "6_7"
+        text: "🟡 6-7小时，基本够"
+        emoji: "🟡"
+      - value: "7_8"
+        text: "🟢 7-8小时，理想状态"
+        emoji: "🟢"
+      - value: "more_8"
+        text: "🔵 8小时以上，充足睡眠"
+        emoji: "🔵"
+    tags: ["睡眠时长", "健康"]
+
+  - id: "sleep_3"
+    question: "📱 睡前你会做什么？"
+    options:
+      - value: "reading"
+        text: "📖 阅读/听书，放松身心"
+        emoji: "📖"
+      - value: "phone"
+        text: "📱 刷手机，看视频"
+        emoji: "📱"
+      - value: "work"
+        text: "💻 加班/处理工作"
+        emoji: "💻"
+      - value: "relax"
+        text: "🧘 冥想/拉伸/放松"
+        emoji: "🧘"
+      - value: "tv"
+        text: "📺 看剧/电影"
+        emoji: "📺"
+    tags: ["睡前习惯", "作息"]
+
+# 心理动机类问题
+motivation:
+  - id: "motivation_1"
+    question: "🎯 你减重的主要目标是？"
+    options:
+      - value: "health"
+        text: "❤️ 为了健康/体检指标"
+        emoji: "❤️"
+      - value: "appearance"
+        text: "💅 改善身材/穿衣更好看"
+        emoji: "💅"
+      - value: "energy"
+        text: "⚡ 提升精力/不累"
+        emoji: "⚡"
+      - value: "confidence"
+        text: "😊 增加自信/状态更好"
+        emoji: "😊"
+      - value: "doctor"
+        text: "👨‍⚕️ 医生建议/身体原因"
+        emoji: "👨‍⚕️"
+    tags: ["目标", "动机"]
+
+  - id: "motivation_2"
+    question: "🚧 减重路上，你最大的挑战是？"
+    options:
+      - value: "hungry"
+        text: "😋 管不住嘴，美食诱惑"
+        emoji: "😋"
+      - value: "lazy"
+        text: "🛋️ 迈不开腿，不想动"
+        emoji: "🛋️"
+      - value: "busy"
+        text: "💼 没时间/工作太忙"
+        emoji: "💼"
+      - value: "plateau"
+        text: "📉 遇到平台期就放弃"
+        emoji: "📉"
+      - value: "stress"
+        text: "😰 压力大/情绪性进食"
+        emoji: "😰"
+    tags: ["挑战", "痛点"]
+
+  - id: "motivation_3"
+    question: "🤝 你希望AI助手怎么陪你？"
+    options:
+      - value: "data"
+        text: "📊 多用数据/图表说话"
+        emoji: "📊"
+      - value: "encourage"
+        text: "💕 温柔鼓励，支持陪伴"
+        emoji: "💕"
+      - value: "direct"
+        text: "🎯 直接给建议/指令"
+        emoji: "🎯"
+      - value: "chat"
+        text: "💬 聊天式交流，像朋友"
+        emoji: "💬"
+      - value: "humor"
+        text: "😄 幽默风趣，有趣不无聊"
+        emoji: "😄"
+    tags: ["偏好", "沟通方式"]
+
+# 趣味场景类问题
+scenario:
+  - id: "scenario_1"
+    question: "🎂 如果减重成功，你最想做什么？"
+    options:
+      - value: "travel"
+        text: "✈️ 去旅行，拍美美的照片"
+        emoji: "✈️"
+      - value: "clothes"
+        text: "👗 买衣服不用挑尺码"
+        emoji: "👗"
+      - value: "food"
+        text: "🍱 可以吃更多好吃的"
+        emoji: "🍱"
+      - value: "photo"
+        text: "📷 拍写真/全身照"
+        emoji: "📷"
+      - value: "prove"
+        text: "🏆 证明自己能做到"
+        emoji: "🏆"
+    tags: ["激励", "愿景"]
+
+  - id: "scenario_2"
+    question: "🍽️ 周末朋友约你去吃大餐，你会？"
+    options:
+      - value: "go_enjoy"
+        text: "😋 去！减脂不代表不吃"
+        emoji: "😋"
+      - value: "choose_healthy"
+        text: "🥗 去，但选健康一些的"
+        emoji: "🥗"
+      - value: "delay"
+        text: "😅 说下周再开始..."
+        emoji: "😅"
+      - value: "skip"
+        text: "❌ 不去，怕前功尽弃"
+        emoji: "❌"
+      - value: "invite_together"
+        text: "👯 叫朋友一起运动"
+        emoji: "👯"
+    tags: ["社交", "饮食控制"]

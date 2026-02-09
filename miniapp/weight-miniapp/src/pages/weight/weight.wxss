@@ -1,0 +1,194 @@
+/* 体重记录页面样式 */
+.weight-display {
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+.weight-number {
+  font-size: 80rpx;
+  font-weight: bold;
+  color: #3498db;
+  display: block;
+  line-height: 1;
+}
+
+.weight-unit {
+  font-size: 40rpx;
+  color: #666;
+  margin-left: 10rpx;
+}
+
+.weight-date {
+  font-size: 26rpx;
+  color: #999;
+  display: block;
+  margin-top: 20rpx;
+}
+
+/* 输入区域 */
+.weight-input-section {
+  padding: 20rpx 0;
+}
+
+.input-group {
+  margin-bottom: 40rpx;
+}
+
+.input-label {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 20rpx;
+  display: block;
+}
+
+.weight-input {
+  background: #f8f9fa;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 16rpx;
+  padding: 24rpx 30rpx;
+  font-size: 32rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.weight-input:focus {
+  border-color: #3498db;
+  background: white;
+}
+
+.note-input {
+  background: #f8f9fa;
+  border: 2rpx solid #e0e0e0;
+  border-radius: 16rpx;
+  padding: 24rpx 30rpx;
+  font-size: 30rpx;
+  width: 100%;
+  min-height: 160rpx;
+  box-sizing: border-box;
+}
+
+/* 趋势分析 */
+.trend-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx 0;
+  margin-bottom: 20rpx;
+}
+
+.trend-text {
+  font-size: 32rpx;
+  font-weight: bold;
+}
+
+.trend-change {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.trend-chart {
+  height: 300rpx;
+  background: #f8f9fa;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 30rpx;
+}
+
+.chart-placeholder {
+  color: #999;
+  font-size: 28rpx;
+}
+
+/* 历史记录 */
+.history-item {
+  padding: 30rpx 0;
+  border-bottom: 2rpx solid #f0f0f0;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-date {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.date-text {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  margin-right: 20rpx;
+}
+
+.time-text {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.history-weight {
+  display: flex;
+  align-items: center;
+  gap: 30rpx;
+}
+
+.weight-value {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #3498db;
+}
+
+.body-fat {
+  font-size: 26rpx;
+  color: #666;
+  background: #f8f9fa;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+.history-note {
+  font-size: 26rpx;
+  color: #666;
+  margin-top: 16rpx;
+  display: block;
+}
+
+.toggle-history {
+  color: #3498db;
+  font-size: 26rpx;
+  cursor: pointer;
+}
+
+.toggle-history:active {
+  opacity: 0.6;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 80rpx 0;
+  color: #999;
+}
+
+.empty-icon {
+  font-size: 120rpx;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+.empty-text {
+  font-size: 32rpx;
+  color: #666;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+.empty-hint {
+  font-size: 28rpx;
+  color: #999;
+  display: block;
+}

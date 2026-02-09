@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试sendMessage修复</title>
+</head>
+<body>
+    <h1>测试sendMessage函数</h1>
+    
+    <textarea id="chat-input" placeholder="输入消息..."></textarea>
+    <button id="send-btn" onclick="sendMessage()">发送</button>
+    
+    <div id="chat-messages"></div>
+    
+    <script>
+        // 模拟原文件中的变量
+        let isSending = false;
+        let selectedImage = null;
+        
+        // 模拟原文件中的函数
+        function appendMessage(role, content) {
+            const container = document.getElementById('chat-messages');
+            container.innerHTML += `<div>${role}: ${content}</div>`;
+        }
+        
+        function showThinking() {
+            const container = document.getElementById('chat-messages');
+            container.innerHTML += '<div>AI思考中...</div>';
+            return 'thinking-id';
+        }
+        
+        // 修复后的sendMessage函数
+        window.sendMessage = async function() {
+            const input = document.getElementById('chat-input');
+            const content = input.value.trim();
+            
+            if (!content || isSending) {
+                console.log('没有内容或正在发送');
+                return;
+            }
+            
+            console.log('发送消息:', content);
+            appendMessage('user', content);
+            
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+            isSending = true;
+            
+            // 模拟AI响应
+            setTimeout(() => {
+                appendMessage('assistant', '这是AI回复');
+                sendBtn.disabled = false;
+                isSending = false;
+                input.value = '';
+            }, 1000);
+        };
+        
+        console.log('sendMessage函数已定义:', typeof window.sendMessage);
+    </script>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>睡眠记录 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .sleep-page { padding: 20px; max-width: 800px; margin: 0 auto; }
+        .sleep-card { background: var(--surface); border-radius: var(--border-radius); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
+        .sleep-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-item { text-align: center; padding: 16px; background: var(--bg-secondary); border-radius: var(--border-radius); }
+        .stat-value { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
+        .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+        .sleep-form { display: grid; gap: 16px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+        .quality-selector { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+        .quality-btn { padding: 8px 16px; border: 2px solid var(--border); border-radius: 20px; background: var(--surface); cursor: pointer; transition: all 0.2s; }
+        .quality-btn:hover { border-color: var(--primary-color); }
+        .quality-btn.selected { border-color: var(--primary-color); background: rgba(52, 152, 219, 0.1); color: var(--primary-color); }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; background: var(--bg-secondary); border-radius: var(--border-radius); margin-bottom: 12px; }
+        .history-date { font-weight: 600; }
+        .history-duration { color: var(--primary-color); font-weight: 600; }
+        .history-quality { padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; }
+        .quality-good { background: rgba(46, 204, 113, 0.1); color: #2ecc71; }
+        .quality-medium { background: rgba(241, 196, 15, 0.1); color: #f39c12; }
+        .quality-poor { background: rgba(231, 76, 60, 0.1); color: #e74c3c; }
+        .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+        .time-input-group { display: flex; gap: 8px; align-items: center; }
+        .time-input { flex: 2; padding: 12px; border: 2px solid var(--border); border-radius: var(--border-radius); font-size: 1rem; }
+        .period-select { flex: 1; padding: 12px; border: 2px solid var(--border); border-radius: var(--border-radius); font-size: 1rem; background: var(--surface); cursor: pointer; }
+        .period-select:focus, .time-input:focus { outline: none; border-color: var(--primary-color); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: var(--surface); border-radius: var(--border-radius); padding: 24px; max-width: 400px; width: 90%; box-shadow: var(--shadow-lg); }
+        .modal-title { font-size: 1.25rem; font-weight: bold; margin-bottom: 16px; }
+        .modal-content { margin-bottom: 24px; }
+        .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+        .modal-btn { padding: 10px 20px; border-radius: var(--border-radius); cursor: pointer; font-size: 1rem; }
+        .modal-btn-cancel { background: var(--bg-secondary); border: none; }
+        .modal-btn-confirm { background: var(--primary-color); color: white; border: none; }
+        .duplicate-info { background: var(--bg-secondary); padding: 16px; border-radius: var(--border-radius); margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="page-header">
+            <div class="header-brand">
+                <a href="index.html" class="menu-toggle" style="margin-right: 12px; text-decoration: none; display: flex; align-items: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <span class="header-brand-icon">😴</span>
+                <span>睡眠记录</span>
+            </div>
+            <div class="header-actions">
+                <button class="menu-toggle" id="menu-toggle" title="打开菜单"><span></span></button>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info"><div class="user-name">加载中...</div><div class="user-status">在线</div></div>
+                </div>
+                <nav class="sidebar-nav">
+                    <div class="nav-section"><div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li><a href="index.html" class="nav-item"><span class="nav-item-icon">🤖</span><span class="nav-item-text">AI助手</span></a></li>
+                            <li><a href="weight.html" class="nav-item"><span class="nav-item-icon">⚖️</span><span class="nav-item-text">体重记录</span></a></li>
+                            <li><a href="meal.html" class="nav-item"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">饮食记录</span></a></li>
+                            <li><a href="exercise.html" class="nav-item"><span class="nav-item-icon">🏃</span><span class="nav-item-text">运动记录</span></a></li>
+                        </ul>
+                    </div>
+                    <div class="nav-section"><div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li><a href="water.html" class="nav-item"><span class="nav-item-icon">💧</span><span class="nav-item-text">饮水记录</span></a></li>
+                            <li><a href="sleep.html" class="nav-item active"><span class="nav-item-icon">😴</span><span class="nav-item-text">睡眠记录</span></a></li>
+                            <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
+                            <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
+                            <li><a href="calculator.html" class="nav-item"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+                            <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">个人设置</span></a>
+                    <button class="logout-btn" onclick="Auth.logout()"><span>🚪</span><span>退出登录</span></button>
+                </div>
+            </aside>
+
+            <main class="page-main">
+                <div class="sleep-page">
+                    <div class="sleep-card">
+                        <h3 style="margin-bottom: 20px; color: var(--text-primary);">记录昨晚睡眠</h3>
+                        <div class="sleep-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">入睡时间</label>
+                                    <div class="time-input-group">
+                                        <input type="time" class="time-input" id="bedtime" value="23:00">
+                                        <select class="period-select" id="bedPeriod">
+                                            <option value="PM" selected>PM</option>
+                                            <option value="AM">AM</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">起床时间</label>
+                                    <div class="time-input-group">
+                                        <input type="time" class="time-input" id="waketime" value="07:00">
+                                        <select class="period-select" id="wakePeriod">
+                                            <option value="AM" selected>AM</option>
+                                            <option value="PM">PM</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">睡眠质量</label>
+                                <div class="quality-selector">
+                                    <button class="quality-btn" data-quality="poor" onclick="selectQuality('poor')">😫 差</button>
+                                    <button class="quality-btn selected" data-quality="medium" onclick="selectQuality('medium')">😐 一般</button>
+                                    <button class="quality-btn" data-quality="good" onclick="selectQuality('good')">😊 好</button>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveSleep()" style="width: 100%;">
+                                <span style="margin-right: 8px;">💾</span>保存记录
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="sleep-card">
+                        <h3 style="margin-bottom: 16px; color: var(--text-primary);">睡眠统计</h3>
+                        <div class="sleep-stats">
+                            <div class="stat-item">
+                                <div class="stat-value" id="avg-duration">--</div>
+                                <div class="stat-label">平均时长</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="avg-quality">--</div>
+                                <div class="stat-label">平均质量</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="total-records">--</div>
+                                <div class="stat-label">记录天数</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sleep-card">
+                        <h3 style="margin-bottom: 16px; color: var(--text-primary);">最近记录</h3>
+                        <div id="history-list">
+                            <div class="empty-state">暂无睡眠记录</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="duplicateModal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <div class="modal-title">⚠️ 重复记录提醒</div>
+            <div class="modal-content">
+                <p>该日期已有睡眠记录，是否覆盖？</p>
+                <div class="duplicate-info" id="duplicateInfo">
+                    <div><strong>原记录：</strong></div>
+                    <div id="duplicateDetails"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" onclick="closeDuplicateModal()">取消</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmOverwrite()">覆盖</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components.js"></script>
+    <script>
+        let selectedQuality = 'medium';
+        let pendingSaveData = null;
+        let duplicateRecordId = null;
+
+        function selectQuality(quality) {
+            selectedQuality = quality;
+            document.querySelectorAll('.quality-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.quality === quality);
+            });
+        }
+
+        async function init() {
+            if (!Auth.check()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            await loadUserInfo();
+            await loadSleepHistory();
+        }
+
+        async function loadUserInfo() {
+            try {
+                const user = Auth.getUser();
+                if (user) {
+                    document.querySelector('.user-name').textContent = user.nickname || user.name || '用户';
+                    document.querySelector('.user-avatar').textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+                }
+            } catch (error) {
+                console.error('加载用户信息失败:', error);
+            }
+        }
+
+        async function loadSleepHistory() {
+            try {
+                const response = await API.sleep.getHistory(7);
+                if (response.success && response.data) {
+                    updateStats(response.data);
+                    renderHistory(response.data);
+                }
+            } catch (error) {
+                console.error('加载睡眠记录失败:', error);
+            }
+        }
+
+        function updateStats(records) {
+            if (records.length === 0) {
+                document.getElementById('avg-duration').textContent = '--';
+                document.getElementById('avg-quality').textContent = '--';
+                document.getElementById('total-records').textContent = '0';
+                return;
+            }
+
+            const totalDuration = records.reduce((sum, r) => sum + (r.duration_hours || 0), 0);
+            const avgDuration = (totalDuration / records.length).toFixed(1);
+            document.getElementById('avg-duration').textContent = avgDuration + 'h';
+
+            const totalQuality = records.reduce((sum, r) => sum + (r.quality || 3), 0);
+            const avgQuality = (totalQuality / records.length).toFixed(1);
+            document.getElementById('avg-quality').textContent = avgQuality;
+
+            document.getElementById('total-records').textContent = records.length;
+        }
+
+        function renderHistory(records) {
+            const listEl = document.getElementById('history-list');
+            if (records.length === 0) {
+                listEl.innerHTML = '<div class="empty-state">暂无睡眠记录</div>';
+                return;
+            }
+
+            listEl.innerHTML = records.map(r => {
+                const qualityClass = r.quality >= 4 ? 'quality-good' : r.quality <= 2 ? 'quality-poor' : 'quality-medium';
+                const qualityText = r.quality >= 4 ? '好' : r.quality <= 2 ? '差' : '一般';
+                const bedTimeStr = r.bed_time ? new Date(r.bed_time).toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'}) : '--';
+                const wakeTimeStr = r.wake_time ? new Date(r.wake_time).toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'}) : '--';
+                return `
+                    <div class="history-item">
+                        <div>
+                            <div class="history-date">${r.date ? new Date(r.date).toLocaleDateString('zh-CN') : '--'}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                                ${bedTimeStr} - ${wakeTimeStr}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="history-duration">${r.duration_hours || '--'}小时</div>
+                            <span class="history-quality ${qualityClass}">${qualityText}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getFormData() {
+            return {
+                bedtime: document.getElementById('bedtime').value,
+                bedPeriod: document.getElementById('bedPeriod').value,
+                waketime: document.getElementById('waketime').value,
+                wakePeriod: document.getElementById('wakePeriod').value,
+                quality: selectedQuality
+            };
+        }
+
+        function validateFormData(data) {
+            if (!data.bedtime || !data.waketime) {
+                return { valid: false, message: '请填写入睡和起床时间' };
+            }
+            return { valid: true };
+        }
+
+        async function saveSleep() {
+            const data = getFormData();
+            const validation = validateFormData(data);
+            if (!validation.valid) {
+                alert(validation.message);
+                return;
+            }
+
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            try {
+                const response = await API.sleep.record({
+                    date: yesterday.toISOString().split('T')[0],
+                    bedtime: data.bedtime,
+                    bedPeriod: data.bedPeriod,
+                    waketime: data.waketime,
+                    wakePeriod: data.wakePeriod,
+                    quality: data.quality
+                });
+
+                if (response.success) {
+                    alert('记录成功！');
+                    await loadSleepHistory();
+                } else if (response.duplicate) {
+                    duplicateRecordId = response.data.existing_id;
+                    pendingSaveData = data;
+                    showDuplicateModal(response.data);
+                } else {
+                    alert('记录失败: ' + response.message);
+                }
+            } catch (error) {
+                console.error('保存睡眠记录失败:', error);
+                alert('保存失败，请重试');
+            }
+        }
+
+        function showDuplicateModal(record) {
+            const modal = document.getElementById('duplicateModal');
+            const details = document.getElementById('duplicateDetails');
+            details.innerHTML = `
+                <div>入睡: ${new Date(record.bed_time).toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})}</div>
+                <div>起床: ${new Date(record.wake_time).toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})}</div>
+                <div>时长: ${record.duration_hours}小时</div>
+                <div>质量: ${record.quality || '--'}分</div>
+            `;
+            modal.style.display = 'flex';
+        }
+
+        function closeDuplicateModal() {
+            document.getElementById('duplicateModal').style.display = 'none';
+            pendingSaveData = null;
+            duplicateRecordId = null;
+        }
+
+        async function confirmOverwrite() {
+            if (!pendingSaveData || !duplicateRecordId) return;
+
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            try {
+                const response = await API.sleep.overwrite(duplicateRecordId, {
+                    date: yesterday.toISOString().split('T')[0],
+                    bedtime: pendingSaveData.bedtime,
+                    bedPeriod: pendingSaveData.bedPeriod,
+                    waketime: pendingSaveData.waketime,
+                    wakePeriod: pendingSaveData.wakePeriod,
+                    quality: pendingSaveData.quality
+                });
+
+                closeDuplicateModal();
+
+                if (response.success) {
+                    alert('记录已覆盖！');
+                    await loadSleepHistory();
+                } else {
+                    alert('覆盖失败: ' + response.message);
+                }
+            } catch (error) {
+                console.error('覆盖睡眠记录失败:', error);
+                alert('覆盖失败，请重试');
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

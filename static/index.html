@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI助手 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        /* 聊天页面特定样式 */
+        .chat-page {
+            height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: var(--background);
+        }
+        
+        /* 每日建议卡片样式 */
+        .daily-suggestion-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 20px;
+            margin: 16px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .suggestion-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .suggestion-icon {
+            font-size: 1.25rem;
+        }
+        
+        .suggestion-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .refresh-btn {
+            margin-left: auto;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        
+        .refresh-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(180deg);
+        }
+        
+        .refresh-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .refresh-btn.spinning svg {
+            animation: spin 1s linear infinite;
+        }
+        
+        .suggestion-content {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 16px;
+            min-height: 50px;
+        }
+        
+        .suggestion-loading {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0.8;
+        }
+        
+        .suggestion-action {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .suggestion-action-btn {
+            flex: 1;
+            padding: 10px 16px;
+            background: white;
+            color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: 0.875rem;
+        }
+        
+        .suggestion-action-btn:hover {
+            background: rgba(255,255,255,0.9);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        /* 快捷工具栏 */
+        .chat-toolbar {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            overflow-x: auto;
+        }
+        
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 14px;
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+        }
+        
+        .toolbar-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        /* 用户画像问答卡片 - 与每日建议卡片保持一致的蓝紫渐变 */
+        .profiling-question-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin: 16px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideInUp 0.5s ease;
+        }
+        
+        .profiling-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .profiling-icon {
+            font-size: 1.25rem;
+        }
+        
+        .profiling-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+        
+        .profiling-close {
+            margin-left: auto;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all var(--transition-fast);
+        }
+        
+        .profiling-close:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .profiling-content {
+            margin-bottom: 12px;
+        }
+        
+        .profiling-question {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        
+        .profiling-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .profiling-option-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.95);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-align: left;
+            animation: fadeIn 0.3s ease backwards;
+        }
+        
+        .profiling-option-btn:hover {
+            background: white;
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .profiling-option-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .option-emoji {
+            font-size: 1.25rem;
+        }
+        
+        .option-text {
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+        
+        .profiling-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .profiling-progress {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+        
+        .profiling-skip {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 0.75rem;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .profiling-skip:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+        
+        .profiling-feedback {
+            margin-top: 12px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .feedback-bubble {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 14px;
+            border-radius: 12px;
+        }
+        
+        .feedback-icon {
+            font-size: 1.25rem;
+        }
+        
+        .feedback-text {
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        /* 输入区域 */
+        .chat-input-area {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 12px 16px;
+        }
+        
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            background: var(--background);
+            border-radius: 24px;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+        }
+        
+        .chat-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            line-height: 1.5;
+            resize: none;
+            max-height: 120px;
+            padding: 8px 0;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+        }
+        
+        .chat-send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+            flex-shrink: 0;
+        }
+        
+        .chat-send-btn:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+        
+        .chat-send-btn:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+        }
+        
+        /* 图片上传按钮 */
+        .chat-image-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--background);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+            flex-shrink: 0;
+        }
+        
+        .chat-image-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        /* 图片预览 */
+        .image-preview {
+            padding: 8px 16px;
+        }
+        
+        .preview-item {
+            position: relative;
+            display: inline-block;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .preview-item img {
+            max-height: 80px;
+            border-radius: 8px;
+        }
+        
+        .preview-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+        }
+        
+        .preview-remove:hover {
+            background: rgba(255,0,0,0.8);
+        }
+        
+        /* 快捷操作按钮 */
+        .quick-actions-bar {
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 16px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+        }
+        
+        .quick-action-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 16px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.75rem;
+            transition: color var(--transition-fast);
+        }
+        
+        .quick-action-item:hover {
+            color: var(--primary-color);
+        }
+        
+        .quick-action-item i {
+            font-size: 1.5rem;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .chat-input-area {
+                padding-bottom: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 页面容器 -->
+    <div class="page">
+        <!-- 顶部导航 -->
+        <header class="page-header">
+            <div class="header-brand">
+                <span class="header-brand-icon">🤖</span>
+                <span>AI助手</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="if(typeof Profiling !== 'undefined') Profiling.forceShowQuestion()" title="测试画像问答" style="margin-right: 8px; font-size: 1.25rem;">❓</button>
+                <button class="menu-toggle" id="menu-toggle" title="打开菜单">
+                    <span></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 页面内容 -->
+        <div class="page-content">
+            <!-- 侧边栏遮罩 -->
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+            
+            <!-- 侧边栏 -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info">
+                        <div class="user-name">加载中...</div>
+                        <div class="user-status">在线</div>
+                    </div>
+                </div>
+                
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="index.html" class="nav-item active">
+                                    <span class="nav-item-icon">🤖</span>
+                                    <span class="nav-item-text">AI助手</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="weight.html" class="nav-item">
+                                    <span class="nav-item-icon">⚖️</span>
+                                    <span class="nav-item-text">体重记录</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="meal.html" class="nav-item">
+                                    <span class="nav-item-icon">🍽️</span>
+                                    <span class="nav-item-text">饮食记录</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="exercise.html" class="nav-item">
+                                    <span class="nav-item-icon">🏃</span>
+                                    <span class="nav-item-text">运动记录</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="nav-section">
+                        <div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="water.html" class="nav-item">
+                                    <span class="nav-item-icon">💧</span>
+                                    <span class="nav-item-text">饮水记录</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="sleep.html" class="nav-item">
+                                    <span class="nav-item-icon">😴</span>
+                                    <span class="nav-item-text">睡眠记录</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="report.html" class="nav-item">
+                                    <span class="nav-item-icon">📊</span>
+                                    <span class="nav-item-text">数据报告</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="goals.html" class="nav-item">
+                                    <span class="nav-item-icon">🎯</span>
+                                    <span class="nav-item-text">目标管理</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="calculator.html" class="nav-item">
+                                    <span class="nav-item-icon">🔥</span>
+                                    <span class="nav-item-text">热量计算</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="reminders.html" class="nav-item">
+                                    <span class="nav-item-icon">🔔</span>
+                                    <span class="nav-item-text">提醒设置</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+                
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item">
+                        <span class="nav-item-icon">⚙️</span>
+                        <span class="nav-item-text">个人设置</span>
+                    </a>
+                    <button class="logout-btn" onclick="Auth.logout()">
+                        <span>🚪</span>
+                        <span>退出登录</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- 主内容区 -->
+            <main class="page-main" style="padding: 0;">
+                <div class="chat-page">
+                    <!-- 聊天消息区域 -->
+                    <div class="chat-container" id="chat-messages">
+                        <!-- 每日建议卡片 -->
+                        <div class="daily-suggestion-card" id="daily-suggestion-card">
+                            <div class="suggestion-header">
+                                <span class="suggestion-icon">💡</span>
+                                <span class="suggestion-title">今日建议</span>
+                                <button class="refresh-btn" id="refresh-btn" onclick="refreshSuggestion()" title="换一条">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <div class="suggestion-content" id="suggestion-content">
+                                <div class="suggestion-loading">
+                                    <div class="loading-spinner" style="width: 24px; height: 24px; border-width: 2px;"></div>
+                                    <p>AI正在生成建议...</p>
+                                </div>
+                            </div>
+                            
+                            <div class="suggestion-action" id="suggestion-action">
+                                <!-- 动态显示建议关联的操作按钮 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 快捷工具栏 -->
+                    <div class="chat-toolbar">
+                        <button class="toolbar-btn" onclick="sendQuickMessage('记录体重')">⚖️ 记体重</button>
+                        <button class="toolbar-btn" onclick="sendQuickMessage('记录早餐')">🍽️ 记饮食</button>
+                        <button class="toolbar-btn" onclick="sendQuickMessage('记录运动')">🏃 记运动</button>
+                        <button class="toolbar-btn" onclick="sendQuickMessage('记录饮水')">💧 记饮水</button>
+                    </div>
+
+                    <!-- 输入区域 -->
+                    <div class="chat-input-area">
+                        <div class="chat-input-wrapper">
+                            <button class="chat-image-btn" onclick="document.getElementById('image-input').click()" title="上传图片">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                            </button>
+                            <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+                            <textarea 
+                                id="chat-input" 
+                                class="chat-input" 
+                                placeholder="输入消息...（支持上传图片询问食物）"
+                                rows="1"
+                            ></textarea>
+                            <button class="chat-send-btn" id="send-btn" onclick="window.sendMessage()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- 图片预览区域 -->
+                        <div id="image-preview" class="image-preview" style="display: none;">
+                            <div class="preview-item">
+                                <img id="preview-img" src="" alt="预览">
+                                <button class="preview-remove" onclick="clearImage()">×</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 底部快捷栏（移动端） -->
+                    <div class="quick-actions-bar" style="display: none;">
+                        <a href="weight.html" class="quick-action-item">
+                            <span>⚖️</span>
+                            <span>体重</span>
+                        </a>
+                        <a href="meal.html" class="quick-action-item">
+                            <span>🍽️</span>
+                            <span>饮食</span>
+                        </a>
+                        <a href="exercise.html" class="quick-action-item">
+                            <span>🏃</span>
+                            <span>运动</span>
+                        </a>
+                        <a href="water.html" class="quick-action-item">
+                            <span>💧</span>
+                            <span>饮水</span>
+                        </a>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/profiling.js"></script>
+    <script>
+        // 全局变量
+        let isSending = false;
+        let messages = [];
+        let selectedImage = null;
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化用户画像收集（模拟企业微信主动推送）
+            if (typeof Profiling !== 'undefined') {
+                Profiling.init();
+            }
+            
+            // 加载每日建议
+            loadDailySuggestion();
+            
+            // 加载聊天历史
+            loadChatHistory();
+            
+            // 自动调整输入框高度
+            const chatInput = document.getElementById('chat-input');
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = chatInput.scrollHeight + 'px';
+            });
+            
+            // 回车发送（Shift+Enter换行）
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    window.sendMessage();
+                }
+            });
+        });
+        
+        // ============ 图片上传功能 ============
+        
+        // 处理图片选择
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // 检查文件类型
+            if (!file.type.startsWith('image/')) {
+                Utils.toast('请选择图片文件', 'error');
+                return;
+            }
+            
+            // 检查文件大小（限制5MB）
+            if (file.size > 5 * 1024 * 1024) {
+                Utils.toast('图片大小不能超过5MB', 'error');
+                return;
+            }
+            
+            // 预览图片
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                selectedImage = {
+                    file: file,
+                    dataUrl: e.target.result
+                };
+                
+                // 显示预览
+                document.getElementById('preview-img').src = e.target.result;
+                document.getElementById('image-preview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+            
+            // 清空input，允许重复选择同一文件
+            event.target.value = '';
+        }
+        
+        // 清除已选图片
+        function clearImage() {
+            selectedImage = null;
+            document.getElementById('image-preview').style.display = 'none';
+            document.getElementById('preview-img').src = '';
+        }
+        
+        // 上传图片到服务器
+        async function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', 'food_query');
+            
+            const response = await fetch(`${API.base}/api/chat/upload-image`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${Auth.getToken()}`
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error('图片上传失败');
+            }
+            
+            return await response.json();
+        }
+        
+        // ============ 每日建议功能 ============
+        
+        // 加载每日建议
+        async function loadDailySuggestion(forceRefresh = false) {
+            const contentEl = document.getElementById('suggestion-content');
+            const actionEl = document.getElementById('suggestion-action');
+            
+            if (!forceRefresh) {
+                contentEl.innerHTML = `
+                    <div class="suggestion-loading">
+                        <div class="loading-spinner" style="width: 24px; height: 24px; border-width: 2px;"></div>
+                        <p>AI正在生成建议...</p>
+                    </div>
+                `;
+            }
+            
+            try {
+                const url = forceRefresh 
+                    ? `${API.base}/api/chat/daily-suggestion?refresh=true`
+                    : `${API.base}/api/chat/daily-suggestion`;
+                    
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.suggestion) {
+                    displaySuggestion(result.suggestion);
+                } else {
+                    displayDefaultSuggestion();
+                }
+            } catch (error) {
+                console.error('加载建议失败:', error);
+                displayDefaultSuggestion();
+            }
+        }
+        
+        // 显示建议
+        function displaySuggestion(suggestion) {
+            const contentEl = document.getElementById('suggestion-content');
+            const actionEl = document.getElementById('suggestion-action');
+            
+            contentEl.textContent = suggestion.content;
+            
+            // 显示关联操作按钮
+            if (suggestion.action_text && suggestion.action_text !== '知道了') {
+                actionEl.innerHTML = `
+                    <button class="suggestion-action-btn" onclick="handleSuggestionAction('${suggestion.action_type}', '${suggestion.action_target}')">
+                        ${suggestion.action_text}
+                    </button>
+                `;
+            } else {
+                actionEl.innerHTML = '';
+            }
+        }
+        
+        // 刷新建议
+        async function refreshSuggestion() {
+            console.log('🔄 刷新建议按钮被点击');
+            const refreshBtn = document.getElementById('refresh-btn');
+            if (!refreshBtn) {
+                console.error('❌ 找不到刷新按钮');
+                return;
+            }
+            
+            refreshBtn.disabled = true;
+            refreshBtn.classList.add('spinning');
+            
+            try {
+                await loadDailySuggestion(true);
+                console.log('✅ 建议刷新成功');
+            } catch (error) {
+                console.error('❌ 刷新建议失败:', error);
+                Utils.toast('刷新失败，请重试', 'error');
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.classList.remove('spinning');
+            }
+        }
+        
+        // 处理建议操作
+        function handleSuggestionAction(type, target) {
+            if (type === 'navigate' && target) {
+                window.location.href = `/static/${target}`;
+            } else if (type === 'quick_action') {
+                sendQuickMessage(target);
+            }
+        }
+        
+        // 默认建议（API失败时）
+        async function displayDefaultSuggestion() {
+            let allDefaults = [];
+            
+            // 优先从服务器获取默认建议
+            try {
+                const response = await fetch(`${API.base}/api/config/default-suggestions`, {
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.suggestions) {
+                        allDefaults = result.suggestions;
+                    }
+                }
+            } catch (e) {
+                console.log('获取默认建议失败');
+            }
+            
+            // 如果没有服务器建议，使用内置的
+            if (allDefaults.length === 0) {
+                allDefaults = [
+                    { content: "今天别忘了记录体重哦，坚持就是胜利！💪", action_text: "记录体重", action_target: "weight.html" },
+                    { content: "多喝水有助于新陈代谢，建议今天喝够2000ml~", action_text: "记录饮水", action_target: "water.html" },
+                    { content: "运动是健康的好伙伴，今天动起来吧！", action_text: "记录运动", action_target: "exercise.html" },
+                    { content: "💡 蛋白质是肌肉的基石，每餐摄入20-30g有助于维持代谢", action_text: "知道了", action_target: "" },
+                    { content: "💡 低GI食物能让血糖更平稳，饱腹感更持久", action_text: "知道了", action_target: "" },
+                    { content: "💡 快走30分钟约消耗150-200kcal", action_text: "知道了", action_target: "" },
+                    { content: "💡 每增加1kg肌肉，每天多消耗约100kcal", action_text: "知道了", action_target: "" },
+                    { content: "💡 基础代谢占每日消耗的60-70%", action_text: "知道了", action_target: "" },
+                    { content: "每一小步都是进步，今天也在变好的路上！🌟", action_text: "记录体重", action_target: "weight.html" },
+                    { content: "坚持记录是减重的第一步，你已经做得很好了！", action_text: "记录数据", action_target: "index.html" }
+                ];
+            }
+            
+            // 随机选择一条
+            const random = allDefaults[Math.floor(Math.random() * allDefaults.length)];
+            displaySuggestion({
+                content: random.content,
+                action_text: random.action_text,
+                action_type: random.action_target ? "navigate" : "none",
+                action_target: random.action_target || ""
+            });
+        }
+        
+        // 加载聊天历史
+        async function loadChatHistory() {
+            try {
+                const response = await API.chat.getHistory(20);
+                if (response.success && response.messages) {
+                    messages = response.messages;
+                    if (messages.length > 0) {
+                        const suggestionCard = document.getElementById('daily-suggestion-card');
+                        if (suggestionCard) suggestionCard.style.display = 'none';
+                        messages.forEach(msg => {
+                            appendMessage(msg.role, msg.content, false);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('加载聊天历史失败:', error);
+            }
+        }
+        
+        // 发送消息（全局函数，供onclick调用）
+        window.sendMessage = async function() {
+            const input = document.getElementById('chat-input');
+            const content = input.value.trim();
+            
+            // 检查是否有内容或图片
+            if ((!content && !selectedImage) || isSending) return;
+            
+            // 隐藏建议卡片
+            const suggestionCard = document.getElementById('daily-suggestion-card');
+            if (suggestionCard) suggestionCard.style.display = 'none';
+            
+            // 构建预览内容（只显示文本，图片单独显示）
+            let previewContent = content || '请帮我看看这张图片里的食物';
+            appendMessage('user', previewContent);
+            
+            // 如果有图片，添加图片预览到消息区域
+            if (selectedImage) {
+                const container = document.getElementById('chat-messages');
+                const lastMessage = container.lastElementChild;
+                const imgHtml = `<img src="${selectedImage.dataUrl}" style="max-width: 200px; border-radius: 8px; margin-top: 8px; display: block;">`;
+                const contentDiv = lastMessage.querySelector('.message-content');
+                contentDiv.innerHTML += imgHtml;
+            }
+            
+            // 清空输入框和图片
+            input.value = '';
+            input.style.height = 'auto';
+            clearImage();
+            
+            // 显示AI思考中
+            const thinkingId = showThinking();
+            
+            // 更新发送按钮状态
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+            isSending = true;
+            
+            try {
+                // 构建请求数据
+                const requestData = { content: content };
+                
+                // 如果有图片，先上传再发送
+                if (selectedImage) {
+                    const uploadResult = await uploadImage(selectedImage.file);
+                    if (uploadResult.success) {
+                        requestData.image_url = uploadResult.url;
+                    } else {
+                        throw new Error('图片上传失败');
+                    }
+                }
+                
+                const response = await API.chat.sendMessageWithImage(requestData);
+                
+                // 移除思考中提示
+                removeThinking(thinkingId);
+                
+                if (response.success) {
+                    appendMessage('assistant', response.data.content);
+                } else {
+                    appendMessage('assistant', '抱歉，我暂时无法回复。请稍后再试。');
+                }
+            } catch (error) {
+                // 移除思考中提示
+                removeThinking(thinkingId);
+                
+                console.error('发送消息失败:', error);
+                appendMessage('assistant', '抱歉，发送消息失败。请检查网络连接后重试。');
+                
+                // 显示错误提示
+                Utils.toast('发送失败，请重试', 'error');
+            } finally {
+                sendBtn.disabled = false;
+                isSending = false;
+            }
+        }
+        
+        // 发送快捷消息
+        function sendQuickMessage(content) {
+            const input = document.getElementById('chat-input');
+            input.value = content;
+            window.sendMessage();
+        }
+        
+        // 添加消息到聊天区域
+        function appendMessage(role, content, animate = true) {
+            const container = document.getElementById('chat-messages');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${role}`;
+            if (animate) {
+                messageDiv.style.animation = 'slideInUp 0.3s ease';
+            }
+            
+            const avatar = role === 'user' ? '👤' : '🤖';
+            const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            
+            // 解析内容，检查是否包含图片
+            let contentHtml = escapeHtml(content);
+            
+            // 检查是否是图片消息预览（base64图片）
+            if (content.includes('data:image/')) {
+                const base64Match = content.match(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/);
+                if (base64Match) {
+                    contentHtml = `<img src="${base64Match[0]}" style="max-width: 200px; border-radius: 8px; margin-top: 8px;">`;
+                    // 移除base64内容，只显示图片
+                    const textPart = content.replace(base64Match[0], '').trim();
+                    if (textPart) {
+                        contentHtml = `<p>${escapeHtml(textPart)}</p>` + contentHtml;
+                    }
+                }
+            } else {
+                // 普通文本，转换换行符
+                contentHtml = content.replace(/\n/g, '<br>');
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div>
+                    <div class="message-content">${contentHtml}</div>
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+            
+            // 滚动到底部
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // 显示思考中
+        function showThinking() {
+            const container = document.getElementById('chat-messages');
+            const id = 'thinking-' + Date.now();
+            
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.id = id;
+            thinkingDiv.className = 'message message-assistant';
+            thinkingDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div>
+                    <div class="message-content">
+                        <div class="message-thinking">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(thinkingDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            return id;
+        }
+        
+        // 移除思考中
+        function removeThinking(id) {
+            const thinking = document.getElementById(id);
+            if (thinking) {
+                thinking.remove();
+            }
+        }
+        
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 页面级认证检查
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.check()) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // 侧边栏菜单功能
+            const menuToggle = document.querySelector('.menu-toggle');
+            const overlay = document.querySelector('.sidebar-overlay');
+
+            if (menuToggle) {
+                menuToggle.onclick = () => {
+                    document.body.classList.add('menu-open');
+                };
+            }
+
+            if (overlay) {
+                overlay.onclick = () => {
+                    document.body.classList.remove('menu-open');
+                };
+            }
+
+            document.onkeydown = (e) => {
+                if (e.key === 'Escape') {
+                    document.body.classList.remove('menu-open');
+                }
+            };
+        });
+    </script>
+</body>
+</html>

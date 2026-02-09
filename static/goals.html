@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>目标管理 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .goals-page {
+            padding-bottom: 24px;
+        }
+
+        /* 进度圆环 */
+        .progress-ring-container {
+            display: flex;
+            justify-content: center;
+            margin: 24px 0;
+        }
+
+        .progress-ring {
+            position: relative;
+            width: 180px;
+            height: 180px;
+        }
+
+        .progress-ring svg {
+            transform: rotate(-90deg);
+            width: 180px;
+            height: 180px;
+        }
+
+        .progress-ring circle {
+            fill: none;
+            stroke-width: 12;
+        }
+
+        .progress-ring .bg {
+            stroke: var(--border);
+        }
+
+        .progress-ring .progress {
+            stroke: var(--primary-color);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        .progress-ring .center-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .progress-percent {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .progress-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* 进度信息卡片 */
+        .progress-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .progress-info-item {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .progress-info-item .value {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .progress-info-item .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .progress-info-item.highlight .value {
+            color: var(--primary-color);
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-badge.ahead {
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+        }
+
+        .status-badge.on-track {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+
+        .status-badge.behind {
+            background: rgba(241, 196, 15, 0.1);
+            color: #f39c12;
+        }
+
+        .status-badge.just-started {
+            background: rgba(155, 89, 182, 0.1);
+            color: #9b59b6;
+        }
+
+        .status-badge.completed {
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+        }
+
+        /* 目标卡片 */
+        .goal-card {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .goal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .goal-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* 设置表单 */
+        .goal-form-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .form-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-section-title .icon {
+            font-size: 1.25rem;
+        }
+
+        /* 周计划选择 */
+        .plan-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .plan-option {
+            background: var(--bg-secondary);
+            border: 2px solid transparent;
+            border-radius: var(--border-radius);
+            padding: 16px 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .plan-option:hover {
+            border-color: var(--primary-color);
+        }
+
+        .plan-option.selected {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .plan-option .plan-value {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .plan-option .plan-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .plan-option .plan-desc {
+            font-size: 0.625rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* 预计达成 */
+        .expected-date {
+            background: linear-gradient(135deg, var(--primary-color), #3498db);
+            color: white;
+            border-radius: var(--border-radius);
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .expected-date .label {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .expected-date .date {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        /* 警告提示 */
+        .warning-box {
+            background: rgba(241, 196, 15, 0.1);
+            border: 1px solid rgba(241, 196, 15, 0.3);
+            border-radius: var(--border-radius);
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .warning-box .icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .warning-box .text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* 历史记录 */
+        .history-section {
+            margin-top: 32px;
+        }
+
+        .history-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .history-item {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item-info .goal-dates {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .history-item .status {
+            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .history-item .status.completed {
+            background: rgba(46, 204, 113, 0.1);
+            color: #2ecc71;
+        }
+
+        .history-item .status.abandoned {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state .text {
+            font-size: 0.875rem;
+            margin-bottom: 20px;
+        }
+
+        /* 操作按钮 */
+        .goal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .goal-actions .btn {
+            flex: 1;
+        }
+
+        .btn-abandon {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        /* 营养分配 */
+        .nutrition-distribution {
+            margin-top: 16px;
+        }
+
+        .distribution-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .distribution-item .label {
+            width: 60px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .distribution-item .bar-container {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0 12px;
+        }
+
+        .distribution-item .bar {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .distribution-item .value {
+            width: 50px;
+            text-align: right;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 480px) {
+            .progress-info {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .plan-options {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .goal-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- 顶部导航 -->
+        <header class="page-header">
+            <div class="header-brand">
+                <a href="index.html" class="menu-toggle" style="margin-right: 12px; text-decoration: none; display: flex; align-items: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <span class="header-brand-icon">🎯</span>
+                <span>目标管理</span>
+            </div>
+        </header>
+
+        <!-- 页面内容 -->
+        <div class="page-content">
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info">
+                        <div class="user-name">加载中...</div>
+                        <div class="user-status">在线</div>
+                    </div>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li><a href="index.html" class="nav-item"><span class="nav-item-icon">🤖</span><span class="nav-item-text">AI助手</span></a></li>
+                            <li><a href="weight.html" class="nav-item"><span class="nav-item-icon">⚖️</span><span class="nav-item-text">体重记录</span></a></li>
+                            <li><a href="meal.html" class="nav-item"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">饮食记录</span></a></li>
+                            <li><a href="exercise.html" class="nav-item"><span class="nav-item-icon">🏃</span><span class="nav-item-text">运动记录</span></a></li>
+                        </ul>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li><a href="water.html" class="nav-item"><span class="nav-item-icon">💧</span><span class="nav-item-text">饮水记录</span></a></li>
+                            <li><a href="sleep.html" class="nav-item"><span class="nav-item-icon">😴</span><span class="nav-item-text">睡眠记录</span></a></li>
+                            <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
+                            <li><a href="goals.html" class="nav-item active"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">个人设置</span></a>
+                    <button class="logout-btn" onclick="Auth.logout()">
+                        <span>🚪</span>
+                        <span>退出登录</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- 主内容区 -->
+            <main class="page-main">
+                <div class="goals-page">
+                    <!-- 当前目标 -->
+                    <div id="current-goal-section">
+                        <div class="goal-card" id="current-goal-card">
+                            <!-- 进度圆环 -->
+                            <div class="progress-ring-container">
+                                <div class="progress-ring">
+                                    <svg>
+                                        <circle class="bg" cx="90" cy="90" r="78"></circle>
+                                        <circle class="progress" id="progress-circle" cx="90" cy="90" r="78"
+                                            stroke-dasharray="490" stroke-dashoffset="490"></circle>
+                                    </svg>
+                                    <div class="center-content">
+                                        <div class="progress-percent" id="progress-percent">0%</div>
+                                        <div class="progress-label">已完成</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 进度信息 -->
+                            <div class="progress-info">
+                                <div class="progress-info-item highlight">
+                                    <div class="value" id="current-weight">--</div>
+                                    <div class="label">当前体重</div>
+                                </div>
+                                <div class="progress-info-item">
+                                    <div class="value" id="target-weight">--</div>
+                                    <div class="label">目标体重</div>
+                                </div>
+                                <div class="progress-info-item">
+                                    <div class="value" id="weight-lost">--</div>
+                                    <div class="label">已减重</div>
+                                </div>
+                                <div class="progress-info-item">
+                                    <div class="value" id="days-remaining">--</div>
+                                    <div class="label">剩余天数</div>
+                                </div>
+                            </div>
+
+                            <!-- 状态和预计达成 -->
+                            <div style="text-align: center; margin-bottom: 16px;">
+                                <span class="status-badge" id="progress-status">--</span>
+                            </div>
+
+                            <div class="expected-date" id="expected-date-box" style="display: none;">
+                                <div class="label">预计达成日期</div>
+                                <div class="date" id="expected-date">--</div>
+                            </div>
+
+                            <!-- 操作按钮 -->
+                            <div class="goal-actions">
+                                <button class="btn btn-outline" onclick="showGoalForm()">调整目标</button>
+                                <button class="btn btn-danger btn-abandon" onclick="abandonGoal()">放弃目标</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 空状态 - 设置新目标 -->
+                    <div id="no-goal-section" style="display: none;">
+                        <div class="empty-state">
+                            <div class="icon">🎯</div>
+                            <div class="text">还没有设置减重目标</div>
+                            <button class="btn btn-primary" onclick="showGoalForm()">
+                                <span style="margin-right: 8px;">+</span>
+                                设置目标
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 目标设置表单 -->
+                    <div id="goal-form-section" style="display: none;">
+                        <div class="goal-form-section">
+                            <div class="form-section-title">
+                                <span class="icon">🎯</span>
+                                <span id="form-title">设置新目标</span>
+                            </div>
+
+                            <form id="goal-form">
+                                <div class="form-group">
+                                    <label class="form-label">目标体重 (kg)</label>
+                                    <input type="number" class="form-input" id="target-weight-input"
+                                        placeholder="例如：65" min="30" max="200" step="0.1" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">目标日期</label>
+                                    <input type="date" class="form-input" id="target-date-input"
+                                        min="" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">每周减重计划</label>
+                                    <div class="plan-options" id="plan-options">
+                                        <div class="plan-option" data-value="0.25">
+                                            <div class="plan-value">0.25kg</div>
+                                            <div class="plan-label">轻松</div>
+                                            <div class="plan-desc">渐进式</div>
+                                        </div>
+                                        <div class="plan-option selected" data-value="0.5">
+                                            <div class="plan-value">0.5kg</div>
+                                            <div class="plan-label">适中</div>
+                                            <div class="plan-desc">推荐</div>
+                                        </div>
+                                        <div class="plan-option" data-value="0.75">
+                                            <div class="plan-value">0.75kg</div>
+                                            <div class="plan-label">较快</div>
+                                            <div class="plan-desc">有挑战</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 预计达成日期 -->
+                                <div class="expected-date" id="expected-calc-box">
+                                    <div class="label">预计达成日期</div>
+                                    <div class="date" id="expected-calc-date">--</div>
+                                </div>
+
+                                <div class="warning-box" id="safety-warning" style="display: none;">
+                                    <span class="icon">⚠️</span>
+                                    <span class="text" id="safety-warning-text"></span>
+                                </div>
+
+                                <div class="form-actions" style="margin-top: 20px;">
+                                    <button type="button" class="btn btn-secondary" onclick="hideGoalForm()">取消</button>
+                                    <button type="submit" class="btn btn-primary" id="submit-btn">保存目标</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- 历史记录 -->
+                    <div class="history-section" id="history-section" style="display: none;">
+                        <div class="history-title">历史目标</div>
+                        <div id="history-list"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        // 全局状态
+        let currentGoal = null;
+        let selectedPlan = 0.5;
+        let currentWeight = null;
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.check()) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // 更新侧边栏用户信息
+            await Utils.updateSidebarUser();
+
+            // 初始化计划选择
+            initPlanOptions();
+
+            // 初始化表单
+            initForm();
+
+            // 加载数据
+            await loadGoalData();
+        });
+
+        // 初始化计划选择
+        function initPlanOptions() {
+            document.querySelectorAll('.plan-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.plan-option').forEach(o => o.classList.remove('selected'));
+                    option.classList.add('selected');
+                    selectedPlan = parseFloat(option.dataset.value);
+                    updateExpectedDate();
+                });
+            });
+        }
+
+        // 初始化表单
+        function initForm() {
+            const form = document.getElementById('goal-form');
+            form.addEventListener('submit', handleSubmit);
+
+            const dateInput = document.getElementById('target-date-input');
+            const today = new Date();
+            const maxDate = new Date();
+            maxDate.setFullYear(today.getFullYear() + 2);
+            dateInput.min = today.toISOString().split('T')[0];
+            dateInput.max = maxDate.toISOString().split('T')[0];
+
+            dateInput.addEventListener('change', updateExpectedDate);
+            document.getElementById('target-weight-input').addEventListener('input', updateExpectedDate);
+        }
+
+        // 更新预计达成日期
+        function updateExpectedDate() {
+            const targetWeight = parseFloat(document.getElementById('target-weight-input').value);
+            const targetDate = document.getElementById('target-date-input').value;
+
+            if (targetWeight && targetDate && currentWeight) {
+                const weightToLose = currentWeight - targetWeight;
+                const weeks = weightToLose / selectedPlan;
+                const days = Math.ceil(weeks * 7);
+
+                const expectedDate = new Date();
+                expectedDate.setDate(expectedDate.getDate() + days);
+
+                document.getElementById('expected-calc-date').textContent =
+                    `${expectedDate.getMonth() + 1}月${expectedDate.getDate()}日`;
+
+                // 安全警告
+                const warningBox = document.getElementById('safety-warning');
+                const warningText = document.getElementById('safety-warning-text');
+
+                if (selectedPlan > 0.75) {
+                    warningBox.style.display = 'flex';
+                    warningText.textContent = '提醒：较快的减重速度可能不健康，建议每周减重不超过0.75kg';
+                } else if (selectedPlan < 0.25) {
+                    warningBox.style.display = 'flex';
+                    warningText.textContent = '提醒：减重速度较慢，可能需要更长时间才能达到目标';
+                } else {
+                    warningBox.style.display = 'none';
+                }
+            }
+        }
+
+        // 加载目标数据
+        async function loadGoalData() {
+            try {
+                const response = await API.goals.getCurrent();
+                if (response.success && response.has_goal) {
+                    currentGoal = response.goal;
+                    renderCurrentGoal(response.goal);
+                    document.getElementById('current-goal-section').style.display = 'block';
+                    document.getElementById('no-goal-section').style.display = 'none';
+                } else {
+                    document.getElementById('current-goal-section').style.display = 'none';
+                    document.getElementById('no-goal-section').style.display = 'block';
+                }
+
+                // 加载历史记录
+                await loadHistory();
+            } catch (error) {
+                console.error('加载目标数据失败:', error);
+                Utils.toast('加载失败，请稍后重试', 'error');
+            }
+        }
+
+        // 渲染当前目标
+        function renderCurrentGoal(goal) {
+            const progress = goal.progress;
+
+            // 更新进度圆环
+            const percent = progress.progress_percent || 0;
+            const circumference = 2 * Math.PI * 78;
+            const offset = circumference - (percent / 100) * circumference;
+
+            document.getElementById('progress-circle').style.strokeDashoffset = offset;
+            document.getElementById('progress-percent').textContent = `${Math.round(percent)}%`;
+
+            // 更新进度信息
+            document.getElementById('current-weight').textContent =
+                progress.current_weight ? `${progress.current_weight}kg` : '--';
+            document.getElementById('target-weight').textContent = `${goal.target_weight}kg`;
+            document.getElementById('weight-lost').textContent =
+                progress.weight_lost ? `${progress.weight_lost}kg` : '0kg';
+            document.getElementById('days-remaining').textContent =
+                progress.days_remaining || '0';
+
+            // 更新状态
+            const statusEl = document.getElementById('progress-status');
+            statusEl.textContent = progress.message || '--';
+            statusEl.className = `status-badge ${progress.status || ''}`;
+
+            // 更新预计达成日期
+            const expectedDateBox = document.getElementById('expected-date-box');
+            if (progress.expected_completion && progress.status !== 'completed') {
+                expectedDateBox.style.display = 'block';
+                const date = new Date(progress.expected_completion);
+                document.getElementById('expected-date').textContent =
+                    `${date.getMonth() + 1}月${date.getDate()}日`;
+            } else {
+                expectedDateBox.style.display = 'none';
+            }
+
+            // 保存当前体重供计算用
+            currentWeight = progress.current_weight;
+        }
+
+        // 显示目标设置表单
+        function showGoalForm() {
+            document.getElementById('goal-form-section').style.display = 'block';
+            document.getElementById('current-goal-section').style.display = 'none';
+            document.getElementById('no-goal-section').style.display = 'none';
+
+            // 如果是编辑模式，填充现有数据
+            if (currentGoal) {
+                document.getElementById('form-title').textContent = '调整目标';
+                document.getElementById('target-weight-input').value = currentGoal.target_weight;
+                document.getElementById('target-date-input').value = currentGoal.target_date;
+                selectedPlan = currentGoal.weekly_plan;
+
+                document.querySelectorAll('.plan-option').forEach(o => {
+                    o.classList.toggle('selected', parseFloat(o.dataset.value) === selectedPlan);
+                });
+
+                document.getElementById('submit-btn').textContent = '更新目标';
+            } else {
+                document.getElementById('form-title').textContent = '设置新目标';
+                document.getElementById('goal-form').reset();
+                document.querySelectorAll('.plan-option').forEach(o => {
+                    o.classList.toggle('selected', parseFloat(o.dataset.value) === 0.5);
+                });
+                selectedPlan = 0.5;
+                document.getElementById('submit-btn').textContent = '保存目标';
+            }
+
+            updateExpectedDate();
+        }
+
+        // 隐藏目标设置表单
+        function hideGoalForm() {
+            document.getElementById('goal-form-section').style.display = 'none';
+            if (currentGoal) {
+                document.getElementById('current-goal-section').style.display = 'block';
+            } else {
+                document.getElementById('no-goal-section').style.display = 'block';
+            }
+        }
+
+        // 提交表单
+        async function handleSubmit(e) {
+            e.preventDefault();
+
+            const targetWeight = parseFloat(document.getElementById('target-weight-input').value);
+            const targetDate = document.getElementById('target-date-input').value;
+
+            if (!targetWeight || !targetDate) {
+                Utils.toast('请填写完整信息', 'warning');
+                return;
+            }
+
+            if (targetWeight >= currentWeight) {
+                Utils.toast('目标体重应小于当前体重', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner" style="width: 16px; height: 16px; border-color: rgba(255,255,255,0.3); border-top-color: white;"></span> 保存中...';
+
+            try {
+                let response;
+                if (currentGoal) {
+                    response = await API.goals.update(currentGoal.id, {
+                        target_weight: targetWeight,
+                        target_date: targetDate,
+                        weekly_plan: selectedPlan
+                    });
+                } else {
+                    response = await API.goals.create({
+                        target_weight: targetWeight,
+                        target_date: targetDate,
+                        weekly_plan: selectedPlan
+                    });
+                }
+
+                if (response.success) {
+                    Utils.toast(currentGoal ? '目标更新成功！' : '目标设置成功！', 'success');
+                    currentGoal = response.goal;
+                    await loadGoalData();
+                    hideGoalForm();
+                } else {
+                    Utils.toast(response.message || '保存失败', 'error');
+                }
+            } catch (error) {
+                console.error('保存目标失败:', error);
+                Utils.toast(error.message || '保存失败，请稍后重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '保存目标';
+            }
+        }
+
+        // 放弃目标
+        async function abandonGoal() {
+            if (!confirm('确定要放弃当前目标吗？放弃后可以设置新目标。')) {
+                return;
+            }
+
+            try {
+                const response = await API.goals.abandon(currentGoal.id);
+                if (response.success) {
+                    Utils.toast('目标已放弃', 'success');
+                    currentGoal = null;
+                    await loadGoalData();
+                } else {
+                    Utils.toast(response.message || '操作失败', 'error');
+                }
+            } catch (error) {
+                console.error('放弃目标失败:', error);
+                Utils.toast('操作失败，请稍后重试', 'error');
+            }
+        }
+
+        // 加载历史记录
+        async function loadHistory() {
+            try {
+                const response = await API.goals.getHistory();
+                if (response.success && response.history && response.history.length > 0) {
+                    renderHistory(response.history);
+                    document.getElementById('history-section').style.display = 'block';
+                } else {
+                    document.getElementById('history-section').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+            }
+        }
+
+        // 渲染历史记录
+        function renderHistory(history) {
+            const container = document.getElementById('history-list');
+            container.innerHTML = history.map(item => `
+                <div class="history-item">
+                    <div class="history-item-info">
+                        <div style="font-weight: 500;">目标体重: ${item.target_weight}kg</div>
+                        <div class="goal-dates">${item.created_at.split('T')[0]} - ${item.target_date}</div>
+                    </div>
+                    <span class="status ${item.status}">${item.status === 'completed' ? '已完成' : '已放弃'}</span>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

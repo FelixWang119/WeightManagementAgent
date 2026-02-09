@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人设置 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .profile-page {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .profile-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        
+        /* 风格选择 */
+        .style-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .style-option {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .style-option:hover {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.05);
+        }
+        
+        .style-option.active {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        .style-icon {
+            font-size: 2rem;
+            margin-right: 16px;
+        }
+        
+        .style-info {
+            flex: 1;
+        }
+        
+        .style-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .style-desc {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .style-check {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        
+        .style-option.active .style-check {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        
+        /* 保存按钮 */
+        .save-btn {
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        /* 当前配置展示 */
+        .current-config {
+            background: var(--background);
+            padding: 16px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+        }
+        
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .config-item:last-child {
+            border-bottom: none;
+        }
+        
+        .config-label {
+            color: var(--text-secondary);
+        }
+        
+        .config-value {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        /* 示例对话 */
+        .example-chat {
+            background: var(--background);
+            padding: 16px;
+            border-radius: var(--border-radius);
+            margin-top: 16px;
+        }
+        
+        .example-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        
+        .example-message {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .example-avatar {
+            font-size: 1.25rem;
+        }
+        
+        .example-content {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            flex: 1;
+        }
+        
+        /* 档案进度条样式 */
+        .progress-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+        
+        .circular-progress {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+        
+        .circular-progress svg {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-bg {
+            stroke: var(--border);
+        }
+        
+        .progress-bar {
+            stroke: var(--primary-color);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .progress-percent {
+            display: block;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+        
+        .progress-label {
+            display: block;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        
+        .progress-details {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .progress-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--background);
+            border-radius: var(--border-radius);
+            margin-bottom: 8px;
+        }
+        
+        .progress-item.completed {
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .progress-item.pending {
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .progress-item-name {
+            flex: 1;
+            color: var(--text-primary);
+        }
+        
+        .progress-item-status {
+            font-size: 0.875rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+        
+        .status-completed {
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--success-color);
+        }
+        
+        .status-pending {
+            background: rgba(241, 196, 15, 0.1);
+            color: var(--warning-color);
+        }
+        
+        .progress-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+        
+        /* 表单样式（用于BMR计算器） */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .form-col {
+            flex: 1;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: white;
+            transition: border-color var(--transition-fast);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .input-with-button {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .input-with-button .form-control {
+            flex: 1;
+        }
+        
+        .result-card {
+            background: var(--background);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            border: 1px solid var(--border);
+        }
+        
+        .result-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .result-content {
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+        
+        .result-note {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 20px;
+            color: var(--text-secondary);
+        }
+        
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(52, 152, 219, 0.3);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="page-header">
+            <div class="header-brand">
+                <button class="menu-toggle" onclick="history.back()" style="margin-right: 12px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <span class="header-brand-icon">⚙️</span>
+                <span>个人设置</span>
+            </div>
+            <div class="header-actions">
+                <button class="menu-toggle" id="menu-toggle" title="打开菜单"><span></span></button>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info"><div class="user-name">加载中...</div><div class="user-status">在线</div></div>
+                </div>
+                <nav class="sidebar-nav">
+                    <div class="nav-section"><div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li><a href="index.html" class="nav-item"><span class="nav-item-icon">🤖</span><span class="nav-item-text">AI助手</span></a></li>
+                            <li><a href="weight.html" class="nav-item"><span class="nav-item-icon">⚖️</span><span class="nav-item-text">体重记录</span></a></li>
+                            <li><a href="meal.html" class="nav-item"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">饮食记录</span></a></li>
+                            <li><a href="exercise.html" class="nav-item"><span class="nav-item-icon">🏃</span><span class="nav-item-text">运动记录</span></a></li>
+                        </ul>
+                    </div>
+                                        <div class="nav-section"><div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li><a href="water.html" class="nav-item"><span class="nav-item-icon">💧</span><span class="nav-item-text">饮水记录</span></a></li>
+                            <li><a href="sleep.html" class="nav-item"><span class="nav-item-icon">😴</span><span class="nav-item-text">睡眠记录</span></a></li>
+                            <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
+                            <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
+                            <li><a href="calculator.html" class="nav-item"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+                            <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item active"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">个人设置</span></a>
+                    <button class="logout-btn" onclick="Auth.logout()"><span>🚪</span><span>退出登录</span></button>
+                </div>
+            </aside>
+
+            <main class="page-main">
+                <div class="profile-page">
+                    <!-- 助手风格选择 -->
+                    <div class="profile-section">
+                        <h2 class="section-title">🎭 选择你的AI助手风格</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.875rem;">
+                            不同风格的助手会用不同的方式与你交流，选择最适合你的风格吧~
+                        </p>
+                        
+                        <div class="style-options" id="style-options">
+                            <!-- 动态加载 -->
+                            <div class="loading">
+                                <div class="loading-spinner"></div>
+                                <span>加载中...</span>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-primary btn-lg save-btn" id="save-btn" onclick="saveStyle()" disabled>
+                            💾 保存设置
+                        </button>
+                    </div>
+                    
+                    <!-- 档案完善度 -->
+                    <div class="profile-section">
+                        <h2 class="section-title">📊 档案完善度</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.875rem;">
+                            完善档案可以帮助AI助手更好地了解你，提供个性化建议。
+                        </p>
+                        
+                        <div class="progress-container" id="profile-progress">
+                            <div class="circular-progress">
+                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                    <circle class="progress-bg" cx="60" cy="60" r="54" stroke-width="12" fill="none"/>
+                                    <circle class="progress-bar" cx="60" cy="60" r="54" stroke-width="12" fill="none"
+                                            stroke-dasharray="339.292" stroke-dashoffset="0"/>
+                                </svg>
+                                <div class="progress-text">
+                                    <span class="progress-percent" id="progress-percent">0%</span>
+                                    <span class="progress-label">完成</span>
+                                </div>
+                            </div>
+                            
+                            <div class="progress-details" id="progress-details">
+                                <!-- 动态加载 -->
+                                <div class="loading">
+                                    <div class="loading-spinner"></div>
+                                    <span>加载中...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-actions" style="margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="loadProfileProgress()">
+                                🔄 刷新进度
+                            </button>
+                            <button class="btn btn-primary" onclick="goToProfiling()" style="margin-left: 12px;">
+                                ✏️ 完善档案
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 当前配置 -->
+                    <div class="profile-section">
+                        <h2 class="section-title">📋 当前配置</h2>
+                        <div class="current-config" id="current-config">
+                            <div class="config-item">
+                                <span class="config-label">助手名称</span>
+                                <span class="config-value" id="current-name">小助</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">当前风格</span>
+                                <span class="config-value" id="current-style">温暖型</span>
+                            </div>
+                            <div class="config-item">
+                                <span class="config-label">基础代谢率 (BMR)</span>
+                                <span class="config-value" id="current-bmr">--</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 基础代谢率设置 -->
+                    <div class="profile-section">
+                        <h2 class="section-title">🔥 基础代谢率设置</h2>
+                        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.875rem;">
+                            基础代谢率是你静息时消耗的热量。你可以手动输入，或使用公式计算。
+                        </p>
+                        
+                        <div class="form-group">
+                            <label for="bmr-input">手动设置 BMR (千卡/天)</label>
+                            <div class="input-with-button">
+                                <input type="number" id="bmr-input" class="form-control" placeholder="例如：1500" min="500" max="5000" step="10">
+                                <button class="btn btn-secondary" onclick="saveBmr()">保存</button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group" style="margin-top: 24px;">
+                            <label>使用公式计算 BMR</label>
+                            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 12px;">
+                                根据你的年龄、性别、身高、体重和活动水平计算。
+                            </p>
+                            
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="calc-age">年龄</label>
+                                    <input type="number" id="calc-age" class="form-control" placeholder="30" min="15" max="100">
+                                </div>
+                                <div class="form-col">
+                                    <label for="calc-gender">性别</label>
+                                    <select id="calc-gender" class="form-control">
+                                        <option value="male">男性</option>
+                                        <option value="female">女性</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <label for="calc-height">身高 (cm)</label>
+                                    <input type="number" id="calc-height" class="form-control" placeholder="170" min="100" max="250">
+                                </div>
+                                <div class="form-col">
+                                    <label for="calc-weight">体重 (kg)</label>
+                                    <input type="number" id="calc-weight" class="form-control" placeholder="65" min="30" max="300" step="0.1">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="calc-activity">活动水平</label>
+                                <select id="calc-activity" class="form-control">
+                                    <option value="1.2">久坐 (办公室工作，很少运动)</option>
+                                    <option value="1.375">轻度活动 (每周1-3天轻度运动)</option>
+                                    <option value="1.55">中度活动 (每周3-5天中度运动)</option>
+                                    <option value="1.725">高度活动 (每周6-7天高强度运动)</option>
+                                    <option value="1.9">极高度活动 (体力劳动或专业运动员)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-col">
+                                    <button class="btn btn-primary" onclick="calculateBmr()" style="width: 100%;">
+                                        🔢 计算 BMR
+                                    </button>
+                                </div>
+                                <div class="form-col">
+                                    <button class="btn btn-secondary" onclick="applyCalculatedBmr()" id="apply-bmr-btn" disabled style="width: 100%;">
+                                        💾 应用计算结果
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="bmr-result" class="result-card" style="display: none; margin-top: 16px;">
+                                <div class="result-title">计算结果</div>
+                                <div class="result-content">
+                                    <div>基础代谢率 (BMR): <strong id="result-bmr">--</strong> 千卡/天</div>
+                                    <div>每日总消耗 (TDEE): <strong id="result-tdee">--</strong> 千卡/天</div>
+                                    <div class="result-note">基于当前活动水平计算</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components.js"></script>
+    <script>
+        // 全局变量
+        let styles = [];
+        let currentStyle = null;
+        let selectedStyle = null;
+        
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', () => {
+        // 检查登录状态
+        if (!Auth.check()) {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // 加载用户信息
+        const user = Auth.getUser();
+        if (user) {
+            const userNameEl = document.querySelector('.user-name');
+            const userAvatarEl = document.querySelector('.user-avatar');
+            if (userNameEl) userNameEl.textContent = user.nickname || user.name || '用户';
+            if (userAvatarEl) userAvatarEl.textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+        }
+
+            loadStyles();
+            loadCurrentConfig();
+        });
+        
+        // 加载所有风格
+        async function loadStyles() {
+            try {
+                const result = await API.user.getAgentStyles();
+                
+                if (result.success && result.styles) {
+                    styles = result.styles;
+                    renderStyles();
+                }
+            } catch (error) {
+                console.error('加载风格失败:', error);
+                document.getElementById('style-options').innerHTML = 
+                    '<div class="alert alert-error">加载失败，请刷新重试</div>';
+            }
+        }
+        
+        // 渲染风格选项
+        function renderStyles() {
+            const container = document.getElementById('style-options');
+            
+            container.innerHTML = styles.map(style => `
+                <div class="style-option ${selectedStyle === style.value ? 'active' : ''}" 
+                     onclick="selectStyle('${style.value}')"
+                     data-value="${style.value}">
+                    <span class="style-icon">${style.icon}</span>
+                    <div class="style-info">
+                        <div class="style-name">${style.name}</div>
+                        <div class="style-desc">${style.description}</div>
+                    </div>
+                    <div class="style-check">${selectedStyle === style.value ? '✓' : ''}</div>
+                </div>
+            `).join('');
+        }
+        
+        // 选择风格
+        function selectStyle(value) {
+            selectedStyle = value;
+            renderStyles();
+            
+            // 启用保存按钮
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.disabled = value === currentStyle;
+        }
+        
+        // 加载当前配置
+        async function loadCurrentConfig() {
+            try {
+                // 加载Agent配置
+                const configResult = await API.user.getAgentConfig();
+                
+                if (configResult.success && configResult.config) {
+                    currentStyle = configResult.config.personality_type;
+                    selectedStyle = currentStyle;
+                    
+                    document.getElementById('current-name').textContent = 
+                        configResult.config.agent_name || '小助';
+                    
+                    const styleNames = {
+                        'professional': '专业型',
+                        'warm': '温暖型',
+                        'energetic': '活泼型'
+                    };
+                    document.getElementById('current-style').textContent = 
+                        styleNames[currentStyle] || '温暖型';
+                    
+                    renderStyles();
+                }
+                
+                // 加载用户资料（获取BMR）
+                const profileResult = await API.user.getProfile();
+                
+                if (profileResult.success && profileResult.profile) {
+                    const bmr = profileResult.profile.bmr;
+                    document.getElementById('current-bmr').textContent = 
+                        bmr ? `${bmr} 千卡/天` : '未设置';
+                    
+                    // 如果已有BMR，填充到输入框
+                    if (bmr) {
+                        document.getElementById('bmr-input').value = bmr;
+                    }
+                    
+                    // 如果已有年龄、性别、身高，填充到计算器
+                    if (profileResult.profile.age) {
+                        document.getElementById('calc-age').value = profileResult.profile.age;
+                    } else {
+                        document.getElementById('calc-age').placeholder = '请先设置年龄';
+                    }
+                    if (profileResult.profile.gender) {
+                        document.getElementById('calc-gender').value = 
+                            profileResult.profile.gender.toLowerCase();
+                    }
+                    if (profileResult.profile.height) {
+                        document.getElementById('calc-height').value = profileResult.profile.height;
+                    } else {
+                        document.getElementById('calc-height').placeholder = '请先设置身高';
+                    }
+                }
+                
+                // 加载最新体重记录
+                try {
+                    const weightResult = await API.weight.getStats();
+                    if (weightResult.success && weightResult.data && weightResult.data.latest) {
+                        const latestWeight = weightResult.data.latest.weight;
+                        document.getElementById('calc-weight').value = latestWeight;
+                    } else if (weightResult.success && !weightResult.data) {
+                        // 没有体重记录，显示提示
+                        console.log('暂无体重记录，请先记录体重');
+                        // 可以在体重输入框添加placeholder提示
+                        document.getElementById('calc-weight').placeholder = '请先记录体重';
+                    }
+                } catch (error) {
+                    console.error('加载体重数据失败:', error);
+                    // 不显示错误，体重字段可以留空让用户手动输入
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+            }
+        }
+        
+        // 保存风格设置
+        async function saveStyle() {
+            if (!selectedStyle) return;
+            
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner" style="width: 16px; height: 16px; border-color: rgba(255,255,255,0.3); border-top-color: white;"></span> 保存中...';
+            
+            try {
+                const result = await API.user.updateAgentConfig({
+                    personality_type: selectedStyle
+                });
+                
+                if (result.success) {
+                    Utils.toast('设置保存成功！', 'success');
+                    currentStyle = selectedStyle;
+                    
+                    // 更新当前配置显示
+                    const styleNames = {
+                        'professional': '专业型',
+                        'warm': '温暖型',
+                        'energetic': '活泼型'
+                    };
+                    document.getElementById('current-style').textContent = 
+                        styleNames[currentStyle] || '温暖型';
+                } else {
+                    throw new Error(result.message || '保存失败');
+                }
+            } catch (error) {
+                console.error('保存失败:', error);
+                Utils.toast('保存失败，请重试', 'error');
+            } finally {
+                btn.disabled = selectedStyle === currentStyle;
+                btn.innerHTML = '💾 保存设置';
+            }
+        }
+        
+        // BMR相关函数
+        let calculatedBmr = null;
+        let calculatedTdee = null;
+        
+        // 保存手动输入的BMR
+        async function saveBmr() {
+            const bmrInput = document.getElementById('bmr-input');
+            const bmrValue = parseInt(bmrInput.value);
+            
+            if (!bmrValue || bmrValue < 500 || bmrValue > 5000) {
+                Utils.toast('请输入有效的BMR值（500-5000千卡）', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('bmr-input').nextElementSibling;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner" style="width: 16px; height: 16px;"></span>';
+            
+            try {
+                const result = await API.user.updateProfile({
+                    bmr: bmrValue
+                });
+                
+                if (result.success) {
+                    Utils.toast('BMR保存成功！', 'success');
+                    document.getElementById('current-bmr').textContent = `${bmrValue} 千卡/天`;
+                } else {
+                    throw new Error(result.message || '保存失败');
+                }
+            } catch (error) {
+                console.error('保存BMR失败:', error);
+                Utils.toast('保存失败，请重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+        
+        // 计算BMR
+        async function calculateBmr() {
+            const age = parseInt(document.getElementById('calc-age').value);
+            const gender = document.getElementById('calc-gender').value;
+            const height = parseFloat(document.getElementById('calc-height').value);
+            const weight = parseFloat(document.getElementById('calc-weight').value);
+            const activity = parseFloat(document.getElementById('calc-activity').value);
+            
+            if (!age || !height || !weight) {
+                Utils.toast('请填写年龄、身高和体重', 'error');
+                return;
+            }
+            
+            try {
+                // 调用后端计算服务
+                const response = await fetch(`${API.base}/api/calories/calculate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    },
+                    body: JSON.stringify({
+                        age,
+                        gender,
+                        height,
+                        weight,
+                        activity_level: activity
+                    })
+                });
+                
+                if (!response.ok) {
+                    // 如果后端API不存在，使用前端计算
+                    return calculateBmrFrontend(age, gender, height, weight, activity);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    calculatedBmr = result.bmr;
+                    calculatedTdee = result.tdee;
+                    
+                    document.getElementById('result-bmr').textContent = calculatedBmr;
+                    document.getElementById('result-tdee').textContent = calculatedTdee;
+                    document.getElementById('bmr-result').style.display = 'block';
+                    document.getElementById('apply-bmr-btn').disabled = false;
+                } else {
+                    throw new Error(result.message || '计算失败');
+                }
+            } catch (error) {
+                console.error('调用计算API失败，使用前端计算:', error);
+                calculateBmrFrontend(age, gender, height, weight, activity);
+            }
+        }
+        
+        // 前端BMR计算（Harris-Benedict公式）
+        function calculateBmrFrontend(age, gender, height, weight, activity) {
+            let bmr;
+            
+            if (gender === 'male') {
+                // 男性: BMR = 88.362 + (13.397 × 体重kg) + (4.799 × 身高cm) - (5.677 × 年龄)
+                bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+            } else {
+                // 女性: BMR = 447.593 + (9.247 × 体重kg) + (3.098 × 身高cm) - (4.330 × 年龄)
+                bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+            }
+            
+            bmr = Math.round(bmr);
+            const tdee = Math.round(bmr * activity);
+            
+            calculatedBmr = bmr;
+            calculatedTdee = tdee;
+            
+            document.getElementById('result-bmr').textContent = bmr;
+            document.getElementById('result-tdee').textContent = tdee;
+            document.getElementById('bmr-result').style.display = 'block';
+            document.getElementById('apply-bmr-btn').disabled = false;
+            
+            Utils.toast('BMR计算完成！', 'success');
+        }
+        
+        // 应用计算出的BMR
+        async function applyCalculatedBmr() {
+            if (!calculatedBmr) {
+                Utils.toast('请先计算BMR', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('apply-bmr-btn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner" style="width: 16px; height: 16px;"></span>';
+            
+            try {
+                const result = await API.user.updateProfile({
+                    bmr: calculatedBmr
+                });
+                
+                if (result.success) {
+                    Utils.toast('BMR应用成功！', 'success');
+                    document.getElementById('current-bmr').textContent = `${calculatedBmr} 千卡/天`;
+                    document.getElementById('bmr-input').value = calculatedBmr;
+                } else {
+                    throw new Error(result.message || '应用失败');
+                }
+            } catch (error) {
+                console.error('应用BMR失败:', error);
+                Utils.toast('应用失败，请重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+        
+        // 档案进度条函数
+        async function loadProfileProgress() {
+            const container = document.getElementById('progress-details');
+            const percentElement = document.getElementById('progress-percent');
+            const progressBar = document.querySelector('.progress-bar');
+            
+            container.innerHTML = '<div class="loading"><div class="loading-spinner"></div><span>加载中...</span></div>';
+            
+            try {
+                const response = await fetch(`${API.base}/api/profiling/progress`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const completion = result.profile_completion;
+                    const overall = completion.overall || 0;
+                    
+                    // 更新环形进度条
+                    percentElement.textContent = `${overall}%`;
+                    const circumference = 2 * Math.PI * 54; // r=54
+                    const offset = circumference - (overall / 100) * circumference;
+                    progressBar.style.strokeDashoffset = offset;
+                    
+                    // 更新详细进度
+                    const details = completion.details || {};
+                    const scoreBreakdown = completion.score_breakdown || {};
+                    
+                    let detailsHtml = '<div class="progress-details-list">';
+                    
+                    // 显示基础字段
+                    const baseFields = scoreBreakdown.base_fields || [];
+                    for (const field of baseFields) {
+                        const isCompleted = details[field] || false;
+                        const displayName = {
+                            'age': '年龄',
+                            'gender': '性别',
+                            'height': '身高',
+                            'weight': '体重记录',
+                            'bmr': '基础代谢率'
+                        }[field] || field;
+                        
+                        detailsHtml += `
+                            <div class="progress-item ${isCompleted ? 'completed' : 'pending'}">
+                                <span class="progress-item-name">${displayName}</span>
+                                <span class="progress-item-status ${isCompleted ? 'status-completed' : 'status-pending'}">
+                                    ${isCompleted ? '✓ 已完成' : '○ 待完善'}
+                                </span>
+                            </div>
+                        `;
+                    }
+                    
+                    // 显示其他字段
+                    const otherFields = scoreBreakdown.other_fields || [];
+                    for (const field of otherFields) {
+                        const isCompleted = details[field] || false;
+                        const displayName = {
+                            'diet_preferences': '饮食偏好',
+                            'exercise_habits': '运动习惯'
+                        }[field] || field;
+                        
+                        detailsHtml += `
+                            <div class="progress-item ${isCompleted ? 'completed' : 'pending'}">
+                                <span class="progress-item-name">${displayName}</span>
+                                <span class="progress-item-status ${isCompleted ? 'status-completed' : 'status-pending'}">
+                                    ${isCompleted ? '✓ 已完成' : '○ 待完善'}
+                                </span>
+                            </div>
+                        `;
+                    }
+                    
+                    detailsHtml += '</div>';
+                    container.innerHTML = detailsHtml;
+                    
+                } else {
+                    throw new Error(result.message || '加载失败');
+                }
+            } catch (error) {
+                console.error('加载进度失败:', error);
+                container.innerHTML = '<div class="alert alert-error">加载失败，请刷新重试</div>';
+            }
+        }
+        
+        function goToProfiling() {
+            // 跳转到用户画像收集页面（假设有 profiling.html）
+            window.location.href = 'profiling.html';
+        }
+        
+        // 页面加载时也加载BMR数据和进度
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStyles();
+            loadCurrentConfig();
+            loadProfileProgress();
+        });
+    </script>
+</body>
+</html>

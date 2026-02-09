@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>饮水记录 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .water-page { padding: 20px; max-width: 800px; margin: 0 auto; }
+        .water-card { background: var(--surface); border-radius: var(--border-radius); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow-sm); text-align: center; }
+        .water-icon { font-size: 4rem; margin-bottom: 16px; }
+        .water-amount { font-size: 3rem; font-weight: bold; color: var(--primary-color); margin-bottom: 8px; }
+        .water-goal { color: var(--text-secondary); margin-bottom: 24px; }
+        .water-progress { height: 12px; background: var(--bg-secondary); border-radius: 6px; overflow: hidden; margin-bottom: 24px; }
+        .water-progress-bar { height: 100%; background: linear-gradient(90deg, #3498db, #2980b9); border-radius: 6px; transition: width 0.3s ease; }
+        .water-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .water-btn { display: flex; flex-direction: column; align-items: center; padding: 16px 24px; background: var(--bg-secondary); border: 2px solid transparent; border-radius: var(--border-radius); cursor: pointer; transition: all 0.2s; min-width: 80px; }
+        .water-btn:hover { border-color: var(--primary-color); background: rgba(52, 152, 219, 0.1); }
+        .water-btn .icon { font-size: 1.5rem; margin-bottom: 4px; }
+        .water-btn .amount { font-size: 0.875rem; color: var(--text-secondary); }
+        .history-list { list-style: none; }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--bg-secondary); border-radius: var(--border-radius); margin-bottom: 8px; }
+        .history-item .time { color: var(--text-muted); font-size: 0.875rem; }
+        .history-item .amount { font-weight: 600; color: var(--primary-color); }
+        .empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="page-header">
+            <div class="header-brand">
+                <a href="index.html" class="menu-toggle" style="margin-right: 12px; text-decoration: none; display: flex; align-items: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <span class="header-brand-icon">💧</span>
+                <span>饮水记录</span>
+            </div>
+            <div class="header-actions">
+                <button class="menu-toggle" id="menu-toggle" title="打开菜单"><span></span></button>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info"><div class="user-name">加载中...</div><div class="user-status">在线</div></div>
+                </div>
+                <nav class="sidebar-nav">
+                    <div class="nav-section"><div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li><a href="index.html" class="nav-item"><span class="nav-item-icon">🤖</span><span class="nav-item-text">AI助手</span></a></li>
+                            <li><a href="weight.html" class="nav-item"><span class="nav-item-icon">⚖️</span><span class="nav-item-text">体重记录</span></a></li>
+                            <li><a href="meal.html" class="nav-item"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">饮食记录</span></a></li>
+                            <li><a href="exercise.html" class="nav-item"><span class="nav-item-icon">🏃</span><span class="nav-item-text">运动记录</span></a></li>
+                        </ul>
+                    </div>
+                    <div class="nav-section"><div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li><a href="water.html" class="nav-item active"><span class="nav-item-icon">💧</span><span class="nav-item-text">饮水记录</span></a></li>
+                            <li><a href="sleep.html" class="nav-item"><span class="nav-item-icon">😴</span><span class="nav-item-text">睡眠记录</span></a></li>
+                            <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
+                            <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
+                            <li><a href="calculator.html" class="nav-item"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+                            <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">个人设置</span></a>
+                    <button class="logout-btn" onclick="Auth.logout()"><span>🚪</span><span>退出登录</span></button>
+                </div>
+            </aside>
+
+            <main class="page-main">
+                <div class="water-page">
+                    <div class="water-card">
+                        <div class="water-icon" id="water-icon">💧</div>
+                        <div class="water-amount" id="today-amount">0 ml</div>
+                        <div class="water-goal">目标: 2000 ml</div>
+                        <div class="water-progress">
+                            <div class="water-progress-bar" id="progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div class="water-buttons">
+                            <div class="water-btn" onclick="addWater(200)">
+                                <span class="icon">🥛</span>
+                                <span class="amount">200ml</span>
+                            </div>
+                            <div class="water-btn" onclick="addWater(350)">
+                                <span class="icon">🥤</span>
+                                <span class="amount">350ml</span>
+                            </div>
+                            <div class="water-btn" onclick="addWater(500)">
+                                <span class="icon">🫗</span>
+                                <span class="amount">500ml</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="water-card">
+                        <h3 style="margin-bottom: 16px; color: var(--text-primary);">今日记录</h3>
+                        <ul class="history-list" id="history-list">
+                            <li class="empty-state">
+                                <div class="icon">💧</div>
+                                <div>还没有饮水记录</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components.js"></script>
+    <script>
+        let todayAmount = 0;
+        const GOAL = 2000;
+        let records = [];
+
+        async function init() {
+            if (!Auth.check()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            await loadUserInfo();
+            await loadTodayRecords();
+        }
+
+        async function loadUserInfo() {
+            try {
+                const user = Auth.getUser();
+                if (user) {
+                    document.querySelector('.user-name').textContent = user.nickname || user.name || '用户';
+                    document.querySelector('.user-avatar').textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+                }
+            } catch (error) {
+                console.error('加载用户信息失败:', error);
+            }
+        }
+
+        async function loadTodayRecords() {
+            try {
+                const response = await API.water.getToday();
+                if (response.success) {
+                    records = response.data || [];
+                    todayAmount = response.total || 0;
+                    updateDisplay();
+                }
+            } catch (error) {
+                console.error('加载饮水记录失败:', error);
+            }
+        }
+
+        async function addWater(amount) {
+            try {
+                const response = await API.water.record(amount);
+                if (response.success) {
+                    todayAmount += amount;
+                    records.unshift({
+                        amount: amount,
+                        created_at: new Date().toISOString()
+                    });
+                    updateDisplay();
+                    
+                    // 庆祝动画
+                    if (todayAmount >= GOAL) {
+                        document.getElementById('water-icon').textContent = '🎉';
+                        setTimeout(() => {
+                            document.getElementById('water-icon').textContent = '💧';
+                        }, 2000);
+                    }
+                }
+            } catch (error) {
+                console.error('记录饮水失败:', error);
+                alert('记录失败，请重试');
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('today-amount').textContent = todayAmount + ' ml';
+            const percentage = Math.min((todayAmount / GOAL) * 100, 100);
+            document.getElementById('progress-bar').style.width = percentage + '%';
+            
+            const listEl = document.getElementById('history-list');
+            if (records.length === 0) {
+                listEl.innerHTML = `
+                    <li class="empty-state">
+                        <div class="icon">💧</div>
+                        <div>还没有饮水记录</div>
+                    </li>
+                `;
+            } else {
+                listEl.innerHTML = records.map(r => `
+                    <li class="history-item">
+                        <span class="time">${new Date(r.created_at).toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})}</span>
+                        <span class="amount">+${r.amount}ml</span>
+                    </li>
+                `).join('');
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

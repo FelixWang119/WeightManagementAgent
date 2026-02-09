@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>饮食记录 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .meal-page {
+            padding-bottom: 24px;
+        }
+        
+        /* 今日统计卡片 */
+        .today-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card.calories-card .stat-value {
+            color: var(--meal-color);
+        }
+        
+        /* 上传区域 - 核心功能 */
+        .upload-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .upload-zone {
+            border: 3px dashed var(--border);
+            border-radius: var(--border-radius-lg);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            background: var(--background);
+        }
+        
+        .upload-zone:hover {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.05);
+        }
+        
+        .upload-zone.drag-over {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .upload-zone.has-image {
+            border-style: solid;
+            border-color: var(--success-color);
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+        
+        .upload-text {
+            font-size: 1.125rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .upload-hint {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        
+        .upload-input {
+            display: none;
+        }
+        
+        /* 图片预览 */
+        .image-preview {
+            position: relative;
+            width: 100%;
+            max-height: 400px;
+            overflow: hidden;
+        }
+        
+        .image-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .image-actions {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .image-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        
+        .image-action-btn:hover {
+            background: rgba(0,0,0,0.8);
+            transform: scale(1.1);
+        }
+        
+        /* AI分析结果 */
+        .analysis-result {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .analysis-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .food-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: var(--background);
+            border-radius: var(--border-radius-sm);
+            margin-bottom: 8px;
+        }
+        
+        .food-icon {
+            font-size: 1.5rem;
+            margin-right: 12px;
+        }
+        
+        .food-info {
+            flex: 1;
+        }
+        
+        .food-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .food-detail {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .food-calories {
+            font-weight: 600;
+            color: var(--meal-color);
+        }
+        
+        /* 餐食类型选择 */
+        .meal-type-section {
+            margin-top: 20px;
+        }
+        
+        .meal-type-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        
+        @media (max-width: 480px) {
+            .meal-type-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .meal-type-btn {
+            padding: 16px 12px;
+            border: 2px solid var(--border);
+            border-radius: var(--border-radius);
+            background: var(--surface);
+            cursor: pointer;
+            text-align: center;
+            transition: all var(--transition-fast);
+        }
+        
+        .meal-type-btn:hover {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.05);
+        }
+        
+        .meal-type-btn.active {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        .meal-type-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .meal-type-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        /* 手动输入表单 */
+        .manual-form {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-light);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* 保存按钮 */
+        .save-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 16px;
+            font-size: 1.125rem;
+        }
+        
+        /* 今日记录列表 */
+        .today-records {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .meal-group {
+            margin-bottom: 20px;
+        }
+        
+        .meal-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .meal-group-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .meal-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: var(--background);
+            border-radius: var(--border-radius-sm);
+            margin-bottom: 8px;
+        }
+        
+        .meal-item-image {
+            width: 60px;
+            height: 60px;
+            border-radius: var(--border-radius-sm);
+            object-fit: cover;
+            margin-right: 12px;
+        }
+        
+        .meal-item-content {
+            flex: 1;
+        }
+        
+        .meal-item-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .meal-item-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .meal-item-calories {
+            font-weight: 600;
+            color: var(--meal-color);
+            font-size: 1.125rem;
+        }
+        
+        /* 加载状态 */
+        .analyzing-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+        
+        .analyzing-text {
+            color: var(--text-secondary);
+            font-size: 1.125rem;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- 顶部导航 -->
+        <header class="page-header">
+            <div class="header-brand">
+                <button class="menu-toggle" onclick="history.back()" style="margin-right: 12px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <span class="header-brand-icon">🍽️</span>
+                <span>饮食记录</span>
+            </div>
+            <div class="header-actions">
+                <button class="menu-toggle" id="menu-toggle" title="打开菜单">
+                    <span></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 页面内容 -->
+        <div class="page-content">
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+            
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info">
+                        <div class="user-name">加载中...</div>
+                        <div class="user-status">在线</div>
+                    </div>
+                </div>
+                
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li><a href="index.html" class="nav-item"><span class="nav-item-icon">🤖</span><span class="nav-item-text">AI助手</span></a></li>
+                            <li><a href="weight.html" class="nav-item"><span class="nav-item-icon">⚖️</span><span class="nav-item-text">体重记录</span></a></li>
+                            <li><a href="meal.html" class="nav-item active"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">饮食记录</span></a></li>
+                            <li><a href="exercise.html" class="nav-item"><span class="nav-item-icon">🏃</span><span class="nav-item-text">运动记录</span></a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="nav-section">
+                        <div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li><a href="water.html" class="nav-item"><span class="nav-item-icon">💧</span><span class="nav-item-text">饮水记录</span></a></li>
+                            <li><a href="sleep.html" class="nav-item"><span class="nav-item-icon">😴</span><span class="nav-item-text">睡眠记录</span></a></li>
+                            <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
+                            <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
+                            <li><a href="calculator.html" class="nav-item"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+                            <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">个人设置</span></a>
+                    <button class="logout-btn" onclick="Auth.logout()">
+                        <span>🚪</span>
+                        <span>退出登录</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- 主内容区 -->
+            <main class="page-main">
+                <div class="meal-page">
+                    <!-- 今日统计 -->
+                    <div class="today-stats">
+                        <div class="stat-card calories-card">
+                            <div class="stat-value" id="today-calories">0</div>
+                            <div class="stat-label">今日摄入(千卡)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="remaining-calories">--</div>
+                            <div class="stat-label">剩余可摄入</div>
+                        </div>
+                    </div>
+
+                    <!-- 照片上传区域 - 核心功能 -->
+                    <div class="upload-section">
+                        <h3 class="section-title">📸 拍照记录餐食</h3>
+                        
+                        <div class="upload-zone" id="upload-zone">
+                            <div class="upload-placeholder" id="upload-placeholder">
+                                <div class="upload-icon">📷</div>
+                                <div class="upload-text">点击或拖拽上传餐食照片</div>
+                                <div class="upload-hint">支持 JPG、PNG 格式，AI将自动识别食物</div>
+                            </div>
+                            <div class="image-preview" id="image-preview" style="display: none;">
+                                <img id="preview-img" src="" alt="餐食预览">
+                                <div class="image-actions">
+                                    <button class="image-action-btn" onclick="clearImage()" title="删除">✕</button>
+                                </div>
+                                <div class="analyzing-overlay" id="analyzing-overlay" style="display: none;">
+                                    <div class="loading-spinner lg"></div>
+                                    <div class="analyzing-text">🤖 AI正在分析食物...</div>
+                                </div>
+                            </div>
+                            <input type="file" id="file-input" class="upload-input" accept="image/*" capture="environment">
+                        </div>
+
+                        <!-- 餐食类型选择 -->
+                        <div class="meal-type-section">
+                            <label class="form-label">选择餐食类型</label>
+                            <div class="meal-type-grid">
+                                <button type="button" class="meal-type-btn active" data-type="breakfast">
+                                    <span class="meal-type-icon">🌅</span>
+                                    <span class="meal-type-label">早餐</span>
+                                </button>
+                                <button type="button" class="meal-type-btn" data-type="lunch">
+                                    <span class="meal-type-icon">☀️</span>
+                                    <span class="meal-type-label">午餐</span>
+                                </button>
+                                <button type="button" class="meal-type-btn" data-type="dinner">
+                                    <span class="meal-type-icon">🌙</span>
+                                    <span class="meal-type-label">晚餐</span>
+                                </button>
+                                <button type="button" class="meal-type-btn" data-type="snack">
+                                    <span class="meal-type-icon">🍿</span>
+                                    <span class="meal-type-label">加餐</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- AI分析结果 -->
+                        <div class="analysis-result" id="analysis-result" style="display: none;">
+                            <div class="analysis-header">
+                                <span>🤖</span>
+                                <span>AI识别结果</span>
+                            </div>
+                            <div id="food-list">
+                                <!-- 动态生成 -->
+                            </div>
+                        </div>
+
+                        <!-- 手动补充表单 -->
+                        <div class="manual-form">
+                            <div class="form-group">
+                                <label class="form-label">食物描述（可选）</label>
+                                <textarea id="meal-note" class="form-textarea" rows="2" placeholder="补充说明，例如：少油、去皮的..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 保存按钮 -->
+                        <button class="btn btn-primary btn-lg save-btn" id="save-btn" onclick="saveMeal()">
+                            💾 保存记录
+                        </button>
+                    </div>
+
+                    <!-- 今日记录 -->
+                    <div class="today-records">
+                        <h3 class="section-title">📋 今日记录</h3>
+                        <div id="today-meals">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 脚本 -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components.js"></script>
+    <script>
+        // 全局状态
+        let selectedImage = null;
+        let analyzedFoods = [];
+        let selectedMealType = 'breakfast';
+        
+        // 餐食类型名称映射
+        const mealTypeNames = {
+            breakfast: '早餐',
+            lunch: '午餐',
+            dinner: '晚餐',
+            snack: '加餐'
+        };
+        
+        const mealTypeIcons = {
+            breakfast: '🌅',
+            lunch: '☀️',
+            dinner: '🌙',
+            snack: '🍿'
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+        // 检查登录状态
+        if (!Auth.check()) {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // 加载用户信息
+        const user = Auth.getUser();
+        if (user) {
+            const userNameEl = document.querySelector('.user-name');
+            const userAvatarEl = document.querySelector('.user-avatar');
+            if (userNameEl) userNameEl.textContent = user.nickname || user.name || '用户';
+            if (userAvatarEl) userAvatarEl.textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+        }
+
+            initUploadZone();
+            initMealTypeButtons();
+            loadTodayMeals();
+        });
+        
+        // 初始化上传区域
+        function initUploadZone() {
+            const zone = document.getElementById('upload-zone');
+            const input = document.getElementById('file-input');
+            
+            // 点击上传
+            zone.addEventListener('click', (e) => {
+                if (e.target.closest('.image-action-btn')) return;
+                input.click();
+            });
+            
+            // 文件选择
+            input.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleImageSelect(e.target.files[0]);
+                }
+            });
+            
+            // 拖拽上传
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+            
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+            
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type.startsWith('image/')) {
+                    handleImageSelect(files[0]);
+                }
+            });
+        }
+        
+        // 处理图片选择
+        function handleImageSelect(file) {
+            selectedImage = file;
+            
+            // 显示预览
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('preview-img').src = e.target.result;
+                document.getElementById('upload-placeholder').style.display = 'none';
+                document.getElementById('image-preview').style.display = 'block';
+                document.getElementById('upload-zone').classList.add('has-image');
+            };
+            reader.readAsDataURL(file);
+            
+            // AI分析
+            analyzeImage(file);
+        }
+        
+        // AI分析图片 - 调用真实后端API
+        async function analyzeImage(file) {
+            const overlay = document.getElementById('analyzing-overlay');
+            overlay.style.display = 'flex';
+            
+            try {
+                // 构建FormData
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('meal_type', selectedMealType);
+                
+                // 调用后端AI分析API
+                const response = await fetch(`${API.base}/api/meal/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'AI分析失败');
+                }
+                
+                // 获取AI分析结果
+                const aiAnalysis = result.data.ai_analysis;
+                
+                if (aiAnalysis && aiAnalysis.foods && aiAnalysis.foods.length > 0) {
+                    // 转换为前端需要的格式
+                    analyzedFoods = aiAnalysis.foods.map(food => ({
+                        name: food.name,
+                        amount: food.amount,
+                        calories: food.calories,
+                        icon: food.icon || '🍽️'
+                    }));
+                    
+                    displayAnalysisResult(analyzedFoods, aiAnalysis.suggestions);
+                    Utils.toast(`AI识别成功：共${analyzedFoods.length}种食物`, 'success');
+                } else {
+                    throw new Error('AI未能识别出食物');
+                }
+                
+            } catch (error) {
+                console.error('AI分析失败:', error);
+                Utils.toast(error.message || 'AI分析失败，请手动输入', 'error');
+                
+                // 显示手动输入提示
+                document.getElementById('analysis-result').style.display = 'none';
+            } finally {
+                overlay.style.display = 'none';
+            }
+        }
+        
+        // 显示分析结果
+        function displayAnalysisResult(foods, suggestions) {
+            const container = document.getElementById('food-list');
+            const resultSection = document.getElementById('analysis-result');
+            
+            const totalCalories = foods.reduce((sum, f) => sum + f.calories, 0);
+            
+            let html = foods.map(food => `
+                <div class="food-item">
+                    <span class="food-icon">${food.icon}</span>
+                    <div class="food-info">
+                        <div class="food-name">${food.name}</div>
+                        <div class="food-detail">${food.amount}</div>
+                    </div>
+                    <div class="food-calories">${food.calories} kcal</div>
+                </div>
+            `).join('');
+            
+            // 添加总计
+            html += `
+                <div class="food-item" style="background: rgba(243, 156, 18, 0.1); margin-top: 12px;">
+                    <span class="food-icon">🔥</span>
+                    <div class="food-info">
+                        <div class="food-name" style="font-weight: 600;">预估总热量</div>
+                    </div>
+                    <div class="food-calories" style="font-size: 1.25rem;">${totalCalories} kcal</div>
+                </div>
+            `;
+            
+            // 添加AI建议
+            if (suggestions) {
+                html += `
+                    <div class="food-item" style="background: rgba(52, 152, 219, 0.08); margin-top: 8px;">
+                        <span class="food-icon">💡</span>
+                        <div class="food-info">
+                            <div class="food-name" style="font-size: 0.875rem; color: var(--text-secondary);">${suggestions}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+            resultSection.style.display = 'block';
+        }
+        
+        // 清除图片
+        function clearImage() {
+            selectedImage = null;
+            analyzedFoods = [];
+            
+            document.getElementById('file-input').value = '';
+            document.getElementById('upload-placeholder').style.display = 'block';
+            document.getElementById('image-preview').style.display = 'none';
+            document.getElementById('analysis-result').style.display = 'none';
+            document.getElementById('upload-zone').classList.remove('has-image');
+        }
+        
+        // 初始化餐食类型按钮
+        function initMealTypeButtons() {
+            document.querySelectorAll('.meal-type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.meal-type-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedMealType = btn.dataset.type;
+                });
+            });
+        }
+        
+        // 保存记录 - 调用真实API
+        async function saveMeal() {
+            if (!selectedImage && analyzedFoods.length === 0) {
+                Utils.toast('请先上传餐食照片', 'warning');
+                return;
+            }
+            
+            // 调试：显示当前选择的餐食类型
+            console.log('当前选择的餐食类型:', selectedMealType);
+            console.log('餐食类型名称:', mealTypeNames[selectedMealType]);
+            
+            // 确认餐食类型
+            const confirmMessage = `确认保存为【${mealTypeNames[selectedMealType]}】吗？\n\n如果类型不对，请先点击上方的餐食类型按钮切换。`;
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+            
+            const btn = document.getElementById('save-btn');
+            const note = document.getElementById('meal-note').value;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner" style="width: 16px; height: 16px; border-color: rgba(255,255,255,0.3); border-top-color: white;"></span> 保存中...';
+            
+            try {
+                // 构造食物描述
+                const content = analyzedFoods.length > 0 
+                    ? analyzedFoods.map(f => `${f.name}(${f.amount})`).join('、')
+                    : note || '餐食记录';
+                
+                const calories = analyzedFoods.reduce((sum, f) => sum + f.calories, 0);
+                
+                console.log('发送请求:', { mealType: selectedMealType, content, calories });
+                
+                // 调用真实API保存
+                const response = await API.meal.record({
+                    mealType: selectedMealType,
+                    foodName: content,
+                    calories: calories,
+                    note: note
+                });
+                
+                console.log('保存响应:', response);
+                
+                if (!response.success) {
+                    throw new Error(response.message || '保存失败');
+                }
+                
+                Utils.toast('餐食记录成功！', 'success');
+                
+                // 清空表单
+                clearImage();
+                document.getElementById('meal-note').value = '';
+                analyzedFoods = [];
+                
+                // 刷新今日记录
+                loadTodayMeals();
+                
+            } catch (error) {
+                console.error('保存失败:', error);
+                Utils.toast(error.message || '保存失败，请重试', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '💾 保存记录';
+            }
+        }
+        
+        // 加载今日记录
+        async function loadTodayMeals() {
+            const container = document.getElementById('today-meals');
+            
+            try {
+                // 调用真实API获取今日记录
+                const response = await API.meal.getToday();
+                
+                if (!response.success) {
+                    throw new Error(response.message || '加载失败');
+                }
+                
+                const meals = response.data || [];
+                
+                if (meals.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🍽️</div>
+                            <div class="empty-state-title">今日暂无记录</div>
+                            <div class="empty-state-desc">上传第一张照片开始记录吧</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 按餐食类型分组
+                const grouped = {};
+                meals.forEach(meal => {
+                    if (!grouped[meal.meal_type]) {
+                        grouped[meal.meal_type] = [];
+                    }
+                    grouped[meal.meal_type].push(meal);
+                });
+                
+                // 渲染
+                let totalCalories = 0;
+                container.innerHTML = Object.entries(grouped).map(([type, items]) => {
+                    const groupCalories = items.reduce((sum, m) => sum + (m.total_calories || m.calories || 0), 0);
+                    totalCalories += groupCalories;
+                    
+                    return `
+                        <div class="meal-group">
+                            <div class="meal-group-title">
+                                <span>${mealTypeIcons[type]}</span>
+                                <span>${mealTypeNames[type]}</span>
+                                <span style="margin-left: auto; color: var(--meal-color);">${groupCalories} kcal</span>
+                            </div>
+                                ${items.map(meal => {
+                                    const recordTime = new Date(meal.record_time || meal.created_at);
+                                    const timeStr = recordTime.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'});
+                                    return `
+                                <div class="meal-item">
+                                    ${meal.photo_url ? `<img src="${meal.photo_url}" class="meal-item-image" alt="餐食">` : '<div style="width: 60px; height: 60px; background: var(--background); border-radius: var(--border-radius-sm); margin-right: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">🍽️</div>'}
+                                    <div class="meal-item-content">
+                                        <div class="meal-item-name">${meal.food_items && meal.food_items[0] ? meal.food_items[0].name : meal.content}</div>
+                                        <div class="meal-item-time">${timeStr}</div>
+                                    </div>
+                                    <div class="meal-item-calories">${meal.total_calories || meal.calories}</div>
+                                </div>
+                            `}).join('')}
+                        </div>
+                    `;
+                }).join('');
+                
+                // 更新统计 - 使用API返回的总热量
+                const apiTotalCalories = response.total_calories || totalCalories;
+                document.getElementById('today-calories').textContent = apiTotalCalories;
+                const target = 2000; // 目标热量
+                const remaining = target - apiTotalCalories;
+                document.getElementById('remaining-calories').textContent = remaining > 0 ? remaining : 0;
+                document.getElementById('remaining-calories').style.color = remaining < 0 ? 'var(--error-color)' : 'var(--success-color)';
+                
+            } catch (error) {
+                console.error('加载今日记录失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>

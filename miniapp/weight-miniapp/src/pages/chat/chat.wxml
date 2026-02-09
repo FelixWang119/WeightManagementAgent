@@ -1,0 +1,68 @@
+<!-- 对话页面 -->
+<view class="chat-container">
+  <!-- 聊天记录 -->
+  <scroll-view class="messages-scroll" scroll-y scroll-into-view="{{scrollIntoView}}" scroll-with-animation>
+    <view class="message-list">
+      <!-- 助手欢迎消息 -->
+      <view wx:if="{{messages.length === 0}}" class="welcome-card">
+        <text class="welcome-title">👋 你好，我是{{agentName}}</text>
+        <text class="welcome-desc">我可以帮你记录体重、分析饮食、制定计划，有什么需要帮助的吗？</text>
+      </view>
+      
+      <!-- 消息列表 -->
+      <view wx:for="{{messages}}" wx:key="id" wx:for-item="msg" class="message-item" id="msg-{{msg.id}}">
+        <!-- 用户消息 -->
+        <view wx:if="{{msg.role === 'user'}}" class="message-user">
+          <text class="message-content-user">{{msg.content}}</text>
+          <text class="message-time">{{msg.time}}</text>
+        </view>
+        
+        <!-- 助手消息 -->
+        <view wx:if="{{msg.role === 'assistant'}}" class="message-assistant">
+          <view class="assistant-info">
+            <text class="assistant-name">{{agentName}}</text>
+            <text class="message-time">{{msg.time}}</text>
+          </view>
+          <text class="message-content-assistant">{{msg.content}}</text>
+        </view>
+      </view>
+      
+      <!-- 正在输入中 -->
+      <view wx:if="{{isTyping}}" class="typing-indicator">
+        <text class="typing-text">{{agentName}}正在思考中</text>
+        <view class="dots">
+          <text class="dot">.</text>
+          <text class="dot">.</text>
+          <text class="dot">.</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+  
+  <!-- 快捷提示 -->
+  <view wx:if="{{showQuickTips}}" class="quick-tips">
+    <text class="quick-tip-btn" bindtap="sendQuickTip" data-tip="我今天吃了什么？">今天吃了什么</text>
+    <text class="quick-tip-btn" bindtap="sendQuickTip" data-tip="给我一些运动建议">运动建议</text>
+    <text class="quick-tip-btn" bindtap="sendQuickTip" data-tip="我今天的饮食健康吗？">饮食分析</text>
+  </view>
+  
+  <!-- 输入框 -->
+  <view class="input-bar">
+    <textarea 
+      class="input-field" 
+      placeholder="输入信息..."
+      bindinput="onInput"
+      value="{{inputValue}}"
+      maxlength="500"
+      adjust-position="true"
+    />
+    <button 
+      class="send-btn" 
+      bindtap="sendMessage" 
+      disabled="{{!inputValue.trim() || isSending}}"
+      loading="{{isSending}}"
+    >
+      发送
+    </button>
+  </view>
+</view>

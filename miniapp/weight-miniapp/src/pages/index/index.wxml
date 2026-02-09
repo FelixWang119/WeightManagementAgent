@@ -1,0 +1,109 @@
+<!-- 首页 - 数据总览 -->
+<view class="container">
+  <!-- 用户信息卡片 -->
+  <view class="user-card">
+    <view class="user-info">
+      <image class="avatar" src="{{userInfo.avatar || '/assets/default-avatar.png'}}" />
+      <view class="user-detail">
+        <text class="nickname">{{userInfo.nickname || '用户'}}</text>
+        <text class="slogan">{{agentName}}陪你一起变健康</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 今日数据概览 -->
+  <view class="card">
+    <view class="card-title">
+      <text class="card-title-icon">📊</text>
+      <text>今日概览</text>
+    </view>
+    
+    <view class="stats-grid">
+      <view class="stat-item" bindtap="goToWeight">
+        <text class="stat-value {{weightChange < 0 ? 'text-success' : ''}}">{{todayData.weight || '--'}}</text>
+        <text class="stat-label">体重(kg)</text>
+        <text class="stat-change" wx:if="{{weightChange}}">{{weightChange > 0 ? '+' : ''}}{{weightChange}}</text>
+      </view>
+      
+      <view class="stat-item" bindtap="goToMeal">
+        <text class="stat-value">{{todayData.calories || 0}}</text>
+        <text class="stat-label">摄入(千卡)</text>
+      </view>
+      
+      <view class="stat-item" bindtap="goToExercise">
+        <text class="stat-value">{{todayData.exerciseMinutes || 0}}</text>
+        <text class="stat-label">运动(分钟)</text>
+      </view>
+      
+      <view class="stat-item" bindtap="goToWater">
+        <text class="stat-value {{waterProgress >= 100 ? 'text-success' : ''}}">{{todayData.water || 0}}</text>
+        <text class="stat-label">饮水(ml)</text>
+        <progress percent="{{waterProgress}}" stroke-width="4" color="#3498db" class="water-progress" />
+      </view>
+    </view>
+  </view>
+
+  <!-- 快捷操作 -->
+  <view class="card">
+    <view class="card-title">
+      <text class="card-title-icon">⚡</text>
+      <text>快捷记录</text>
+    </view>
+    
+    <view class="quick-actions">
+      <view class="action-btn" bindtap="quickRecord" data-type="weight">
+        <text class="action-icon">⚖️</text>
+        <text class="action-text">记体重</text>
+      </view>
+      <view class="action-btn" bindtap="quickRecord" data-type="meal">
+        <text class="action-icon">🍽️</text>
+        <text class="action-text">记餐食</text>
+      </view>
+      <view class="action-btn" bindtap="quickRecord" data-type="water">
+        <text class="action-icon">💧</text>
+        <text class="action-text">记饮水</text>
+      </view>
+      <view class="action-btn" bindtap="quickRecord" data-type="exercise">
+        <text class="action-icon">🏃</text>
+        <text class="action-text">记运动</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 本周目标进度 -->
+  <view class="card" wx:if="{{weeklyGoal}}">
+    <view class="card-title">
+      <text class="card-title-icon">🎯</text>
+      <text>本周目标</text>
+    </view>
+    
+    <view class="goal-item">
+      <text class="goal-label">减重目标</text>
+      <view class="goal-progress">
+        <progress percent="{{goalProgress}}" stroke-width="8" color="#3498db" />
+        <text class="goal-text">{{weeklyGoal.current}} / {{weeklyGoal.target}} kg</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最新周报 -->
+  <view class="card" wx:if="{{latestReport}}">
+    <view class="card-title">
+      <text class="card-title-icon">📈</text>
+      <text>最新周报</text>
+      <text class="view-more" bindtap="viewReport">查看 ></text>
+    </view>
+    
+    <view class="report-preview">
+      <text class="report-summary">{{latestReport.summary}}</text>
+      <view class="report-highlights">
+        <view class="highlight-tag" wx:for="{{latestReport.highlights}}" wx:key="index">
+          {{item}}
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部占位 -->
+  <view style="height: 40rpx;"></view>
+</view>

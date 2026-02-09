@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据报告 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .report-page {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .report-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        /* 图表容器 */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 24px;
+        }
+        
+        .chart-container.pie {
+            height: 250px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* 控制面板 */
+        .controls {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .btn-group .btn {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+        }
+        
+        /* 数据表格 */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        
+        .data-table th {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover {
+            background: var(--background);
+        }
+        
+        /* 状态标签 */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-deficit {
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--success-color);
+        }
+        
+        .status-surplus {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+        }
+        
+        .status-maintenance {
+            background: rgba(241, 196, 15, 0.1);
+            color: var(--warning-color);
+        }
+        
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(52, 152, 219, 0.3);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        /* 颜色说明 */
+        .color-legend {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .color-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="page-header">
+            <div class="header-brand">
+                <button class="menu-toggle" onclick="history.back()" style="margin-right: 12px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <span class="header-brand-icon">📊</span>
+                <span>数据报告</span>
+            </div>
+            <div class="header-actions">
+                <button class="menu-toggle" id="menu-toggle" title="打开菜单"><span></span></button>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info"><div class="user-name">加载中...</div><div class="user-status">在线</div></div>
+                </div>
+                <nav class="sidebar-nav">
+                    <div class="nav-section"><div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li><a href="index.html" class="nav-item"><span class="nav-item-icon">🤖</span><span class="nav-item-text">AI助手</span></a></li>
+                            <li><a href="weight.html" class="nav-item"><span class="nav-item-icon">⚖️</span><span class="nav-item-text">体重记录</span></a></li>
+                            <li><a href="meal.html" class="nav-item"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">饮食记录</span></a></li>
+                            <li><a href="exercise.html" class="nav-item"><span class="nav-item-icon">🏃</span><span class="nav-item-text">运动记录</span></a></li>
+                        </ul>
+                    </div>
+                                        <div class="nav-section"><div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li><a href="water.html" class="nav-item"><span class="nav-item-icon">💧</span><span class="nav-item-text">饮水记录</span></a></li>
+                            <li><a href="sleep.html" class="nav-item"><span class="nav-item-icon">😴</span><span class="nav-item-text">睡眠记录</span></a></li>
+                            <li><a href="report.html" class="nav-item active"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
+                            <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
+                            <li><a href="calculator.html" class="nav-item"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+                            <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">个人设置</span></a>
+                    <button class="logout-btn" onclick="Auth.logout()"><span>🚪</span><span>退出登录</span></button>
+                </div>
+            </aside>
+
+            <main class="page-main">
+                <div class="report-page">
+                    <!-- 控制面板 -->
+                    <div class="report-section">
+                        <h2 class="section-title">📈 热量平衡分析</h2>
+                        <div class="controls">
+                            <div class="control-group">
+                                <span class="control-label">时间范围：</span>
+                                <div class="btn-group">
+                                    <button class="btn btn-primary" onclick="setChartType('daily')">最近7天</button>
+                                    <button class="btn btn-secondary" onclick="setChartType('weekly')">最近4周</button>
+                                    <button class="btn btn-secondary" onclick="setChartType('monthly')">最近3月</button>
+                                </div>
+                            </div>
+                            
+                            <div class="control-group">
+                                <span class="control-label">图表类型：</span>
+                                <div class="btn-group">
+                                    <button class="btn btn-primary" onclick="loadBalanceChart()">热量平衡图</button>
+                                    <button class="btn btn-secondary" onclick="loadDistributionChart()">热量分布图</button>
+                                </div>
+                            </div>
+                            
+                            <div class="control-group">
+                                <button class="btn btn-secondary" onclick="refreshAllData()">
+                                    🔄 刷新数据
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="color-legend">
+                            <div class="color-item">
+                                <span class="color-dot" style="background-color: rgba(255, 99, 132, 0.8);"></span>
+                                <span>热量摄入</span>
+                            </div>
+                            <div class="color-item">
+                                <span class="color-dot" style="background-color: rgba(54, 162, 235, 0.8);"></span>
+                                <span>热量消耗</span>
+                            </div>
+                            <div class="color-item">
+                                <span class="color-dot" style="background-color: rgba(75, 192, 192, 0.8);"></span>
+                                <span>热量平衡</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 统计卡片 -->
+                    <div class="report-section">
+                        <h2 class="section-title">📊 统计数据</h2>
+                        <div class="stats-grid" id="stats-grid">
+                            <div class="loading">
+                                <div class="loading-spinner"></div>
+                                <span>加载统计...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 主图表 -->
+                    <div class="report-section">
+                        <h2 class="section-title" id="chart-title">📈 每日热量平衡</h2>
+                        <div class="chart-container">
+                            <canvas id="main-chart"></canvas>
+                        </div>
+                        <div id="chart-summary" style="margin-top: 16px; font-size: 0.875rem; color: var(--text-secondary);">
+                            <!-- 动态加载图表摘要 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 分布图表 -->
+                    <div class="report-section">
+                        <h2 class="section-title">🥗 热量分布</h2>
+                        <div class="charts-grid">
+                            <div>
+                                <h3 style="font-size: 1rem; margin-bottom: 12px; color: var(--text-primary);">热量摄入分布</h3>
+                                <div class="chart-container pie">
+                                    <canvas id="intake-pie-chart"></canvas>
+                                </div>
+                                <div id="intake-summary" style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary);">
+                                    <!-- 摄入分布摘要 -->
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 style="font-size: 1rem; margin-bottom: 12px; color: var(--text-primary);">热量消耗分布</h3>
+                                <div class="chart-container pie">
+                                    <canvas id="exercise-pie-chart"></canvas>
+                                </div>
+                                <div id="exercise-summary" style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary);">
+                                    <!-- 消耗分布摘要 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 详细数据 -->
+                    <div class="report-section">
+                        <h2 class="section-title">📝 每日详细数据</h2>
+                        <div class="data-table-container">
+                            <table class="data-table" id="daily-data-table">
+                                <thead>
+                                    <tr>
+                                        <th>日期</th>
+                                        <th>热量摄入</th>
+                                        <th>基础消耗</th>
+                                        <th>运动消耗</th>
+                                        <th>总消耗</th>
+                                        <th>热量平衡</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="daily-data-body">
+                                    <tr>
+                                        <td colspan="7" style="text-align: center; padding: 40px;">
+                                            <div class="loading">
+                                                <div class="loading-spinner"></div>
+                                                <span>加载数据...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components.js"></script>
+    <script>
+        // 全局变量
+        let currentChartType = 'daily';  // daily, weekly, monthly
+        let currentView = 'balance';     // balance, distribution
+        let mainChart = null;
+        let intakePieChart = null;
+        let exercisePieChart = null;
+        
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', () => {
+        // 检查登录状态
+        if (!Auth.check()) {
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // 加载用户信息
+        const user = Auth.getUser();
+        if (user) {
+            const userNameEl = document.querySelector('.user-name');
+            const userAvatarEl = document.querySelector('.user-avatar');
+            if (userNameEl) userNameEl.textContent = user.nickname || user.name || '用户';
+            if (userAvatarEl) userAvatarEl.textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+        }
+
+            loadAllData();
+        });
+        
+        // 设置图表类型
+        function setChartType(type) {
+            currentChartType = type;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.btn-group .btn').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            });
+            
+            // 激活当前按钮
+            const buttons = document.querySelectorAll('.btn-group .btn');
+            if (type === 'daily') buttons[0].classList.add('btn-primary');
+            else if (type === 'weekly') buttons[1].classList.add('btn-primary');
+            else if (type === 'monthly') buttons[2].classList.add('btn-primary');
+            
+            // 重新加载数据
+            if (currentView === 'balance') {
+                loadBalanceChart();
+            } else {
+                loadDistributionChart();
+            }
+        }
+        
+        // 加载平衡图表
+        async function loadBalanceChart() {
+            currentView = 'balance';
+            
+            // 更新按钮状态
+            document.querySelectorAll('.btn-group .btn')[3].classList.add('btn-primary');
+            document.querySelectorAll('.btn-group .btn')[4].classList.remove('btn-primary');
+            
+            document.getElementById('chart-title').textContent = 
+                `${getChartTypeName()}热量平衡`;
+            
+            try {
+                const response = await fetch(
+                    `${API.base}/api/calories/balance/chart?chart_type=${currentChartType}`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderMainChart(result);
+                    updateChartSummary(result.summary);
+                    loadDailyData();
+                } else {
+                    throw new Error(result.message || '加载图表数据失败');
+                }
+            } catch (error) {
+                console.error('加载平衡图表失败:', error);
+                showChartError('加载图表数据失败，请重试');
+            }
+        }
+        
+        // 加载分布图表
+        async function loadDistributionChart() {
+            currentView = 'distribution';
+            
+            // 更新按钮状态
+            document.querySelectorAll('.btn-group .btn')[3].classList.remove('btn-primary');
+            document.querySelectorAll('.btn-group .btn')[4].classList.add('btn-primary');
+            
+            document.getElementById('chart-title').textContent = 
+                `${getChartTypeName()}热量分布`;
+            
+            try {
+                const response = await fetch(
+                    `${API.base}/api/calories/balance/distribution?days=${getDaysFromChartType()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderDistributionCharts(result);
+                    loadDailyData();
+                } else {
+                    throw new Error(result.message || '加载分布数据失败');
+                }
+            } catch (error) {
+                console.error('加载分布图表失败:', error);
+                showChartError('加载分布数据失败，请重试');
+            }
+        }
+        
+        // 获取图表类型名称
+        function getChartTypeName() {
+            const names = {
+                'daily': '每日',
+                'weekly': '每周', 
+                'monthly': '每月'
+            };
+            return names[currentChartType] || '每日';
+        }
+        
+        // 根据图表类型获取天数
+        function getDaysFromChartType() {
+            const daysMap = {
+                'daily': 7,
+                'weekly': 28,
+                'monthly': 90
+            };
+            return daysMap[currentChartType] || 7;
+        }
+        
+        // 渲染主图表（平衡图）
+        function renderMainChart(chartData) {
+            const ctx = document.getElementById('main-chart').getContext('2d');
+            
+            // 销毁现有图表
+            if (mainChart) {
+                mainChart.destroy();
+            }
+            
+            // 创建新图表
+            mainChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: chartData.datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '热量 (千卡)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += context.parsed.y + ' 千卡';
+                                    return label;
+                                }
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 渲染分布图表
+        function renderDistributionCharts(distributionData) {
+            // 销毁现有饼图
+            if (intakePieChart) intakePieChart.destroy();
+            if (exercisePieChart) exercisePieChart.destroy();
+            
+            // 渲染摄入分布饼图
+            const intakeCtx = document.getElementById('intake-pie-chart').getContext('2d');
+            intakePieChart = new Chart(intakeCtx, {
+                type: 'pie',
+                data: distributionData.intake_distribution.chart_data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value}千卡 (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 更新摄入摘要
+            const intakeSummary = document.getElementById('intake-summary');
+            const intakeTotal = distributionData.intake_distribution.total;
+            const intakeItems = distributionData.intake_distribution.data.length;
+            intakeSummary.innerHTML = `总计: ${intakeTotal}千卡 | ${intakeItems}种餐食类型`;
+            
+            // 渲染消耗分布饼图
+            const exerciseCtx = document.getElementById('exercise-pie-chart').getContext('2d');
+            exercisePieChart = new Chart(exerciseCtx, {
+                type: 'pie',
+                data: distributionData.exercise_distribution.chart_data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value}千卡 (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 更新消耗摘要
+            const exerciseSummary = document.getElementById('exercise-summary');
+            const exerciseTotal = distributionData.exercise_distribution.total;
+            const exerciseItems = distributionData.exercise_distribution.data.length;
+            exerciseSummary.innerHTML = `总计: ${exerciseTotal}千卡 | ${exerciseItems}种运动类型`;
+            
+            // 如果没有主图表，显示一个简单的柱状图
+            if (!mainChart) {
+                loadBalanceChart();
+            }
+        }
+        
+        // 更新图表摘要
+        function updateChartSummary(summary) {
+            const container = document.getElementById('chart-summary');
+            
+            let html = `
+                <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                    <div>📊 平均摄入: <strong>${summary.avg_daily_intake}</strong> 千卡/天</div>
+                    <div>🔥 平均消耗: <strong>${summary.avg_daily_burned}</strong> 千卡/天</div>
+                    <div>⚖️ 净平衡: <strong>${summary.net_balance > 0 ? '+' : ''}${summary.net_balance}</strong> 千卡</div>
+                </div>
+                <div style="margin-top: 8px;">
+                    趋势: <strong>${getTrendText(summary.weekly_trend)}</strong> | 
+                    赤字天数: <strong>${summary.deficit_days}</strong> | 
+                    盈余天数: <strong>${summary.surplus_days}</strong>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+        
+        // 获取趋势文本
+        function getTrendText(trend) {
+            const texts = {
+                'increasing': '上升',
+                'decreasing': '下降', 
+                'stable': '稳定'
+            };
+            return texts[trend] || '稳定';
+        }
+        
+        // 加载每日数据表格
+        async function loadDailyData() {
+            try {
+                const response = await fetch(
+                    `${API.base}/api/calories/balance/daily?days=${getDaysFromChartType()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderDailyDataTable(result.daily_data);
+                    updateStatsGrid(result.summary, result.user_stats);
+                }
+            } catch (error) {
+                console.error('加载每日数据失败:', error);
+            }
+        }
+        
+        // 渲染每日数据表格
+        function renderDailyDataTable(dailyData) {
+            const tbody = document.getElementById('daily-data-body');
+            
+            if (!dailyData || dailyData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            📊 暂无数据，请先记录饮食和运动~
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = dailyData.map(day => {
+                const statusClass = {
+                    'deficit': 'status-deficit',
+                    'surplus': 'status-surplus',
+                    'maintenance': 'status-maintenance'
+                }[day.status] || 'status-maintenance';
+                
+                const statusText = {
+                    'deficit': '赤字',
+                    'surplus': '盈余',
+                    'maintenance': '平衡'
+                }[day.status] || '平衡';
+                
+                const balanceClass = day.balance > 0 ? 'text-success' : 
+                                   day.balance < 0 ? 'text-danger' : '';
+                
+                return `
+                    <tr>
+                        <td>${day.date_display}${day.is_today ? ' (今日)' : ''}</td>
+                        <td>${day.intake.toLocaleString()}</td>
+                        <td>${day.base_burned.toLocaleString()}</td>
+                        <td>${day.exercise_burned.toLocaleString()}</td>
+                        <td>${day.total_burned.toLocaleString()}</td>
+                        <td class="${balanceClass}">${day.balance > 0 ? '+' : ''}${day.balance.toLocaleString()}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // 更新统计网格
+        function updateStatsGrid(summary, userStats) {
+            const container = document.getElementById('stats-grid');
+            
+            container.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--primary-color);">
+                        ${summary.avg_daily_intake.toLocaleString()}
+                    </div>
+                    <div class="stat-label">平均每日摄入</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: var(--success-color);">
+                        ${summary.avg_daily_burned.toLocaleString()}
+                    </div>
+                    <div class="stat-label">平均每日消耗</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: ${summary.net_balance > 0 ? 'var(--success-color)' : 'var(--danger-color)'};">
+                        ${summary.net_balance > 0 ? '+' : ''}${summary.net_balance.toLocaleString()}
+                    </div>
+                    <div class="stat-label">净热量平衡</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: ${userStats.has_bmr_data ? 'var(--success-color)' : 'var(--warning-color)'};">
+                        ${userStats.estimated_tdee.toLocaleString()}
+                    </div>
+                    <div class="stat-label">估算TDEE${userStats.has_bmr_data ? '' : ' (估算)'}</div>
+                </div>
+            `;
+        }
+        
+        // 显示图表错误
+        function showChartError(message) {
+            const container = document.getElementById('main-chart').parentElement;
+            const canvas = document.getElementById('main-chart');
+            
+            canvas.style.display = 'none';
+            
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'empty-state';
+            errorDiv.innerHTML = `
+                <div class="empty-state-icon">📊</div>
+                <div>${message}</div>
+            `;
+            
+            // 移除现有错误信息
+            const existingError = container.querySelector('.empty-state');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            container.appendChild(errorDiv);
+        }
+        
+        // 加载所有数据
+        async function loadAllData() {
+            loadBalanceChart();
+            loadDistributionChart();
+        }
+        
+        // 刷新所有数据
+        function refreshAllData() {
+            Utils.toast('刷新数据中...', 'info');
+            loadAllData();
+        }
+    </script>
+</body>
+</html>

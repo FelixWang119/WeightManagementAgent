@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>热量计算器 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .calculator-page { padding-bottom: 24px; }
+        .result-card { background: var(--surface); border-radius: var(--border-radius); padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow-sm); }
+        .result-title { font-size: 1rem; font-weight: 600; margin-bottom: 20px; text-align: center; }
+        .result-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+        .result-item { background: var(--bg-secondary); border-radius: var(--border-radius); padding: 16px; text-align: center; }
+        .result-item.highlight { background: linear-gradient(135deg, var(--primary-color), #3498db); color: white; }
+        .result-value { font-size: 1.75rem; font-weight: bold; color: var(--primary-color); }
+        .result-item.highlight .result-value { color: white; }
+        .result-label { font-size: 0.75rem; margin-top: 4px; color: var(--text-muted); }
+        .result-item.highlight .result-label { color: rgba(255,255,255,0.9); }
+        .form-section { background: var(--surface); border-radius: var(--border-radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow-sm); }
+        .form-section-title { font-size: 1rem; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+        .gender-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+        .gender-option { background: var(--bg-secondary); border: 2px solid transparent; border-radius: var(--border-radius); padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .gender-option.selected { border-color: var(--primary-color); background: rgba(52, 152, 219, 0.1); }
+        .gender-option .icon { font-size: 1.5rem; margin-bottom: 8px; }
+        .gender-option .text { font-size: 0.875rem; color: var(--text-secondary); }
+        .gender-option.selected .text { color: var(--primary-color); font-weight: 600; }
+        .activity-info { background: var(--bg-secondary); border-radius: var(--border-radius); padding: 16px; margin-top: 16px; }
+        .activity-title { font-size: 0.875rem; font-weight: 600; margin-bottom: 12px; }
+        .activity-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .activity-tag { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; background: var(--surface); color: var(--text-secondary); cursor: pointer; border: 2px solid transparent; }
+        .activity-tag:hover { border-color: var(--primary-color); }
+        .activity-tag.selected { background: rgba(52, 152, 219, 0.2); color: var(--primary-color); border-color: var(--primary-color); }
+        .loss-target-card { background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: var(--border-radius); padding: 20px; color: white; margin-bottom: 20px; }
+        .loss-target-title { font-size: 0.875rem; opacity: 0.9; margin-bottom: 8px; }
+        .loss-target-value { font-size: 2rem; font-weight: bold; margin-bottom: 4px; }
+        .loss-target-desc { font-size: 0.75rem; opacity: 0.8; }
+        .safety-assessment { background: var(--bg-secondary); border-radius: var(--border-radius); padding: 16px; margin-top: 16px; }
+        .safety-item { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+        .safety-item:last-child { margin-bottom: 0; }
+        .safety-icon { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; }
+        .safety-icon.success { background: rgba(46, 204, 113, 0.1); color: #2ecc71; }
+        .safety-icon.warning { background: rgba(241, 196, 15, 0.1); color: #f39c12; }
+        .safety-icon.error { background: rgba(231, 76, 60, 0.1); color: #e74c3c; }
+        .safety-text { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5; }
+        .nutrition-distribution { margin-top: 20px; }
+        .nutrition-item { display: flex; align-items: center; margin-bottom: 12px; }
+        .nutrition-item .label { width: 60px; font-size: 0.875rem; color: var(--text-secondary); }
+        .nutrition-item .bar-container { flex: 1; height: 12px; background: var(--bg-secondary); border-radius: 6px; overflow: hidden; margin: 0 12px; }
+        .nutrition-item .bar { height: 100%; border-radius: 6px; transition: width 0.3s ease; }
+        .nutrition-item .bar.protein { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+        .nutrition-item .bar.carbs { background: linear-gradient(90deg, #f39c12, #d68910); }
+        .nutrition-item .bar.fat { background: linear-gradient(90deg, #3498db, #2980b9); }
+        .nutrition-item .value { width: 80px; text-align: right; font-size: 0.875rem; font-weight: 600; }
+        @media (max-width: 480px) { .result-grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="page-header">
+            <div class="header-brand">
+                <a href="index.html" class="menu-toggle" style="margin-right: 12px; text-decoration: none; display: flex; align-items: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <span class="header-brand-icon">🔥</span>
+                <span>热量计算器</span>
+            </div>
+        </header>
+
+        <div class="page-content">
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info"><div class="user-name">加载中...</div><div class="user-status">在线</div></div>
+                </div>
+                <nav class="sidebar-nav">
+                    <div class="nav-section"><div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li><a href="index.html" class="nav-item"><span class="nav-item-icon">🤖</span><span class="nav-item-text">AI助手</span></a></li>
+                            <li><a href="weight.html" class="nav-item"><span class="nav-item-icon">⚖️</span><span class="nav-item-text">体重记录</span></a></li>
+                            <li><a href="meal.html" class="nav-item"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">饮食记录</span></a></li>
+                            <li><a href="exercise.html" class="nav-item"><span class="nav-item-icon">🏃</span><span class="nav-item-text">运动记录</span></a></li>
+                        </ul>
+                    </div>
+                    <div class="nav-section"><div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li><a href="water.html" class="nav-item"><span class="nav-item-icon">💧</span><span class="nav-item-text">饮水记录</span></a></li>
+                            <li><a href="sleep.html" class="nav-item"><span class="nav-item-icon">😴</span><span class="nav-item-text">睡眠记录</span></a></li>
+                            <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
+                            <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
+                            <li><a href="calculator.html" class="nav-item active"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+                            <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">个人设置</span></a>
+                    <button class="logout-btn" onclick="Auth.logout()"><span>🚪</span><span>退出登录</span></button>
+                </div>
+            </aside>
+
+            <main class="page-main">
+                <div class="calculator-page">
+                    <div class="form-section">
+                        <div class="form-section-title"><span>📊</span><span>基础信息</span></div>
+                        <div class="gender-options" id="gender-options">
+                            <div class="gender-option selected" data-gender="male" onclick="selectGender('male')">
+                                <div class="icon">👨</div>
+                                <div class="text">男性</div>
+                            </div>
+                            <div class="gender-option" data-gender="female" onclick="selectGender('female')">
+                                <div class="icon">👩</div>
+                                <div class="text">女性</div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">年龄 (岁)</label>
+                            <input type="number" class="form-input" id="age-input" placeholder="请输入年龄" min="15" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">身高 (cm)</label>
+                            <input type="number" class="form-input" id="height-input" placeholder="请输入身高" min="100" max="250">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">当前体重 (kg)</label>
+                            <input type="number" class="form-input" id="weight-input" placeholder="请输入体重" min="30" max="300" step="0.1">
+                        </div>
+                        <div class="activity-info">
+                            <div class="activity-title">活动水平</div>
+                            <div class="activity-list">
+                                <div class="activity-tag" onclick="selectActivity('sedentary')">久坐</div>
+                                <div class="activity-tag selected" onclick="selectActivity('light')">轻度</div>
+                                <div class="activity-tag" onclick="selectActivity('moderate')">中度</div>
+                                <div class="activity-tag" onclick="selectActivity('active')">高度</div>
+                                <div class="activity-tag" onclick="selectActivity('very-active')">极高度</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="calculate-btn" style="margin-top: 20px; width: 100%;" onclick="calculateCalories()">
+                            <span style="margin-right: 8px;">🔥</span>计算BMR & TDEE
+                        </button>
+                    </div>
+
+                    <div id="result-section" style="display: none;">
+                        <div class="result-card">
+                            <div class="result-title">计算结果</div>
+                            <div class="result-grid">
+                                <div class="result-item">
+                                    <div class="result-value" id="bmr-value">--</div>
+                                    <div class="result-label">基础代谢 (BMR)</div>
+                                </div>
+                                <div class="result-item highlight">
+                                    <div class="result-value" id="tdee-value">--</div>
+                                    <div class="result-label">每日消耗 (TDEE)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="loss-target-card" id="loss-target-card" style="display: none;">
+                            <div class="loss-target-title">每日建议热量摄入</div>
+                            <div class="loss-target-value" id="calorie-target">--</div>
+                            <div class="loss-target-desc" id="calorie-target-desc">基于您的目标体重计算</div>
+                        </div>
+
+                        <div class="result-card" id="safety-card" style="display: none;">
+                            <div class="result-title">安全评估</div>
+                            <div class="safety-assessment" id="safety-list"></div>
+                        </div>
+
+                        <div class="result-card" id="nutrition-card" style="display: none;">
+                            <div class="result-title">营养分配建议</div>
+                            <div class="nutrition-distribution">
+                                <div class="nutrition-item">
+                                    <span class="label">蛋白质</span>
+                                    <div class="bar-container"><div class="bar protein" id="protein-bar" style="width: 30%;"></div></div>
+                                    <span class="value" id="protein-value">--</span>
+                                </div>
+                                <div class="nutrition-item">
+                                    <span class="label">碳水</span>
+                                    <div class="bar-container"><div class="bar carbs" id="carbs-bar" style="width: 40%;"></div></div>
+                                    <span class="value" id="carbs-value">--</span>
+                                </div>
+                                <div class="nutrition-item">
+                                    <span class="label">脂肪</span>
+                                    <div class="bar-container"><div class="bar fat" id="fat-bar" style="width: 30%;"></div></div>
+                                    <span class="value" id="fat-value">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="save-section" style="display: none;">
+                        <button class="btn btn-primary" id="save-btn" style="width: 100%;" onclick="saveCalorieTarget()">
+                            <span style="margin-right: 8px;">💾</span>保存为我的热量目标
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        let selectedGender = 'male';
+        let selectedActivity = 'light';
+        let currentResult = null;
+
+        function selectGender(gender) {
+            selectedGender = gender;
+            document.querySelectorAll('.gender-option').forEach(el => {
+                el.classList.toggle('selected', el.dataset.gender === gender);
+            });
+        }
+
+        function selectActivity(activity) {
+            selectedActivity = activity;
+            document.querySelectorAll('.activity-tag').forEach(el => {
+                el.classList.toggle('selected', el.textContent.includes(
+                    activity === 'sedentary' ? '久坐' :
+                    activity === 'light' ? '轻度' :
+                    activity === 'moderate' ? '中度' :
+                    activity === 'active' ? '高度' : '极高度'
+                ));
+            });
+            // 简化选择逻辑
+            const tags = document.querySelectorAll('.activity-tag');
+            tags.forEach((el, i) => {
+                const levels = ['sedentary', 'light', 'moderate', 'active', 'very-active'];
+                el.classList.toggle('selected', levels[i] === activity);
+            });
+        }
+
+        async function calculateCalories() {
+            const age = parseInt(document.getElementById('age-input').value);
+            const height = parseFloat(document.getElementById('height-input').value);
+            const weight = parseFloat(document.getElementById('weight-input').value);
+
+            console.log('Calculate clicked', age, height, weight);
+
+            if (!age || !height || !weight) {
+                console.log('Validation failed - empty values');
+                alert('请填写完整信息');
+                return;
+            }
+
+            const btn = document.getElementById('calculate-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>计算中...</span>';
+
+            console.log('Calling API...');
+            try {
+                const response = await API.calories.calculate({
+                    age: age,
+                    gender: selectedGender,
+                    height: height,
+                    weight: weight,
+                    activity_level: selectedActivity
+                });
+
+                console.log('API Response:', response);
+
+                if (response && response.success) {
+                    currentResult = response;
+                    console.log('Showing results...');
+                    
+                    const bmrEl = document.getElementById('bmr-value');
+                    const tdeeEl = document.getElementById('tdee-value');
+                    const resultSection = document.getElementById('result-section');
+                    const saveSection = document.getElementById('save-section');
+                    
+                    console.log('Elements:', bmrEl, tdeeEl, resultSection, saveSection);
+                    
+                    if (bmrEl) bmrEl.textContent = response.bmr;
+                    if (tdeeEl) tdeeEl.textContent = response.tdee;
+                    if (resultSection) resultSection.style.cssText = 'display: block !important;';
+                    if (saveSection) saveSection.style.cssText = 'display: block !important;';
+                    
+                    console.log('Result section style after:', resultSection ? resultSection.style.cssText : 'null');
+
+                    // 计算减重目标
+                    console.log('Calling target API...');
+                    const targetResponse = await API.calories.calculateWeightLossTarget({
+                        tdee: response.tdee,
+                        target_weekly_loss_kg: 0.5
+                    });
+
+                    console.log('Target Response:', targetResponse);
+
+                    if (targetResponse && targetResponse.success) {
+                        const target = targetResponse.target;
+                        
+                        const lossCard = document.getElementById('loss-target-card');
+                        const calorieTarget = document.getElementById('calorie-target');
+                        const descEl = document.getElementById('calorie-target-desc');
+                        
+                        if (lossCard) lossCard.style.cssText = 'display: block !important; background: linear-gradient(135deg, #2ecc71, #27ae60) !important; border-radius: var(--border-radius) !important; padding: 20px !important; color: white !important; margin-bottom: 20px !important;';
+                        if (calorieTarget) calorieTarget.textContent = target.daily_calorie_intake + ' kcal';
+                        if (descEl) descEl.textContent = '每周减重 0.5kg | 热量缺口 ' + target.daily_calorie_deficit + ' kcal';
+
+                        // 安全评估
+                        const list = document.getElementById('safety-list');
+                        if (list) {
+                            const assessments = [];
+                            if (target.daily_calorie_intake < response.bmr) {
+                                assessments.push({type: 'warning', text: '每日摄入低于基础代谢，长期可能影响健康'});
+                            } else {
+                                assessments.push({type: 'success', text: '热量摄入充足，营养均衡'});
+                            }
+                            assessments.push({type: 'success', text: '减重速度适中，科学健康'});
+                            list.innerHTML = assessments.map(a => '<div class="safety-item"><div class="safety-icon ' + a.type + '">' + (a.type === 'success' ? '✓' : '!') + '</div><div class="safety-text">' + a.text + '</div></div>').join('');
+                        }
+
+                        const safetyCard = document.getElementById('safety-card');
+                        if (safetyCard) safetyCard.style.cssText = 'display: block !important;';
+
+                        // 营养分配
+                        const protein = Math.round(target.daily_calorie_intake * 0.25 / 4);
+                        const carbs = Math.round(target.daily_calorie_intake * 0.45 / 4);
+                        const fat = Math.round(target.daily_calorie_intake * 0.30 / 9);
+                        
+                        const proteinBar = document.getElementById('protein-bar');
+                        const carbsBar = document.getElementById('carbs-bar');
+                        const fatBar = document.getElementById('fat-bar');
+                        const proteinVal = document.getElementById('protein-value');
+                        const carbsVal = document.getElementById('carbs-value');
+                        const fatVal = document.getElementById('fat-value');
+                        const nutritionCard = document.getElementById('nutrition-card');
+                        if (nutritionCard) nutritionCard.style.cssText = 'display: block !important;';
+                    }
+                } else {
+                    alert(response.detail || '计算失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('计算失败: ' + error.message);
+            } finally {
+                const btn = document.getElementById('calculate-btn');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span style="margin-right: 8px;">🔥</span>计算BMR & TDEE';
+                }
+            }
+        }
+
+        async function saveCalorieTarget() {
+            if (!currentResult) return;
+            try {
+                await API.user.updateProfile({daily_calorie_target: parseInt(document.getElementById('calorie-target').textContent)});
+                alert('热量目标已保存！');
+            } catch (error) {
+                alert('保存失败');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:5px;z-index:9999;';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        async function init() {
+            if (!Auth.check()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            const user = Auth.getUser();
+            if (user) {
+                document.querySelector('.user-name').textContent = user.nickname || user.name || '用户';
+                document.querySelector('.user-avatar').textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

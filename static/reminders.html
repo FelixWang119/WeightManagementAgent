@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>提醒设置 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .reminders-page {
+            padding-bottom: 24px;
+        }
+
+        /* 提醒卡片 */
+        .reminder-card {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .reminder-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .reminder-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .reminder-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .reminder-icon.weight {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .reminder-icon.meal {
+            background: rgba(230, 126, 34, 0.1);
+        }
+
+        .reminder-icon.exercise {
+            background: rgba(46, 204, 113, 0.1);
+        }
+
+        .reminder-icon.water {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .reminder-icon.sleep {
+            background: rgba(155, 89, 182, 0.1);
+        }
+
+        .reminder-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .reminder-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* 开关样式 */
+        .switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border);
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .switch input:checked + .switch-slider {
+            background-color: var(--primary-color);
+        }
+
+        .switch input:checked + .switch-slider:before {
+            transform: translateX(22px);
+        }
+
+        /* 提醒时间设置 */
+        .reminder-settings {
+            display: none;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            margin-top: 8px;
+        }
+
+        .reminder-settings.expanded {
+            display: block;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .setting-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .time-input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .interval-select {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary-color);
+        }
+
+        .checkbox-label span {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* 免打扰模式 */
+        .dnd-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .dnd-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .dnd-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dnd-times {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .time-separator {
+            color: var(--text-muted);
+        }
+
+        /* 全局开关 */
+        .global-switch {
+            background: linear-gradient(135deg, var(--primary-color), #3498db);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .global-switch .text {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .global-switch .desc {
+            font-size: 0.75rem;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .global-switch .switch {
+            transform: scale(1.2);
+        }
+
+        .global-switch .switch-slider {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .global-switch input:checked + .switch-slider {
+            background-color: white;
+        }
+
+        .global-switch input:checked + .switch-slider:before {
+            background-color: var(--primary-color);
+        }
+
+        /* 提示信息 */
+        .tips-box {
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-top: 24px;
+        }
+
+        .tips-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #3498db;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tips-content {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 480px) {
+            .dnd-times {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .time-separator {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- 顶部导航 -->
+        <header class="page-header">
+            <div class="header-brand">
+                <a href="index.html" class="menu-toggle" style="margin-right: 12px; text-decoration: none; display: flex; align-items: center;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <span class="header-brand-icon">🔔</span>
+                <span>提醒设置</span>
+            </div>
+        </header>
+
+        <!-- 页面内容 -->
+        <div class="page-content">
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info">
+                        <div class="user-name">加载中...</div>
+                        <div class="user-status">在线</div>
+                    </div>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li><a href="index.html" class="nav-item"><span class="nav-item-icon">🤖</span><span class="nav-item-text">AI助手</span></a></li>
+                            <li><a href="weight.html" class="nav-item"><span class="nav-item-icon">⚖️</span><span class="nav-item-text">体重记录</span></a></li>
+                            <li><a href="meal.html" class="nav-item"><span class="nav-item-icon">🍽️</span><span class="nav-item-text">饮食记录</span></a></li>
+                            <li><a href="exercise.html" class="nav-item"><span class="nav-item-icon">🏃</span><span class="nav-item-text">运动记录</span></a></li>
+                        </ul>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li><a href="water.html" class="nav-item"><span class="nav-item-icon">💧</span><span class="nav-item-text">饮水记录</span></a></li>
+                            <li><a href="sleep.html" class="nav-item"><span class="nav-item-icon">😴</span><span class="nav-item-text">睡眠记录</span></a></li>
+                            <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
+                            <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
+                        </ul>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <a href="profile.html" class="nav-item"><span class="nav-item-icon">⚙️</span><span class="nav-item-text">个人设置</span></a>
+                    <button class="logout-btn" onclick="Auth.logout()">
+                        <span>🚪</span>
+                        <span>退出登录</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- 主内容区 -->
+            <main class="page-main">
+                <div class="reminders-page">
+                    <!-- 全局开关 -->
+                    <div class="global-switch">
+                        <div>
+                            <div class="text">提醒通知</div>
+                            <div class="desc">开启后将在设定时间收到提醒</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="global-toggle" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <!-- 体重记录提醒 -->
+                    <div class="reminder-card" data-type="weight">
+                        <div class="reminder-header">
+                            <div class="reminder-info">
+                                <div class="reminder-icon weight">⚖️</div>
+                                <div>
+                                    <div class="reminder-title">体重记录提醒</div>
+                                    <div class="reminder-desc">每天早上提醒您记录体重</div>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="reminder-toggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="reminder-settings">
+                            <div class="setting-row">
+                                <span class="setting-label">提醒时间</span>
+                                <input type="time" class="time-input reminder-time" value="08:00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 饮食提醒 -->
+                    <div class="reminder-card" data-type="breakfast">
+                        <div class="reminder-header">
+                            <div class="reminder-info">
+                                <div class="reminder-icon meal">🍳</div>
+                                <div>
+                                    <div class="reminder-title">早餐提醒</div>
+                                    <div class="reminder-desc">提醒您吃一顿健康的早餐</div>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="reminder-toggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="reminder-settings">
+                            <div class="setting-row">
+                                <span class="setting-label">提醒时间</span>
+                                <input type="time" class="time-input reminder-time" value="08:30">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="reminder-card" data-type="lunch">
+                        <div class="reminder-header">
+                            <div class="reminder-info">
+                                <div class="reminder-icon meal">🍱</div>
+                                <div>
+                                    <div class="reminder-title">午餐提醒</div>
+                                    <div class="reminder-desc">提醒您按时吃午餐</div>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="reminder-toggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="reminder-settings">
+                            <div class="setting-row">
+                                <span class="setting-label">提醒时间</span>
+                                <input type="time" class="time-input reminder-time" value="12:00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="reminder-card" data-type="dinner">
+                        <div class="reminder-header">
+                            <div class="reminder-info">
+                                <div class="reminder-icon meal">🍽️</div>
+                                <div>
+                                    <div class="reminder-title">晚餐提醒</div>
+                                    <div class="reminder-desc">提醒您按时吃晚餐</div>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="reminder-toggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="reminder-settings">
+                            <div class="setting-row">
+                                <span class="setting-label">提醒时间</span>
+                                <input type="time" class="time-input reminder-time" value="18:30">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 运动提醒 -->
+                    <div class="reminder-card" data-type="exercise">
+                        <div class="reminder-header">
+                            <div class="reminder-info">
+                                <div class="reminder-icon exercise">🏃</div>
+                                <div>
+                                    <div class="reminder-title">运动提醒</div>
+                                    <div class="reminder-desc">提醒您今天还没运动哦</div>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="reminder-toggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="reminder-settings">
+                            <div class="setting-row">
+                                <span class="setting-label">提醒时间</span>
+                                <input type="time" class="time-input reminder-time" value="19:00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 饮水提醒 -->
+                    <div class="reminder-card" data-type="water">
+                        <div class="reminder-header">
+                            <div class="reminder-info">
+                                <div class="reminder-icon water">💧</div>
+                                <div>
+                                    <div class="reminder-title">饮水提醒</div>
+                                    <div class="reminder-desc">定时提醒您补充水分</div>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="reminder-toggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="reminder-settings">
+                            <div class="setting-row">
+                                <span class="setting-label">提醒间隔</span>
+                                <select class="interval-select reminder-interval">
+                                    <option value="60">每1小时</option>
+                                    <option value="90">每1.5小时</option>
+                                    <option value="120" selected>每2小时</option>
+                                    <option value="180">每3小时</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 睡眠提醒 -->
+                    <div class="reminder-card" data-type="sleep">
+                        <div class="reminder-header">
+                            <div class="reminder-info">
+                                <div class="reminder-icon sleep">😴</div>
+                                <div>
+                                    <div class="reminder-title">睡眠提醒</div>
+                                    <div class="reminder-desc">提醒您该睡觉了</div>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="reminder-toggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                        <div class="reminder-settings">
+                            <div class="setting-row">
+                                <span class="setting-label">提醒时间</span>
+                                <input type="time" class="time-input reminder-time" value="22:30">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 免打扰模式 -->
+                    <div class="dnd-section">
+                        <div class="dnd-header">
+                            <div class="dnd-title">
+                                <span>🌙</span>
+                                <span>免打扰模式</span>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <span class="setting-label">免打扰时间段</span>
+                            <div class="dnd-times">
+                                <input type="time" class="time-input" id="dnd-start" value="22:00">
+                                <span class="time-separator">至</span>
+                                <input type="time" class="time-input" id="dnd-end" value="08:00">
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="dnd-weekdays" checked>
+                                <span>仅工作日启用提醒</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 提示信息 -->
+                    <div class="tips-box">
+                        <div class="tips-title">
+                            <span>💡</span>
+                            <span>关于提醒</span>
+                        </div>
+                        <div class="tips-content">
+                            <p>1. 提醒功能需要您授权浏览器通知权限</p>
+                            <p>2. 请确保应用在前台运行，或保持浏览器通知常驻</p>
+                            <p>3. 免打扰模式下将不会发送任何提醒</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        // 提醒配置
+        const REMINDER_CONFIG = {
+            weight: {
+                icon: '⚖️',
+                title: '体重记录提醒',
+                desc: '每天早上提醒您记录体重'
+            },
+            breakfast: {
+                icon: '🍳',
+                title: '早餐提醒',
+                desc: '提醒您吃一顿健康的早餐'
+            },
+            lunch: {
+                icon: '🍱',
+                title: '午餐提醒',
+                desc: '提醒您按时吃午餐'
+            },
+            dinner: {
+                icon: '🍽️',
+                title: '晚餐提醒',
+                desc: '提醒您按时吃晚餐'
+            },
+            exercise: {
+                icon: '🏃',
+                title: '运动提醒',
+                desc: '提醒您今天还没运动哦'
+            },
+            water: {
+                icon: '💧',
+                title: '饮水提醒',
+                desc: '定时提醒您补充水分'
+            },
+            sleep: {
+                icon: '😴',
+                title: '睡眠提醒',
+                desc: '提醒您该睡觉了'
+            }
+        };
+
+        // 默认值
+        const DEFAULTS = {
+            weight: { enabled: true, time: '08:00' },
+            breakfast: { enabled: true, time: '08:30' },
+            lunch: { enabled: true, time: '12:00' },
+            dinner: { enabled: true, time: '18:30' },
+            exercise: { enabled: true, time: '19:00' },
+            water: { enabled: true, interval: 120 },
+            sleep: { enabled: true, time: '22:30' }
+        };
+
+        // 当前设置
+        let settings = { ...DEFAULTS };
+        let globalEnabled = true;
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!Auth.check()) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // 更新侧边栏用户信息
+            await Utils.updateSidebarUser();
+
+            // 绑定事件
+            initEventListeners();
+
+            // 加载设置
+            await loadSettings();
+        });
+
+        // 绑定事件
+        function initEventListeners() {
+            // 全局开关
+            document.getElementById('global-toggle').addEventListener('change', async (e) => {
+                globalEnabled = e.target.checked;
+                await saveAllSettings();
+                updateUI();
+            });
+
+            // 免打扰时间
+            document.getElementById('dnd-start').addEventListener('change', async () => {
+                await saveDndSettings();
+            });
+            document.getElementById('dnd-end').addEventListener('change', async () => {
+                await saveDndSettings();
+            });
+            document.getElementById('dnd-weekdays').addEventListener('change', async () => {
+                await saveDndSettings();
+            });
+
+            // 提醒卡片点击展开
+            document.querySelectorAll('.reminder-card').forEach(card => {
+                const header = card.querySelector('.reminder-header');
+                header.addEventListener('click', (e) => {
+                    if (e.target.type !== 'checkbox') {
+                        card.querySelector('.reminder-settings').classList.toggle('expanded');
+                    }
+                });
+            });
+
+            // 提醒开关
+            document.querySelectorAll('.reminder-toggle').forEach(toggle => {
+                toggle.addEventListener('change', async (e) => {
+                    const card = e.target.closest('.reminder-card');
+                    const type = card.dataset.type;
+                    settings[type].enabled = e.target.checked;
+                    await saveReminderSetting(type);
+                    updateUI();
+                });
+            });
+
+            // 时间输入
+            document.querySelectorAll('.reminder-time').forEach(input => {
+                input.addEventListener('change', async (e) => {
+                    const card = e.target.closest('.reminder-card');
+                    const type = card.dataset.type;
+                    settings[type].time = e.target.value;
+                    await saveReminderSetting(type);
+                });
+            });
+
+            // 间隔选择
+            document.querySelectorAll('.reminder-interval').forEach(select => {
+                select.addEventListener('change', async (e) => {
+                    const card = e.target.closest('.reminder-card');
+                    const type = card.dataset.type;
+                    settings[type].interval = parseInt(e.target.value);
+                    await saveReminderSetting(type);
+                });
+            });
+        }
+
+        // 加载设置
+        async function loadSettings() {
+            try {
+                const response = await API.reminder.getSettings();
+                if (response.success) {
+                    const data = response.data;
+
+                    // 更新全局开关（基于任一提醒是否启用）
+                    const hasEnabled = Object.values(data).some(s => s.enabled);
+                    globalEnabled = hasEnabled;
+                    document.getElementById('global-toggle').checked = hasEnabled;
+
+                    // 合并设置
+                    Object.keys(DEFAULTS).forEach(type => {
+                        if (data[type]) {
+                            settings[type] = { ...settings[type], ...data[type] };
+                        }
+                    });
+
+                    updateUI();
+                }
+            } catch (error) {
+                console.error('加载提醒设置失败:', error);
+                Utils.toast('加载设置失败，使用默认值', 'warning');
+            }
+        }
+
+        // 更新UI
+        function updateUI() {
+            // 更新各提醒卡片
+            Object.keys(settings).forEach(type => {
+                const card = document.querySelector(`.reminder-card[data-type="${type}"]`);
+                if (!card) return;
+
+                const toggle = card.querySelector('.reminder-toggle');
+                const timeInput = card.querySelector('.reminder-time');
+                const intervalSelect = card.querySelector('.reminder-interval');
+
+                if (toggle) toggle.checked = settings[type].enabled;
+                if (timeInput && settings[type].time) timeInput.value = settings[type].time;
+                if (intervalSelect && settings[type].interval) intervalSelect.value = settings[type].interval;
+            });
+        }
+
+        // 保存单个提醒设置
+        async function saveReminderSetting(type) {
+            try {
+                const data = {
+                    enabled: settings[type].enabled,
+                    reminder_time: settings[type].time || null,
+                    interval_minutes: settings[type].interval || null,
+                    weekdays_only: false
+                };
+
+                await API.reminder.updateSettings({
+                    [type]: data
+                });
+            } catch (error) {
+                console.error(`保存${type}设置失败:`, error);
+                Utils.toast('保存失败，请稍后重试', 'error');
+            }
+        }
+
+        // 保存免打扰设置
+        async function saveDndSettings() {
+            try {
+                // 免打扰设置存储在本地，因为API可能不直接支持
+                const dndSettings = {
+                    start: document.getElementById('dnd-start').value,
+                    end: document.getElementById('dnd-end').value,
+                    weekdaysOnly: document.getElementById('dnd-weekdays').checked
+                };
+                localStorage.setItem('reminder_dnd', JSON.stringify(dndSettings));
+            } catch (error) {
+                console.error('保存免打扰设置失败:', error);
+            }
+        }
+
+        // 保存所有设置
+        async function saveAllSettings() {
+            try {
+                await API.reminder.updateSettings({
+                    enabled: globalEnabled,
+                    ...settings
+                });
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                Utils.toast('保存失败，请稍后重试', 'error');
+            }
+        }
+
+        // 请求通知权限
+        async function requestNotificationPermission() {
+            if ('Notification' in window) {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    Utils.toast('通知权限已开启', 'success');
+                } else {
+                    Utils.toast('未获得通知权限，将无法接收提醒', 'warning');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

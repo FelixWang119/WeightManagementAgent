@@ -1,0 +1,116 @@
+<!-- 体重记录页面 -->
+<view class="container">
+  <!-- 当前体重卡片 -->
+  <view class="card">
+    <view class="card-title">
+      <text class="card-title-icon">⚖️</text>
+      <text>{{latestWeight ? '当前体重' : '记录体重'}}</text>
+    </view>
+    
+    <view class="weight-display" wx:if="{{latestWeight}}">
+      <text class="weight-number">{{latestWeight.weight}}</text>
+      <text class="weight-unit">kg</text>
+      <text class="weight-date">{{latestWeight.date}}</text>
+    </view>
+    
+    <view class="weight-input-section">
+      <view class="input-group">
+        <text class="input-label">体重 (kg)</text>
+        <input 
+          type="digit" 
+          class="weight-input" 
+          placeholder="例: 65.5"
+          bindinput="onWeightInput"
+          value="{{inputWeight}}"
+        />
+      </view>
+      
+      <view class="input-group">
+        <text class="input-label">体脂率 (%)</text>
+        <input 
+          type="digit" 
+          class="weight-input" 
+          placeholder="可选"
+          bindinput="onBodyFatInput"
+          value="{{inputBodyFat}}"
+        />
+      </view>
+      
+      <view class="input-group">
+        <text class="input-label">备注</text>
+        <textarea 
+          class="note-input" 
+          placeholder="记录一下今天的状态..."
+          bindinput="onNoteInput"
+          value="{{inputNote}}"
+          maxlength="200"
+        />
+      </view>
+      
+      <button 
+        class="btn-primary" 
+        bindtap="recordWeight"
+        disabled="{{!inputWeight || isRecording}}"
+        loading="{{isRecording}}"
+      >
+        {{latestWeight ? '更新记录' : '记录体重'}}
+      </button>
+    </view>
+  </view>
+
+  <!-- 体重趋势 -->
+  <view class="card" wx:if="{{weightTrend.length > 1}}">
+    <view class="card-title">
+      <text class="card-title-icon">📈</text>
+      <text>7天趋势</text>
+    </view>
+    
+    <view class="trend-summary">
+      <text class="trend-text {{trendDirection === 'down' ? 'text-success' : trendDirection === 'up' ? 'text-danger' : ''}}">
+        {{trendText}}
+      </text>
+      <text class="trend-change">{{trendChange}}kg</text>
+    </view>
+    
+    <view class="trend-chart">
+      <!-- 这里可以集成图表组件 -->
+      <view class="chart-placeholder">
+        <text>趋势图表（可集成 ECharts）</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 历史记录 -->
+  <view class="card">
+    <view class="card-title">
+      <text class="card-title-icon">📋</text>
+      <text>历史记录</text>
+      <text class="view-more" bindtap="toggleHistory">
+        {{showAllHistory ? '收起' : '查看全部'}}
+      </text>
+    </view>
+    
+    <view class="history-list">
+      <view class="history-item" wx:for="{{displayHistory}}" wx:for-item="record" wx:key="id">
+        <view class="history-date">
+          <text class="date-text">{{record.date}}</text>
+          <text class="time-text">{{record.time}}</text>
+        </view>
+        <view class="history-weight">
+          <text class="weight-value">{{record.weight}}kg</text>
+          <text wx:if="{{record.body_fat}}" class="body-fat">体脂 {{record.body_fat}}%</text>
+        </view>
+        <text wx:if="{{record.note}}" class="history-note">{{record.note}}</text>
+      </view>
+    </view>
+    
+    <view class="empty-state" wx:if="{{!weightHistory || weightHistory.length === 0}}">
+      <text class="empty-icon">📝</text>
+      <text class="empty-text">还没有体重记录</text>
+      <text class="empty-hint">开始记录你的体重变化吧</text>
+    </view>
+  </view>
+
+  <!-- 底部占位 -->
+  <view style="height: 40rpx;"></view>
+</view>

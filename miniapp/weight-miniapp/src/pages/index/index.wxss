@@ -1,0 +1,167 @@
+/* 首页样式 */
+.user-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 40rpx;
+  border-radius: 20rpx;
+  margin-bottom: 30rpx;
+  color: white;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+}
+
+.user-detail {
+  margin-left: 30rpx;
+}
+
+.nickname {
+  font-size: 36rpx;
+  font-weight: bold;
+  display: block;
+}
+
+.slogan {
+  font-size: 26rpx;
+  opacity: 0.9;
+  margin-top: 8rpx;
+  display: block;
+}
+
+/* 统计网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+.stat-item {
+  background: #f8f9fa;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  text-align: center;
+  position: relative;
+}
+
+.stat-value {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: #3498db;
+  display: block;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 10rpx;
+  display: block;
+}
+
+.stat-change {
+  position: absolute;
+  top: 10rpx;
+  right: 10rpx;
+  font-size: 22rpx;
+  color: #2ecc71;
+  background: rgba(46, 204, 113, 0.1);
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+}
+
+.water-progress {
+  margin-top: 15rpx;
+}
+
+/* 快捷操作 */
+.quick-actions {
+  display: flex;
+  justify-content: space-around;
+  padding: 20rpx 0;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx;
+}
+
+.action-icon {
+  font-size: 60rpx;
+  margin-bottom: 10rpx;
+}
+
+.action-text {
+  font-size: 26rpx;
+  color: #666;
+}
+
+/* 目标进度 */
+.goal-item {
+  padding: 20rpx 0;
+}
+
+.goal-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 15rpx;
+  display: block;
+}
+
+.goal-progress {
+  display: flex;
+  align-items: center;
+}
+
+.goal-progress progress {
+  flex: 1;
+}
+
+.goal-text {
+  margin-left: 20rpx;
+  font-size: 26rpx;
+  color: #3498db;
+  min-width: 120rpx;
+  text-align: right;
+}
+
+/* 周报预览 */
+.view-more {
+  font-size: 26rpx;
+  color: #3498db;
+  margin-left: auto;
+}
+
+.report-preview {
+  padding: 20rpx 0;
+}
+
+.report-summary {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 20rpx;
+  display: block;
+}
+
+.report-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15rpx;
+}
+
+.highlight-tag {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 10rpx 24rpx;
+  border-radius: 30rpx;
+  font-size: 24rpx;
+}
