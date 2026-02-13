@@ -83,3 +83,14 @@ yarn-error.log*
 
 # Miniapp
 miniapp/weight-miniapp/node_modules/
+# 日志文件
+logs/*
+!logs/.gitkeep
+
+# 测试报告
+reports/*
+!reports/.gitkeep
+
+# 用户token文件（包含敏感信息）
+test_users_tokens.json
+test_users_mapping.json

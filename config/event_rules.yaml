@@ -1,0 +1,373 @@
+# 智能事件识别规则配置
+# 采用YAML格式，支持热更新和丰富的规则配置
+
+# 全局配置
+global:
+  # 置信度阈值设置
+  confidence_threshold: 0.6
+  
+  # LLM兜底配置
+  llm_fallback:
+    enabled: true
+    threshold: 0.4  # 低于此置信度触发LLM
+    max_tokens: 500
+    timeout: 30
+  
+  # 规则更新配置
+  auto_reload: true
+  reload_interval: 60  # 秒
+  
+  # 性能配置
+  max_concurrent_detections: 10
+  cache_ttl: 300  # 秒
+
+# 事件类型定义
+event_types:
+  business_dinner:
+    name: "商务应酬"
+    category: "work_related"
+    description: "商务宴请、客户应酬等"
+    impact_level: 3
+    priority: 8
+    
+  overtime:
+    name: "加班工作"
+    category: "work_related"
+    description: "加班、晚下班等"
+    impact_level: 2
+    priority: 7
+    
+  meeting:
+    name: "会议安排"
+    category: "work_related"
+    description: "会议、培训等"
+    impact_level: 2
+    priority: 6
+    
+  illness:
+    name: "身体不适"
+    category: "health_related"
+    description: "感冒、发烧、身体不适等"
+    impact_level: 4
+    priority: 9
+    
+  medical_appointment:
+    name: "医疗预约"
+    category: "health_related"
+    description: "看医生、体检、复诊等"
+    impact_level: 3
+    priority: 8
+    
+  travel:
+    name: "旅行出差"
+    category: "personal"
+    description: "出差、旅行、外出等"
+    impact_level: 4
+    priority: 9
+    
+  family_event:
+    name: "家庭事务"
+    category: "personal"
+    description: "家庭聚会、照顾家人等"
+    impact_level: 3
+    priority: 7
+    
+  social_gathering:
+    name: "社交聚会"
+    category: "social"
+    description: "朋友聚会、聚餐等"
+    impact_level: 2
+    priority: 6
+    
+  special_occasion:
+    name: "特殊场合"
+    category: "special"
+    description: "生日、节日、纪念日等"
+    impact_level: 2
+    priority: 6
+
+# 识别规则库
+recognition_rules:
+  # 商务应酬规则
+  business_dinner:
+    # 精确关键词匹配（高置信度）
+    exact_keywords:
+      - "应酬"
+      - "商务餐"
+      - "陪客户"
+      - "客户吃饭"
+      - "商业宴请"
+      - "商务接待"
+      
+    # 变体关键词匹配（中置信度）
+    variant_keywords:
+      - "饭局"
+      - "聚餐"
+      - "请客"
+      - "接待"
+      - "招待"
+      
+    # 正则模式匹配（精确检测）
+    patterns:
+      - "(今晚|明天|今天).*?(有|要|需要).*?(应酬|饭局|商务餐)"
+      - "(陪|和).*?(客户|老板|领导).*?(吃饭|聚餐)"
+      - "(商务|商业).*?(应酬|接待|宴请)"
+      
+    # 语义相似度关键词
+    semantic_keywords:
+      - "工作餐"
+      - "业务招待"
+      - "商业洽谈"
+      - "客户关系"
+      
+    # 置信度权重
+    weights:
+      exact_keywords: 0.8
+      variant_keywords: 0.6
+      patterns: 0.9
+      semantic_keywords: 0.7
+
+  # 加班工作规则
+  overtime:
+    exact_keywords:
+      - "加班"
+      - "晚点下班"
+      - "赶工"
+      - "通宵"
+      
+    variant_keywords:
+      - "工作到很晚"
+      - "工作到深夜"
+      - "项目紧急"
+      - "deadline"
+      
+    patterns:
+      - "(今天|今晚).*?(要|需要).*?(加班|晚点下班)"
+      - "工作.*?(到很晚|到深夜|通宵)"
+      - "(项目|任务).*?(紧急|赶工)"
+      
+    semantic_keywords:
+      - "工作压力"
+      - "时间紧张"
+      - "任务繁重"
+      - "项目截止"
+      
+    weights:
+      exact_keywords: 0.7
+      variant_keywords: 0.5
+      patterns: 0.8
+      semantic_keywords: 0.6
+
+  # 身体不适规则
+  illness:
+    exact_keywords:
+      - "不舒服"
+      - "生病"
+      - "感冒"
+      - "发烧"
+      - "头疼"
+      - "胃疼"
+      
+    variant_keywords:
+      - "身体不适"
+      - "感觉不好"
+      - "生病了"
+      - "感冒了"
+      - "发烧了"
+      
+    patterns:
+      - "(身体|感觉).*?(不舒服|难受|不适)"
+      - "(感冒|发烧|头疼|胃疼).*?(了|中)"
+      - "生病.*?(休息|请假)"
+      
+    semantic_keywords:
+      - "健康问题"
+      - "身体不适"
+      - "生病状态"
+      - "需要休息"
+      
+    weights:
+      exact_keywords: 0.9
+      variant_keywords: 0.7
+      patterns: 0.8
+      semantic_keywords: 0.6
+
+  # 旅行出差规则
+  travel:
+    exact_keywords:
+      - "旅行"
+      - "出差"
+      - "外出"
+      - "去外地"
+      - "去旅游"
+      
+    variant_keywords:
+      - "外出几天"
+      - "外出旅行"
+      - "商务出差"
+      - "外出工作"
+      
+    patterns:
+      - "(明天|后天).*?(要|去).*?(旅行|出差)"
+      - "外出.*?(几天|一段时间)"
+      - "(去|到).*?(北京|上海|广州|深圳)"
+      
+    semantic_keywords:
+      - "行程安排"
+      - "外出计划"
+      - "差旅安排"
+      - "旅行计划"
+      
+    weights:
+      exact_keywords: 0.8
+      variant_keywords: 0.6
+      patterns: 0.7
+      semantic_keywords: 0.5
+
+  # 家庭事务规则
+  family_event:
+    exact_keywords:
+      - "家庭"
+      - "家人"
+      - "孩子"
+      - "父母"
+      - "配偶"
+      
+    variant_keywords:
+      - "家庭聚会"
+      - "家人有事"
+      - "照顾孩子"
+      - "陪父母"
+      - "配偶生日"
+      
+    patterns:
+      - "(家庭|家人).*?(有事|聚会)"
+      - "(陪|照顾).*?(孩子|父母|家人)"
+      - "家庭.*?(事务|事情)"
+      
+    semantic_keywords:
+      - "家庭责任"
+      - "家庭事务"
+      - "家人需要"
+      - "家庭聚会"
+      
+    weights:
+      exact_keywords: 0.7
+      variant_keywords: 0.5
+      patterns: 0.6
+      semantic_keywords: 0.4
+
+  # 社交聚会规则
+  social_gathering:
+    exact_keywords:
+      - "聚会"
+      - "聚餐"
+      - "朋友"
+      - "同学"
+      - "同事"
+      
+    variant_keywords:
+      - "朋友聚会"
+      - "同学聚餐"
+      - "同事聚餐"
+      - "朋友见面"
+      - "社交活动"
+      
+    patterns:
+      - "(晚上|周末).*?(有|要).*?(聚会|聚餐)"
+      - "(和|跟).*?(朋友|同学|同事).*?(吃饭|见面)"
+      - "社交.*?(活动|聚会)"
+      
+    semantic_keywords:
+      - "社交活动"
+      - "朋友聚会"
+      - "社交场合"
+      - "人际交往"
+      
+    weights:
+      exact_keywords: 0.6
+      variant_keywords: 0.4
+      patterns: 0.5
+      semantic_keywords: 0.3
+
+  # 特殊场合规则
+  special_occasion:
+    exact_keywords:
+      - "生日"
+      - "节日"
+      - "纪念日"
+      - "庆祝"
+      - "周年"
+      
+    variant_keywords:
+      - "生日聚会"
+      - "节日庆祝"
+      - "纪念日庆祝"
+      - "生日宴会"
+      - "节日活动"
+      
+    patterns:
+      - "(今天|明天).*?(是|过).*?(生日|节日)"
+      - "庆祝.*?(纪念日|节日|生日)"
+      - "(生日|节日|纪念日).*?(聚会|庆祝)"
+      
+    semantic_keywords:
+      - "特殊日子"
+      - "庆祝活动"
+      - "重要时刻"
+      - "纪念活动"
+      
+    weights:
+      exact_keywords: 0.7
+      variant_keywords: 0.5
+      patterns: 0.6
+      semantic_keywords: 0.4
+
+# 冲突规则定义（事件与计划冲突）
+conflict_rules:
+  exercise:
+    conflicting_events:
+      - "business_dinner"
+      - "overtime"
+      - "meeting"
+      - "illness"
+      - "travel"
+      - "family_event"
+      - "social_gathering"
+    
+  diet:
+    conflicting_events:
+      - "business_dinner"
+      - "travel"
+      - "social_gathering"
+      - "special_occasion"
+    
+  weight:
+    conflicting_events:
+      - "travel"
+      - "illness"
+    
+  sleep:
+    conflicting_events:
+      - "overtime"
+      - "travel"
+      - "social_gathering"
+
+# 时间模式识别（用于提取时间信息）
+time_patterns:
+  today: "(今天|今日)"
+  tonight: "(今晚|今天晚上|今夜)"
+  tomorrow: "(明天|明日)"
+  morning: "(早上|早晨|上午)"
+  afternoon: "(下午|午后)"
+  evening: "(晚上|傍晚|晚间)"
+  specific_time: "(\\d{1,2}[:：]\\d{1,2})"
+  date_format: "(\\d{4}[-/]\\d{1,2}[-/]\\d{1,2})"
+
+# 调试和监控配置
+debug:
+  enable_logging: true
+  log_detailed_matches: false
+  log_confidence_calculations: false
+  save_detection_samples: false
+  sample_dir: "temp/event_detection_samples"
