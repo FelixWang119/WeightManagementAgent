@@ -1,9 +1,9 @@
 # LangChain 技术架构文档
 
-**文档版本**: 1.1
+**文档版本**: 2.0
 **创建日期**: 2026-02-07
-**最后更新**: 2026-02-07
-**状态**: 开发中
+**最后更新**: 2026-02-13
+**状态**: 生产就绪
 
 ---
 
@@ -16,7 +16,7 @@
 | **LLM** | Qwen (通义千问) | OpenAI GPT-4 / Claude 3 |
 | **嵌入模型** | SimpleEmbedding (词频哈希) | OpenAI Embeddings |
 | **向量数据库** | ChromaDB (本地) | Pinecone / Milvus |
-| **Agent 框架** | SimpleAgent | 保持或升级 LangGraph |
+| **Agent 框架** | SimpleAgent (推荐) | SimpleAgent (生产验证) |
 | **部署方式** | SQLite + 本地文件 | PostgreSQL + 云存储 |
 
 ### 1.2 目录结构
@@ -28,7 +28,13 @@ services/
 │   ├── base.py             # 配置中心
 │   ├── memory.py           # 记忆管理（简化版）
 │   ├── tools.py            # 工具函数
-│   └── agents.py           # SimpleAgent 实现
+│   ├── agents.py           # Agent 入口点（兼容层）
+│   ├── agent.py            # 主实现（最新版本）
+│   ├── agent_simple.py     # 简化版（推荐使用）
+│   ├── agent_selector.py   # 版本选择器
+│   ├── monitoring.py       # 性能监控
+│   ├── tools.py            # 工具函数
+│   └── memory.py           # 记忆管理
 ├── vectorstore/            # 向量存储模块
 │   ├── __init__.py
 │   ├── embedding.py        # 嵌入服务（Simple/OpenAI）
