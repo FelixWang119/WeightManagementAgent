@@ -50,7 +50,7 @@ class FastAPISettings(BaseSettings):
     
     # 通义千问(Qwen)配置
     QWEN_API_KEY: Optional[str] = None
-    QWEN_API_BASE: str = "https://dashscope.aliyuncs.com/api/v1"
+    QWEN_API_BASE: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     QWEN_MODEL: str = "qwen-turbo"
     QWEN_MAX_TOKENS: int = 2000
     QWEN_TEMPERATURE: float = 0.7

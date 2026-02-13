@@ -285,32 +285,32 @@ class UserProfileService:
         ]
         
         # 添加基础信息
-        basic_info = profile_data["basic_info"]
-        if basic_info["age"] is not None:
+        basic_info = profile_data.get("basic_info", {})
+        if basic_info.get("age") is not None:
             prompt_parts.append(f"- 年龄: {basic_info['age']}岁")
         else:
             prompt_parts.append(f"- 年龄: 未知")
         
-        if basic_info["gender"]:
+        if basic_info.get("gender"):
             prompt_parts.append(f"- 性别: {basic_info['gender']}")
         else:
             prompt_parts.append(f"- 性别: 未知")
         
-        if basic_info["height"] is not None:
+        if basic_info.get("height") is not None:
             prompt_parts.append(f"- 身高: {basic_info['height']}cm")
         else:
             prompt_parts.append(f"- 身高: 未知")
         
-        if basic_info["bmr"] is not None:
+        if basic_info.get("bmr") is not None:
             prompt_parts.append(f"- 基础代谢率(BMR): {basic_info['bmr']}")
         else:
             prompt_parts.append(f"- 基础代谢率(BMR): 未知")
         
-        if basic_info["current_weight"] is not None:
+        if basic_info.get("current_weight") is not None:
             prompt_parts.append(f"- 当前体重: {basic_info['current_weight']}kg")
         
         # 添加用户画像（从画像回答中提取）
-        profile_desc = profile_data["profile_desc"]
+        profile_desc = profile_data.get("profile_desc", {})
         if profile_desc:
             prompt_parts.extend(["", "【用户画像】"])
             
@@ -345,7 +345,7 @@ class UserProfileService:
                 prompt_parts.append(f"- 减重动机: 未知")
         
         # 添加详细风格配置
-        prompt_parts.extend(["", profile_data["style_addition"]])
+        prompt_parts.extend(["", profile_data.get("style_addition", "")])
         
         # 添加当前时间
         prompt_parts.extend([
