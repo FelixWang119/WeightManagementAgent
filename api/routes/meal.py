@@ -830,3 +830,180 @@ async def cancel_meal_confirmation(
         "message": "已取消，请重新上传照片或手动输入",
         "data": {"cancelled": True},
     }
+
+
+# ============ 快速食物选择系统 ============
+
+
+@router.get("/foods/recent")
+async def get_recent_foods(
+    limit: int = Query(10, ge=1, le=30),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取最近食用的食物记录
+
+    - **limit**: 返回数量（1-30，默认10）
+
+    返回用户最近记录过的食物，方便快速选择
+    """
+    # 查询最近的食物记录
+    result = await db.execute(
+        select(MealRecord)
+        .where(MealRecord.user_id == current_user.id)
+        .order_by(MealRecord.record_time.desc())
+        .limit(limit * 2)  # 多获取一些用于提取食物
+    )
+    records = result.scalars().all()
+
+    # 提取食物并去重
+    recent_foods = {}
+    for record in records:
+        if record.food_items:
+            for item in record.food_items:
+                if isinstance(item, dict) and "name" in item:
+                    food_name = item["name"]
+                    if food_name not in recent_foods:
+                        recent_foods[food_name] = {
+                            "name": food_name,
+                            "calories": item.get("calories", 0),
+                            "icon": item.get("icon", "🍽️"),
+                            "last_used": record.record_time.isoformat(),
+                        }
+
+        if len(recent_foods) >= limit:
+            break
+
+    foods_list = list(recent_foods.values())[:limit]
+
+    return {"success": True, "count": len(foods_list), "foods": foods_list}
+
+
+# 收藏食物存储（生产环境应使用数据库）
+_user_favorites = {}
+
+
+@router.get("/foods/favorites")
+async def get_favorite_foods(current_user: User = Depends(get_current_user)):
+    """
+    获取收藏的食物列表
+    """
+    user_id = current_user.id
+    favorites = _user_favorites.get(user_id, [])
+
+    return {"success": True, "count": len(favorites), "foods": favorites}
+
+
+@router.post("/foods/favorites")
+async def add_favorite_food(
+    food_name: str,
+    calories: int,
+    icon: str = "🍽️",
+    current_user: User = Depends(get_current_user),
+):
+    """
+    收藏食物
+
+    - **food_name**: 食物名称
+    - **calories**: 热量
+    - **icon**: 图标emoji
+    """
+    user_id = current_user.id
+
+    if user_id not in _user_favorites:
+        _user_favorites[user_id] = []
+
+    # 检查是否已收藏
+    existing = [f for f in _user_favorites[user_id] if f["name"] == food_name]
+    if existing:
+        return {"success": False, "message": "该食物已收藏"}
+
+    _user_favorites[user_id].append(
+        {"name": food_name, "calories": calories, "icon": icon}
+    )
+
+    return {
+        "success": True,
+        "message": "收藏成功",
+        "data": {"name": food_name, "calories": calories, "icon": icon},
+    }
+
+
+@router.delete("/foods/favorites")
+async def remove_favorite_food(
+    food_name: str, current_user: User = Depends(get_current_user)
+):
+    """
+    取消收藏食物
+
+    - **food_name**: 食物名称
+    """
+    user_id = current_user.id
+
+    if user_id not in _user_favorites:
+        return {"success": False, "message": "没有收藏该食物"}
+
+    _user_favorites[user_id] = [
+        f for f in _user_favorites[user_id] if f["name"] != food_name
+    ]
+
+    return {"success": True, "message": "已取消收藏"}
+
+
+@router.get("/foods/quick")
+async def get_quick_foods(
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    """
+    获取快速选择的食物列表（系统常用 + 最近食用 + 收藏）
+    """
+    user_id = current_user.id
+
+    # 1. 获取系统常用食物
+    system_foods_result = await db.execute(select(FoodItem).limit(15))
+    system_foods = [
+        {
+            "name": f.name,
+            "calories": f.calories_per_100g,
+            "icon": "🍽️",
+            "source": "system",
+        }
+        for f in system_foods_result.scalars()
+    ]
+
+    # 2. 获取最近食用
+    recent_result = await db.execute(
+        select(MealRecord)
+        .where(MealRecord.user_id == user_id)
+        .order_by(MealRecord.record_time.desc())
+        .limit(20)
+    )
+    recent_foods = {}
+    for record in recent_result.scalars():
+        if record.food_items:
+            for item in record.food_items:
+                if isinstance(item, dict) and "name" in item:
+                    food_name = item["name"]
+                    if food_name not in recent_foods:
+                        recent_foods[food_name] = {
+                            "name": food_name,
+                            "calories": item.get("calories", 0),
+                            "icon": item.get("icon", "🍽️"),
+                            "source": "recent",
+                        }
+        if len(recent_foods) >= 10:
+            break
+
+    # 3. 获取收藏
+    favorites = _user_favorites.get(user_id, [])
+    favorite_foods = [{**f, "source": "favorite"} for f in favorites]
+
+    return {
+        "success": True,
+        "data": {
+            "system": system_foods,
+            "recent": list(recent_foods.values())[:10],
+            "favorites": favorite_foods,
+        },
+    }

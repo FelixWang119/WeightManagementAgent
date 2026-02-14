@@ -39,15 +39,33 @@
   - `POST /api/meal/reanalyze` - 重新描述分析
   - `POST /api/meal/cancel` - 取消确认
 
-### Week 2: 习惯追踪 + 快速食物库
-- [ ] 连续打卡统计
-- [ ] 习惯养成可视化
-- [ ] 打卡热力图
-- [ ] 常用食物快捷选择
-- [ ] 最近食用记录
-- [ ] 收藏食物功能
+### Week 2: 习惯追踪 + 快速食物库 ✅
+- [x] 连续打卡统计 - 多维度连续打卡计算(体重/餐食/运动/饮水/睡眠)
+- [x] 习惯养成可视化 - 30天习惯进度卡片，综合评分算法
+- [x] 打卡热力图 - GitHub风格年度热力图展示
+- [x] 常用食物快捷选择 - 系统食物库+快速选择API
+- [x] 最近食用记录 - 自动提取历史记录
+- [x] 收藏食物功能 - 收藏/取消收藏API
 
-**状态**: 待开始
+**状态**: 已完成
+**完成日期**: 2026-02-14
+**主要成果**:
+- 新建 `services/habit_tracking_service.py` - 习惯追踪服务(470行)
+- 新建 `api/routes/habit.py` - 习惯打卡API(5个端点)
+- 新建 `static/habit.html` - 习惯打卡前端页面
+- 更新 `main.py` - 注册habit路由
+- 更新 `api/routes/meal.py` - 添加快速食物API(5个端点)
+- 新增API端点:
+  - `GET /api/habit/streaks` - 连续打卡统计
+  - `GET /api/habit/heatmap` - 打卡热力图
+  - `GET /api/habit/progress` - 习惯养成进度
+  - `GET /api/habit/recent` - 最近打卡记录
+  - `GET /api/habit/dashboard` - 习惯打卡仪表盘
+  - `GET /api/meal/foods/recent` - 最近食用食物
+  - `GET /api/meal/foods/favorites` - 收藏食物列表
+  - `POST /api/meal/foods/favorites` - 添加收藏
+  - `DELETE /api/meal/foods/favorites` - 取消收藏
+  - `GET /api/meal/foods/quick` - 快速选择食物(系统+最近+收藏)
 
 ### Week 3: 记忆摘要 + 富媒体消息
 - [ ] 对话摘要生成
@@ -202,6 +220,7 @@ Phase 3 (体验)
 |------|---------|--------|
 | 2026-02-14 | 计划创建 | opencode |
 | 2026-02-14 | Week 1完成：睡眠分析系统(3个分析维度)、AI确认流程(4个API+前端UI) | opencode |
+| 2026-02-14 | Week 2完成：习惯打卡系统(5个API+前端页面)、快速食物选择(5个API) | opencode |
 
 ---
 

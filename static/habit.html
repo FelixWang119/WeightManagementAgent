@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>习惯打卡 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <style>
+        .habit-page { padding-bottom: 24px; }
+        
+        /* 连续打卡展示 */
+        .streak-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .streak-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .streak-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .streak-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .streak-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+        }
+        
+        .streak-card {
+            background: var(--background);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all var(--transition-fast);
+        }
+        
+        .streak-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+        
+        .streak-card.active {
+            border-color: var(--success-color);
+            background: rgba(46, 204, 113, 0.05);
+        }
+        
+        .streak-icon { font-size: 2rem; margin-bottom: 8px; }
+        .streak-name { font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 8px; }
+        .streak-count { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
+        .streak-count .unit { font-size: 0.75rem; font-weight: 400; color: var(--text-muted); }
+        .streak-max { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+        
+        /* 热力图 */
+        .heatmap-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .heatmap-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .heatmap-title { font-size: 1.125rem; font-weight: 600; }
+        
+        .heatmap-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .heatmap-container { overflow-x: auto; padding-bottom: 8px; }
+        
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(53, 1fr);
+            gap: 3px;
+            min-width: 800px;
+        }
+        
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: transform var(--transition-fast);
+        }
+        
+        .heatmap-cell:hover { transform: scale(1.2); z-index: 1; }
+        .heatmap-cell.level-0 { background: #ebedf0; }
+        .heatmap-cell.level-1 { background: #c6e48b; }
+        .heatmap-cell.level-2 { background: #7bc96f; }
+        .heatmap-cell.level-3 { background: #239a3b; }
+        .heatmap-cell.level-4 { background: #196127; }
+        
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .heatmap-legend .cell { width: 12px; height: 12px; border-radius: 2px; }
+        
+        /* 习惯进度 */
+        .progress-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .progress-title { font-size: 1.125rem; font-weight: 600; margin-bottom: 20px; }
+        
+        .habit-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: var(--background);
+            border-radius: var(--border-radius);
+            margin-bottom: 12px;
+        }
+        
+        .habit-icon {
+            font-size: 2rem;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 12px;
+        }
+        
+        .habit-info { flex: 1; }
+        .habit-name { font-weight: 600; margin-bottom: 4px; }
+        .habit-desc { font-size: 0.875rem; color: var(--text-muted); }
+        
+        .habit-progress { width: 120px; }
+        
+        .progress-bar {
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width var(--transition-fast);
+        }
+        
+        .progress-fill.excellent { background: var(--success-color); }
+        .progress-fill.good { background: #f39c12; }
+        .progress-fill.developing { background: #e74c3c; }
+        .progress-fill.weak { background: #95a5a6; }
+        
+        .progress-text { font-size: 0.75rem; text-align: right; color: var(--text-muted); }
+        
+        .habit-status {
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+        
+        .habit-status.excellent { background: rgba(46, 204, 113, 0.1); color: var(--success-color); }
+        .habit-status.good { background: rgba(243, 156, 18, 0.1); color: #f39c12; }
+        .habit-status.developing { background: rgba(231, 76, 60, 0.1); color: #e74c3c; }
+        .habit-status.weak { background: rgba(149, 165, 166, 0.1); color: #95a5a6; }
+        
+        /* 最近打卡 */
+        .recent-section {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .recent-title { font-size: 1.125rem; font-weight: 600; margin-bottom: 16px; }
+        
+        .recent-list { display: flex; flex-direction: column; gap: 12px; }
+        
+        .recent-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--background);
+            border-radius: var(--border-radius);
+        }
+        
+        .recent-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 10px;
+        }
+        
+        .recent-info { flex: 1; }
+        .recent-type { font-weight: 500; margin-bottom: 2px; }
+        .recent-time { font-size: 0.75rem; color: var(--text-muted); }
+        .recent-content { font-weight: 600; color: var(--primary-color); }
+        
+        /* 总体评分卡片 */
+        .overall-score-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: var(--border-radius);
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .score-label { font-size: 0.875rem; opacity: 0.9; margin-bottom: 8px; }
+        .score-value { font-size: 3rem; font-weight: 700; margin-bottom: 8px; }
+        .score-desc { font-size: 0.875rem; opacity: 0.9; }
+        
+        @media (max-width: 768px) {
+            .heatmap-grid { grid-template-columns: repeat(26, 1fr); }
+            .streak-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <span class="nav-logo">💪</span>
+                <span class="nav-title">体重管理助手</span>
+            </div>
+            <div class="nav-user">
+                <span class="user-avatar" id="user-avatar">U</span>
+                <span class="user-name" id="user-name">用户</span>
+                <button class="btn btn-sm btn-ghost" onclick="Auth.logout()">退出</button>
+            </div>
+        </nav>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-logo">💪</span>
+                <span>体重管理助手</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>首页</span></a>
+                <a href="chat.html" class="nav-item"><span class="nav-icon">💬</span><span>AI对话</span></a>
+                <a href="weight.html" class="nav-item"><span class="nav-icon">⚖️</span><span>体重记录</span></a>
+                <a href="meal.html" class="nav-item"><span class="nav-icon">🍽️</span><span>饮食记录</span></a>
+                <a href="exercise.html" class="nav-item"><span class="nav-icon">🏃</span><span>运动打卡</span></a>
+                <a href="water.html" class="nav-item"><span class="nav-icon">💧</span><span>饮水记录</span></a>
+                <a href="sleep.html" class="nav-item"><span class="nav-icon">😴</span><span>睡眠记录</span></a>
+                <a href="habit.html" class="nav-item active"><span class="nav-icon">📊</span><span>习惯打卡</span></a>
+                <a href="report.html" class="nav-item"><span class="nav-icon">📈</span><span>周报</span></a>
+                <a href="profile.html" class="nav-item"><span class="nav-icon">👤</span><span>个人中心</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1 class="page-title">📊 习惯打卡</h1>
+                <p class="page-subtitle">追踪您的健康习惯养成进度</p>
+            </div>
+
+            <div class="habit-page">
+                <div class="overall-score-card" id="overall-score">
+                    <div class="score-label">习惯养成综合评分</div>
+                    <div class="score-value">--</div>
+                    <div class="score-desc">持续记录，养成健康好习惯</div>
+                </div>
+
+                <div class="streak-section">
+                    <div class="streak-header">
+                        <h2 class="streak-title">🔥 连续打卡</h2>
+                        <div class="streak-badge">
+                            <span>🔥</span>
+                            <span id="current-streak">0 天</span>
+                        </div>
+                    </div>
+                    <div class="streak-grid" id="streak-grid"></div>
+                </div>
+
+                <div class="heatmap-section">
+                    <div class="heatmap-header">
+                        <h2 class="heatmap-title">📅 年度打卡热力图</h2>
+                        <div class="heatmap-stats">
+                            <span id="total-checkins">总打卡: 0</span>
+                            <span id="active-days">活跃天数: 0</span>
+                        </div>
+                    </div>
+                    <div class="heatmap-container">
+                        <div class="heatmap-grid" id="heatmap-grid"></div>
+                    </div>
+                    <div class="heatmap-legend">
+                        <span>少</span>
+                        <div class="cell level-0"></div>
+                        <div class="cell level-1"></div>
+                        <div class="cell level-2"></div>
+                        <div class="cell level-3"></div>
+                        <div class="cell level-4"></div>
+                        <span>多</span>
+                    </div>
+                </div>
+
+                <div class="progress-section">
+                    <h2 class="progress-title">🎯 习惯养成进度 (最近30天)</h2>
+                    <div id="habit-progress"></div>
+                </div>
+
+                <div class="recent-section">
+                    <h2 class="recent-title">📝 最近打卡</h2>
+                    <div class="recent-list" id="recent-list"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components.js"></script>
+    <script>
+        // 类型名称映射
+        const typeNames = {
+            weight: '体重记录',
+            breakfast: '早餐打卡',
+            lunch: '午餐打卡',
+            dinner: '晚餐打卡',
+            snack: '加餐记录',
+            exercise: '运动打卡',
+            water: '饮水记录',
+            sleep: '睡眠记录'
+        };
+        
+        const typeIcons = {
+            weight: '⚖️',
+            breakfast: '🌅',
+            lunch: '☀️',
+            dinner: '🌙',
+            snack: '🍿',
+            exercise: '🏃',
+            water: '💧',
+            sleep: '😴'
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.check()) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            const user = Auth.getUser();
+            if (user) {
+                document.getElementById('user-name').textContent = user.nickname || user.name || '用户';
+                document.getElementById('user-avatar').textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+            }
+
+            loadHabitData();
+        });
+
+        async function loadHabitData() {
+            try {
+                // 加载仪表盘数据
+                const response = await fetch(`${API.base}/api/habit/dashboard`, {
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                });
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message);
+                }
+                
+                const data = result.data;
+                
+                // 更新总体评分
+                updateOverallScore(data.summary);
+                
+                // 更新连续打卡
+                if (data.streaks) {
+                    updateStreaks(data.streaks);
+                }
+                
+                // 更新习惯进度
+                if (data.progress) {
+                    updateProgress(data.progress);
+                }
+                
+                // 更新最近打卡
+                if (data.recent) {
+                    updateRecent(data.recent);
+                }
+                
+                // 加载热力图
+                loadHeatmap();
+                
+            } catch (error) {
+                console.error('加载习惯数据失败:', error);
+                Utils.toast('加载数据失败', 'error');
+            }
+        }
+
+        function updateOverallScore(summary) {
+            const score = summary.overall_score || 0;
+            document.querySelector('#overall-score .score-value').textContent = score;
+            document.getElementById('current-streak').textContent = `${summary.current_streak || 0} 天`;
+            
+            let desc = '持续记录，养成健康好习惯';
+            if (score >= 80) desc = '太棒了！您的习惯养成非常好';
+            else if (score >= 60) desc = '不错！继续保持良好的习惯';
+            else if (score >= 40) desc = '加油！坚持记录会看到进步';
+            document.querySelector('#overall-score .score-desc').textContent = desc;
+        }
+
+        function updateStreaks(streaksData) {
+            const container = document.getElementById('streak-grid');
+            const streaks = streaksData.streaks || {};
+            
+            let html = '';
+            for (const [type, data] of Object.entries(streaks)) {
+                const isActive = data.current_streak > 0;
+                html += `
+                    <div class="streak-card ${isActive ? 'active' : 'inactive'}">
+                        <div class="streak-icon">${typeIcons[type] || '📝'}</div>
+                        <div class="streak-name">${typeNames[type] || type}</div>
+                        <div class="streak-count">${data.current_streak}<span class="unit">天</span></div>
+                        <div class="streak-max">最高 ${data.max_streak} 天</div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function updateProgress(progressData) {
+            const container = document.getElementById('habit-progress');
+            const habits = progressData.habits || {};
+            
+            let html = '';
+            for (const [id, habit] of Object.entries(habits)) {
+                html += `
+                    <div class="habit-item">
+                        <div class="habit-icon">${habit.icon}</div>
+                        <div class="habit-info">
+                            <div class="habit-name">${habit.name}</div>
+                            <div class="habit-desc">${habit.description}</div>
+                        </div>
+                        <div class="habit-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill ${habit.status}" style="width: ${habit.progress}%"></div>
+                            </div>
+                            <div class="progress-text">${habit.progress}%</div>
+                        </div>
+                        <div class="habit-status ${habit.status}">${habit.status_text}</div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function updateRecent(recentData) {
+            const container = document.getElementById('recent-list');
+            const checkins = recentData.checkins || [];
+            
+            if (checkins.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无打卡记录</div>';
+                return;
+            }
+            
+            let html = '';
+            checkins.forEach(checkin => {
+                html += `
+                    <div class="recent-item">
+                        <div class="recent-icon">${checkin.icon}</div>
+                        <div class="recent-info">
+                            <div class="recent-type">${checkin.type_name}</div>
+                            <div class="recent-time">${checkin.date} ${checkin.time}</div>
+                        </div>
+                        <div class="recent-content">${checkin.content}</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        async function loadHeatmap() {
+            try {
+                const response = await fetch(`${API.base}/api/habit/heatmap`, {
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                });
+                const result = await response.json();
+                
+                if (!result.success) return;
+                
+                const data = result.data;
+                document.getElementById('total-checkins').textContent = `总打卡: ${data.summary.total_checkins}`;
+                document.getElementById('active-days').textContent = `活跃天数: ${data.summary.active_days}`;
+                
+                // 生成热力图
+                const container = document.getElementById('heatmap-grid');
+                let html = '';
+                data.heatmap.forEach(day => {
+                    html += `<div class="heatmap-cell level-${day.level}" title="${day.date}: ${day.count}次打卡"></div>`;
+                });
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载热力图失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>
