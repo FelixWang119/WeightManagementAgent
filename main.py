@@ -248,6 +248,7 @@ from api.routes import (
     insights,
     monitoring,
     suggestions,
+    achievements,
 )
 from api.routes.admin import auth as admin_auth
 from api.routes.admin import prompts as admin_prompts
@@ -274,6 +275,7 @@ app.include_router(summary.router, prefix="/api/summary", tags=["对话总结"])
 app.include_router(insights.router, prefix="/api/insights", tags=["AI洞察"])
 app.include_router(monitoring.router, prefix="/api/monitoring", tags=["监控"])
 app.include_router(suggestions.router, prefix="/api/suggestions", tags=["智能建议"])
+app.include_router(achievements.router, prefix="/api/achievements", tags=["成就积分"])
 
 # 管理员路由
 app.include_router(admin_auth.router, prefix="/admin/auth", tags=["管理员认证"])

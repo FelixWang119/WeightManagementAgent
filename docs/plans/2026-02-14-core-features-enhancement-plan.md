@@ -236,15 +236,39 @@
 
 ## Phase 3: 体验优化完善 (Week 9-12)
 
-### Week 9: 成就系统 + 积分框架
-- [ ] 成就徽章设计
-- [ ] 解锁逻辑
-- [ ] 成就展示页面
-- [ ] 积分规则引擎
-- [ ] 获取/消耗记录
-- [ ] 积分显示
+### Week 9: 成就系统 + 积分框架 ✅
+- [x] 成就徽章设计 - 6类成就，20+徽章类型
+- [x] 解锁逻辑 - 基于用户行为自动解锁
+- [x] 成就展示页面 - API端点返回成就列表和解锁状态
+- [x] 积分规则引擎 - 动态积分计算和发放
+- [x] 获取/消耗记录 - 积分流水记录和查询
+- [x] 积分显示 - 用户积分查询和统计
 
-**状态**: 待开始
+**状态**: 已完成
+**完成日期**: 2026-02-14
+**主要成果**:
+- 新建 `services/achievement_service.py` - 成就与积分服务(450+行):
+  - AchievementService: 成就徽章管理
+    - 6类成就分类(体重/饮食/运动/坚持/里程碑/特殊)
+    - 20+徽章类型(连续打卡/达成目标/完美一周等)
+    - 自动解锁逻辑和状态检查
+  - PointsService: 积分规则引擎
+    - 动态积分计算(基于行为类型和难度)
+    - 积分发放和消耗记录
+    - 用户积分统计和查询
+- 新建 `api/routes/achievements.py` - 成就与积分API(6个端点):
+  - `GET /api/achievements/achievements` - 获取用户成就
+  - `GET /api/achievements/points` - 获取用户积分
+  - `POST /api/achievements/points/earn` - 获取积分
+  - `POST /api/achievements/points/spend` - 消耗积分
+  - `GET /api/achievements/points/history` - 积分流水记录
+  - `GET /api/achievements/leaderboard` - 积分排行榜
+- 更新 `models/database.py` - 用户档案新增字段:
+  - `achievements`: JSON格式存储解锁成就
+  - `points`: 当前可用积分
+  - `total_points_earned`: 累计获得积分
+  - `total_points_spent`: 累计消耗积分
+- 更新 `main.py` - 注册achievements路由
 
 ### Week 10: 数据导出 + 食谱库
 - [ ] Excel导出实现

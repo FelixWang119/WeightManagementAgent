@@ -311,6 +311,11 @@ class UserProfile(Base):
         default="balanced",
         comment="决策模式: conservative/balanced/intelligent",
     )
+    achievements = Column(JSON, nullable=True, comment="已解锁成就列表")
+    points = Column(Integer, default=0, comment="当前积分")
+    total_points_earned = Column(Integer, default=0, comment="累计获得积分")
+    total_points_spent = Column(Integer, default=0, comment="累计消耗积分")
+    communication_style = Column(String(20), nullable=True, comment="沟通风格")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="profile")
