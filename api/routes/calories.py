@@ -53,15 +53,47 @@ async def calculate_calories(
     计算基础代谢率(BMR)和每日总能量消耗(TDEE)
     
     优先使用用户提供的BMR值，否则根据年龄、性别、身高、体重计算
+    如果用户profile中有数据，优先使用profile中的数据
     """
     try:
+        # 优先从用户profile中获取数据
+        from sqlalchemy import select
+        from models.database import UserProfile
+        
+        # 查询用户profile
+        result = await db.execute(
+            select(UserProfile).where(UserProfile.user_id == current_user.id)
+        )
+        profile = result.scalar_one_or_none()
+        
+        # 使用优先级：用户提供的BMR > profile中的BMR > 计算BMR
+        use_user_bmr = request.use_user_bmr
+        
+        # 如果用户没有提供BMR，但profile中有BMR，使用profile的BMR
+        if use_user_bmr is None and profile and profile.bmr:
+            use_user_bmr = profile.bmr
+        
+        # 如果用户没有提供年龄/性别/身高/体重，尝试从profile获取
+        age = request.age
+        gender = request.gender
+        height = request.height
+        weight = request.weight
+        
+        if profile:
+            if age is None and profile.age:
+                age = profile.age
+            if gender is None and profile.gender:
+                gender = profile.gender
+            if height is None and profile.height:
+                height = profile.height
+        
         # 计算BMR（优先使用用户提供的值）
         bmr = CalorieCalculator.calculate_bmr(
-            age=request.age,
-            gender=request.gender,
-            height_cm=request.height,
-            weight_kg=request.weight,
-            use_user_bmr=request.use_user_bmr
+            age=age,
+            gender=gender,
+            height_cm=height,
+            weight_kg=weight,
+            use_user_bmr=use_user_bmr
         )
         
         if bmr is None:
@@ -76,7 +108,8 @@ async def calculate_calories(
             activity_level=request.activity_level or "light"
         )
         
-        return {
+        # 返回详细的数据来源信息
+        response_data = {
             "success": True,
             "bmr": round(bmr, 1),
             "tdee": round(tdee, 1),
@@ -85,8 +118,25 @@ async def calculate_calories(
                 request.activity_level or "light", 
                 1.375
             ),
-            "formula_used": "harris_benedict"
+            "formula_used": "harris_benedict",
+            "data_sources": {
+                "bmr_used": "user_provided" if request.use_user_bmr else (
+                    "profile" if profile and profile.bmr else "calculated"
+                ),
+                "age_used": "user_provided" if request.age else (
+                    "profile" if profile and profile.age else "not_provided"
+                ),
+                "gender_used": "user_provided" if request.gender else (
+                    "profile" if profile and profile.gender else "not_provided"
+                ),
+                "height_used": "user_provided" if request.height else (
+                    "profile" if profile and profile.height else "not_provided"
+                ),
+                "weight_used": "user_provided" if request.weight else "not_provided"
+            }
         }
+        
+        return response_data
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"计算失败: {str(e)}")

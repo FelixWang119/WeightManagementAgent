@@ -71,8 +71,8 @@ class ChromaVectorStore:
         # 确保目录存在
         os.makedirs(persist_dir, exist_ok=True)
         
-        # 初始化 ChromaDB 客户端
-        self._client = chromadb.EphemeralClient()
+        # 初始化 ChromaDB 客户端（使用持久化存储）
+        self._client = chromadb.PersistentClient(path=persist_dir)
         
         # 获取或创建集合
         self._collection = self._client.get_or_create_collection(

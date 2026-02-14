@@ -203,10 +203,10 @@ class CalorieCalculator:
         net_balance = total_burned - intake_calories
         
         # 判断热量状态
-        if net_balance < -300:
-            status = "surplus"      # 热量盈余（增重）
-        elif net_balance > 300:
+        if net_balance > 300:
             status = "deficit"      # 热量赤字（减重）
+        elif net_balance < -300:
+            status = "surplus"      # 热量盈余（增重）
         else:
             status = "maintenance"  # 维持
         

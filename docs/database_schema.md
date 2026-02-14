@@ -9,7 +9,7 @@
 ### 自动初始化
 当启动应用时，数据库会自动创建：
 ```bash
-python main_new.py
+python main.py
 ```
 
 ### 手动初始化

@@ -131,7 +131,11 @@ graph LR
   - 🔄 **快速选择**: 常用食物库快捷选择（待完善）
 - ✅ **热量计算**: 基于食物数据库自动计算总热量
 - ✅ **餐食分类**: 早餐、午餐、晚餐、加餐
-- 🔄 **确认机制**: AI识别结果用户确认/修正（待完善）
+- ✅ **确认机制**: AI识别结果用户确认/修正（2026-02-14已完成）
+  - 确认卡片展示AI识别结果
+  - 0.5x-1.5x滑动条调整分量
+  - 重新描述功能，AI重新解析
+  - 确认后保存到数据库
 
 #### **3.2.3 运动记录**
 - ✅ **运动类型**: 跑步、快走、游泳、健身等预设类型
@@ -148,7 +152,11 @@ graph LR
 - ✅ **时间记录**: 入睡时间、起床时间
 - ✅ **质量评估**: 1-5星睡眠质量评分
 - ✅ **时长计算**: 自动计算睡眠总时长
-- 🔄 **模式分析**: 睡眠规律性分析（待实现）
+- ✅ **模式分析**: 睡眠规律性分析（2026-02-14已完成）
+  - 入睡/起床时间规律性评分（基于CV变异系数）
+  - 睡眠时长规律性分析
+  - 睡眠质量趋势图表
+  - 睡眠-体重变化关联性分析
 
 ### 3.3 AI对话与智能建议系统
 
@@ -456,9 +464,19 @@ User (用户)
 #### **数据记录端点**
 - `POST /api/weight/record` - 记录体重数据
 - `POST /api/meal/record` - 记录餐食（支持图片上传）
+- `POST /api/meal/analyze-with-confirm` - AI分析餐食照片（带确认流程）
+- `POST /api/meal/confirm` - 确认AI识别结果并保存
+- `POST /api/meal/reanalyze` - 根据重新描述分析餐食
+- `POST /api/meal/cancel` - 取消餐食确认
 - `POST /api/exercise/record` - 记录运动打卡
 - `POST /api/water/record` - 记录饮水量
 - `POST /api/sleep/record` - 记录睡眠数据
+
+#### **睡眠分析端点**
+- `GET /api/sleep/analysis/pattern` - 睡眠规律性分析
+- `GET /api/sleep/analysis/quality-trend` - 睡眠质量趋势
+- `GET /api/sleep/analysis/weight-correlation` - 睡眠-体重关联分析
+- `GET /api/sleep/analysis/dashboard` - 睡眠分析仪表盘（综合）
 
 #### **首页功能端点**
 - `GET /api/calories/balance/daily` - 获取每日热量平衡数据（包含摄入、消耗、缺口等）

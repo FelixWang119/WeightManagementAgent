@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户画像收集 - 健康助手</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/profiling.css">
+    <style>
+        /* 专门为画像页面定制的样式 */
+        .profiling-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .profiling-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        .profiling-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .profiling-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .profiling-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .progress-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .progress-circle {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+
+        .progress-bg {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #f0f0f0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#4CAF50 var(--progress, 0%), #f0f0f0 0%);
+            transition: --progress 0.5s ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .progress-info {
+            font-size: 1.1rem;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .question-section {
+            text-align: center;
+        }
+
+        .question-title {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .question-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .option-btn {
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .option-btn:hover {
+            border-color: #4CAF50;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+        }
+
+        .option-btn.selected {
+            border-color: #4CAF50;
+            background: #4CAF50;
+            color: white;
+        }
+
+        .option-emoji {
+            font-size: 1.2rem;
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-field {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-field label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-field input,
+        .form-field select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-field input:focus,
+        .form-field select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .feedback-section {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .feedback-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .feedback-text {
+            font-size: 1.1rem;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .completed-section {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .completed-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+
+        .completed-text {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .profiling-container {
+                padding: 10px;
+            }
+
+            .profiling-content {
+                padding: 20px;
+            }
+
+            .question-options {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="profiling-container">
+        <div class="profiling-header">
+            <h1>🤖 用户画像收集</h1>
+            <p>通过几个简单问题，让我更好地了解你的健康需求和习惯</p>
+        </div>
+
+        <div class="profiling-content">
+            <!-- 进度显示区域 -->
+            <div class="progress-section" id="progress-section">
+                <div class="progress-circle">
+                    <div class="progress-bg">
+                        <div class="progress-fill"></div>
+                        <div class="progress-text">0%</div>
+                    </div>
+                </div>
+                <div class="progress-info">
+                    <span id="progress-text">正在加载进度...</span>
+                </div>
+            </div>
+
+            <!-- 问题显示区域 -->
+            <div class="question-section" id="question-section" style="display: none;">
+                <div class="question-title" id="question-text"></div>
+                
+                <!-- 选择题选项 -->
+                <div class="question-options" id="options-container"></div>
+                
+                <!-- 表单输入区域 -->
+                <div class="form-section" id="form-section"></div>
+                
+                <!-- 操作按钮 -->
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="submit-btn" onclick="submitAnswer()">提交</button>
+                    <button class="btn btn-secondary" onclick="skipQuestion()">跳过</button>
+                </div>
+            </div>
+
+            <!-- AI反馈区域 -->
+            <div class="feedback-section" id="feedback-section">
+                <div class="feedback-icon">🤖</div>
+                <div class="feedback-text" id="feedback-text"></div>
+            </div>
+
+            <!-- 完成区域 -->
+            <div class="completed-section" id="completed-section">
+                <div class="completed-icon">🎉</div>
+                <div class="completed-text">太棒了！我已经足够了解你了~</div>
+                <button class="btn btn-primary" onclick="window.location.href='/static/index.html'">返回首页</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入必要的JS库 -->
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/profiling.js"></script>
+    
+    <script>
+        // 当前问题数据
+        let currentQuestion = null;
+
+        // 页面加载初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProgress();
+            loadNextQuestion();
+        });
+
+        // 加载进度
+        async function loadProgress() {
+            try {
+                const response = await fetch(`${API.base}/api/profiling/progress`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const progress = result.progress.percentage || 0;
+                    const progressFill = document.querySelector('.progress-fill');
+                    const progressText = document.querySelector('.progress-text');
+                    const progressInfo = document.getElementById('progress-text');
+                    
+                    // 更新进度圆环
+                    progressFill.style.setProperty('--progress', `${progress}%`);
+                    progressText.textContent = `${progress}%`;
+                    progressInfo.textContent = `已完成 ${result.progress.answered || 0}/${result.progress.total || 0} 个问题`;
+                }
+            } catch (error) {
+                console.error('加载进度失败:', error);
+            }
+        }
+
+        // 加载下一个问题
+        async function loadNextQuestion() {
+            try {
+                const response = await fetch(`${API.base}/api/profiling/next-question?force_new=true`, {
+                    headers: {
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.has_question) {
+                        showQuestion(result.question);
+                    } else {
+                        showCompleted();
+                    }
+                }
+            } catch (error) {
+                console.error('加载问题失败:', error);
+                Utils.toast('加载失败，请重试', 'error');
+            }
+        }
+
+        // 显示问题
+        function showQuestion(question) {
+            currentQuestion = question;
+            
+            // 显示问题区域，隐藏进度区域
+            document.getElementById('progress-section').style.display = 'none';
+            document.getElementById('question-section').style.display = 'block';
+            document.getElementById('feedback-section').style.display = 'none';
+            document.getElementById('completed-section').style.display = 'none';
+            
+            // 设置问题文本
+            document.getElementById('question-text').textContent = question.question_text;
+            
+            // 根据问题类型显示不同的界面
+            if (question.type === 'form' && question.fields) {
+                showFormQuestion(question);
+            } else {
+                showChoiceQuestion(question);
+            }
+        }
+
+        // 显示选择题
+        function showChoiceQuestion(question) {
+            const optionsContainer = document.getElementById('options-container');
+            const formSection = document.getElementById('form-section');
+            
+            // 隐藏表单，显示选项
+            formSection.style.display = 'none';
+            optionsContainer.style.display = 'grid';
+            
+            // 生成选项按钮
+            optionsContainer.innerHTML = question.options.map((opt, index) => `
+                <button class="option-btn" onclick="selectOption(this, '${opt.value}')" 
+                        style="animation-delay: ${index * 0.1}s">
+                    <span class="option-emoji">${opt.emoji || ''}</span>
+                    <span class="option-text">${opt.text}</span>
+                </button>
+            `).join('');
+        }
+
+        // 显示表单题
+        function showFormQuestion(question) {
+            const optionsContainer = document.getElementById('options-container');
+            const formSection = document.getElementById('form-section');
+            
+            // 隐藏选项，显示表单
+            optionsContainer.style.display = 'none';
+            formSection.style.display = 'block';
+            
+            // 生成表单字段
+            formSection.innerHTML = question.fields.map(field => `
+                <div class="form-field">
+                    <label>${field.label || field.name}</label>
+                    ${renderFieldInput(field)}
+                </div>
+            `).join('');
+        }
+
+        // 渲染表单输入字段
+        function renderFieldInput(field) {
+            const placeholder = field.placeholder || '';
+            const min = field.min || '';
+            const max = field.max || '';
+
+            if (field.input_type === 'select' && field.options) {
+                return `
+                    <select name="${field.name}" required>
+                        <option value="">请选择${field.label}</option>
+                        ${field.options.map(opt => `
+                            <option value="${opt.value}">${opt.text}</option>
+                        `).join('')}
+                    </select>
+                `;
+            } else {
+                return `
+                    <input type="${field.input_type || 'text'}"
+                           name="${field.name}"
+                           placeholder="${placeholder}"
+                           ${min ? `min="${min}"` : ''}
+                           ${max ? `max="${max}"` : ''}
+                           ${field.required ? 'required' : ''}
+                           ${field.unit ? `data-unit="${field.unit}"` : ''}>
+                `;
+            }
+        }
+
+        // 选择选项
+        function selectOption(button, value) {
+            // 移除其他按钮的选中状态
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // 设置当前按钮为选中状态
+            button.classList.add('selected');
+            
+            // 保存选中的值
+            currentQuestion.selectedValue = value;
+        }
+
+        // 提交答案
+        async function submitAnswer() {
+            if (!currentQuestion) return;
+
+            try {
+                let response;
+                
+                if (currentQuestion.type === 'form') {
+                    // 表单题提交
+                    const formData = new FormData(document.getElementById('form-section'));
+                    const answers = {};
+                    
+                    for (let [key, value] of formData.entries()) {
+                        if (!value) {
+                            Utils.toast('请填写完整信息', 'error');
+                            return;
+                        }
+                        answers[key] = value;
+                    }
+                    
+                    response = await fetch(`${API.base}/api/profiling/submit-form`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${Auth.getToken()}`
+                        },
+                        body: JSON.stringify({
+                            question_id: currentQuestion.id,
+                            answer_value: JSON.stringify(answers)
+                        })
+                    });
+                } else {
+                    // 选择题提交
+                    if (!currentQuestion.selectedValue) {
+                        Utils.toast('请选择一个选项', 'error');
+                        return;
+                    }
+                    
+                    response = await fetch(`${API.base}/api/profiling/answer`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${Auth.getToken()}`
+                        },
+                        body: JSON.stringify({
+                            question_id: currentQuestion.id,
+                            answer_value: currentQuestion.selectedValue,
+                            answer_text: currentQuestion.options.find(opt => opt.value === currentQuestion.selectedValue)?.text || ''
+                        })
+                    });
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showFeedback(result.ai_feedback);
+                    setTimeout(() => {
+                        loadProgress();
+                        loadNextQuestion();
+                    }, 2000);
+                } else {
+                    throw new Error(result.detail || result.message || '提交失败');
+                }
+            } catch (error) {
+                console.error('提交失败:', error);
+                Utils.toast('提交失败，请重试', 'error');
+            }
+        }
+
+        // 显示AI反馈
+        function showFeedback(feedback) {
+            document.getElementById('question-section').style.display = 'none';
+            document.getElementById('feedback-section').style.display = 'block';
+            document.getElementById('feedback-text').textContent = feedback;
+        }
+
+        // 跳过问题
+        async function skipQuestion() {
+            try {
+                const response = await fetch(`${API.base}/api/profiling/skip`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    },
+                    body: JSON.stringify({
+                        question_id: currentQuestion.id
+                    })
+                });
+                
+                loadNextQuestion();
+                Utils.toast('已跳过该问题', 'info');
+            } catch (error) {
+                console.error('跳过问题失败:', error);
+            }
+        }
+
+        // 显示完成页面
+        function showCompleted() {
+            document.getElementById('progress-section').style.display = 'none';
+            document.getElementById('question-section').style.display = 'none';
+            document.getElementById('feedback-section').style.display = 'none';
+            document.getElementById('completed-section').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

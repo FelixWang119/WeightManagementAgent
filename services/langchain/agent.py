@@ -358,25 +358,20 @@ class WeightManagementAgent:
                     self.user_id, self.db
                 )
 
-            profile = self._user_profile
-            basic = profile.get("basic_info", {})
+            # 使用公共的format_system_prompt方法
+            base_prompt = UserProfileService.format_system_prompt(
+                self._user_profile, conversation_context=""
+            )
 
-            prompt = f"""你是{profile.get("agent_name", self.agent_name)}，用户的专属体重管理伙伴。
-
-【用户基础信息】
-- 年龄: {basic.get("age", "未知")}岁
-- 性别: {basic.get("gender", "未知")}
-- 身高: {basic.get("height", "未知")}cm
-- 当前体重: {basic.get("current_weight", "未知")}kg
-
-{profile.get("style_addition", "")}
+            # 添加Agent特定的回复规则
+            additional_rules = """
 
 【回复规则】
 1. 当用户提到体重、饮食、运动、饮水时，请使用工具记录
 2. 回复要简洁友好，控制在150字以内
 3. 记录成功后，向用户确认并给出简单建议"""
 
-            return prompt
+            return base_prompt + additional_rules
 
         except Exception as e:
             self.logger.error(f"构建系统提示失败: {e}", exc_info=True)
@@ -507,38 +502,14 @@ class WeightManagementAgent:
 
 
 class AgentFactory:
-    """Agent 工厂"""
-
-    _instances: Dict[int, WeightManagementAgent] = {}
+    """Agent 工厂 - 每次请求创建新实例避免session复用问题"""
 
     @classmethod
     async def get_agent(
         cls, user_id: int, db: AsyncSession, force_new: bool = False
     ) -> WeightManagementAgent:
-        """获取或创建 Agent"""
-        if force_new or user_id not in cls._instances:
-            cls._instances[user_id] = await WeightManagementAgent.create(user_id, db)
-
-        # 更新数据库会话
-        cls._instances[user_id].db = db
-        cls._instances[user_id].tool_executor.db = db
-        cls._instances[user_id].memory.db = db
-
-        return cls._instances[user_id]
-
-    @classmethod
-    async def close_agent(cls, user_id: int):
-        """关闭 Agent"""
-        if user_id in cls._instances:
-            await cls._instances[user_id].clear_memory()
-            del cls._instances[user_id]
-
-    @classmethod
-    async def close_all(cls):
-        """关闭所有 Agent"""
-        for agent in cls._instances.values():
-            await agent.clear_memory()
-        cls._instances.clear()
+        """获取或创建 Agent - 每次创建新实例"""
+        return await WeightManagementAgent.create(user_id, db)
 
 
 # 便捷函数

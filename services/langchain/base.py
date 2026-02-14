@@ -79,7 +79,7 @@ class LangChainConfig:
         - 使用 GPT-4 或 GPT-4 Turbo
         - 配置 API Key 和 Base URL
         """
-        from langchain_community.chat_models import ChatOpenAI
+        from langchain_openai import ChatOpenAI
         
         model_name = model_name or fastapi_settings.OPENAI_MODEL or "gpt-4"
         
@@ -87,8 +87,8 @@ class LangChainConfig:
             model=model_name,
             temperature=temperature,
             max_tokens=max_tokens,
-            openai_api_key=fastapi_settings.OPENAI_API_KEY,
-            openai_api_base=fastapi_settings.OPENAI_API_BASE,
+            api_key=fastapi_settings.OPENAI_API_KEY,
+            base_url=fastapi_settings.OPENAI_API_BASE,
         )
     
     @staticmethod
@@ -102,7 +102,7 @@ class LangChainConfig:
         
         使用 OpenAI 兼容接口
         """
-        from langchain_community.chat_models import ChatOpenAI as QwenChatOpenAI
+        from langchain_openai import ChatOpenAI as QwenChatOpenAI
         
         model_name = model_name or fastapi_settings.QWEN_MODEL or "qwen-turbo"
         
@@ -110,8 +110,8 @@ class LangChainConfig:
             model=model_name,
             temperature=temperature,
             max_tokens=max_tokens,
-            openai_api_key=fastapi_settings.QWEN_API_KEY,
-            openai_api_base=fastapi_settings.QWEN_API_BASE,
+            api_key=fastapi_settings.QWEN_API_KEY,
+            base_url=fastapi_settings.QWEN_API_BASE,
         )
     
     @staticmethod

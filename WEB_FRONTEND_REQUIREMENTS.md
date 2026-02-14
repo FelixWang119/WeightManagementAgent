@@ -393,7 +393,7 @@ const defaults = [
 ## 🚀 使用说明
 
 ### 启动应用
-1. 确保后端已启动：`python main_new.py`
+1. 确保后端已启动：`python main.py`
 2. 访问登录页：http://localhost:8000/static/login.html
 3. 输入任意代码登录
 4. 进入AI对话首页

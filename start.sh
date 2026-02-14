@@ -41,4 +41,4 @@ echo "📍 访问地址: http://localhost:8000"
 echo "📚 API 文档: http://localhost:8000/docs"
 echo ""
 
-python main_new.py
+python main.py

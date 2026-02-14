@@ -3,7 +3,7 @@
 包含：运动记录、运动统计、运动类型管理
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
 from typing import List, Optional
@@ -268,9 +268,9 @@ async def delete_exercise_record(
 
 @router.post("/checkin")
 async def checkin_exercise(
-    exercise_type: str = "日常活动",
-    duration_minutes: int = 30,
-    intensity: ExerciseIntensity = ExerciseIntensity.MEDIUM,
+    exercise_type: Optional[str] = Body(None),
+    duration_minutes: int = Body(30),
+    intensity: ExerciseIntensity = Body(ExerciseIntensity.MEDIUM),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -279,9 +279,22 @@ async def checkin_exercise(
     
     简化版运动记录，用于快速打卡，区别于详细运动记录
     """
-    # 计算消耗热量（简化计算）
+    # 如果没有提供运动类型，使用默认值
+    if not exercise_type:
+        exercise_type = "日常活动"
+    
+    # 计算消耗热量（后端统一计算）
     calories_per_hour = EXERCISE_CALORIES.get(exercise_type, 200)
-    calories_burned = int(calories_per_hour * duration_minutes / 60)
+    
+    # 强度系数
+    intensity_multiplier = {
+        "low": 0.8,
+        "medium": 1.0,
+        "high": 1.2
+    }
+    intensity_factor = intensity_multiplier.get(intensity.value, 1.0)
+    
+    calories_burned = int(calories_per_hour * duration_minutes / 60 * intensity_factor)
     
     # 创建打卡记录
     record = ExerciseRecord(

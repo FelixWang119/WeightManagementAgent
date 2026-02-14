@@ -159,32 +159,19 @@ class QwenClient(BaseAIClient):
         temperature: Optional[float] = None,
         stream: bool = False
     ) -> AIResponse:
-        """Qwen 聊天完成"""
+        """Qwen 聊天完成 - 使用OpenAI兼容接口"""
         try:
-            url = f"{self.api_base}/services/aigc/text-generation/generation"
-            
-            # 转换消息格式为 Qwen 格式
-            qwen_messages = []
-            for msg in messages:
-                if msg["role"] == "system":
-                    qwen_messages.append({"role": "system", "content": msg["content"]})
-                elif msg["role"] == "user":
-                    qwen_messages.append({"role": "user", "content": msg["content"]})
-                elif msg["role"] == "assistant":
-                    qwen_messages.append({"role": "assistant", "content": msg["content"]})
-            
+            # 使用OpenAI兼容接口，注意base_url不要带/api/v1后缀
+            base_url = self.api_base.replace('/api/v1', '')
+            url = f"{base_url}/compatible-mode/v1/chat/completions"
+
             payload = {
                 "model": model or self.default_model,
-                "input": {
-                    "messages": qwen_messages
-                },
-                "parameters": {
-                    "max_tokens": max_tokens or self.default_max_tokens,
-                    "temperature": temperature or self.default_temperature,
-                    "result_format": "message"
-                }
+                "messages": messages,
+                "max_tokens": max_tokens or self.default_max_tokens,
+                "temperature": temperature or self.default_temperature
             }
-            
+
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     url,
@@ -193,11 +180,11 @@ class QwenClient(BaseAIClient):
                     timeout=60.0
                 )
                 response.raise_for_status()
-                
+
                 data = response.json()
-                
-                if "output" in data and "choices" in data["output"]:
-                    choice = data["output"]["choices"][0]
+
+                if "choices" in data and len(data["choices"]) > 0:
+                    choice = data["choices"][0]
                     return AIResponse(
                         content=choice["message"]["content"],
                         model=data.get("model", model or self.default_model),

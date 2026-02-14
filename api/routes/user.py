@@ -23,7 +23,7 @@ security = HTTPBearer(auto_error=False)
 
 def generate_token(user_id: int) -> str:
     """生成简单的访问令牌（实际生产环境应使用 JWT）"""
-    data = f"{user_id}:{fastapi_settings.SECRET_KEY}:{datetime.utcnow().timestamp()}"
+    data = f"{user_id}:{fastapi_settings.SECRET_KEY}"
     return hashlib.sha256(data.encode()).hexdigest()[:32]
 
 
@@ -37,23 +37,31 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="未提供认证令牌"
         )
-    
-    # 实际应该解析 JWT，这里简化处理
-    # 从 Authorization header 获取 token: Bearer xxx
+
+    # 从 Authorization header 获取 token
     token = credentials.credentials
-    
-    # 查询用户（简化实现，实际应查询 token 表或使用 JWT 解析）
-    # 这里临时返回第一个用户用于测试
-    result = await db.execute(select(User).limit(1))
-    user = result.scalar_one_or_none()
-    
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="无效令牌"
-        )
-    
-    return user
+
+    import hashlib
+    from config.settings import fastapi_settings
+
+    # 遍历所有用户，找到匹配的 token
+    result = await db.execute(select(User))
+    all_users = result.scalars().all()
+
+    for user in all_users:
+        # 生成期望的token（不包含时间戳，使其永久有效）
+        expected_token_data = f"{user.id}:{fastapi_settings.SECRET_KEY}"
+        expected_token = hashlib.sha256(expected_token_data.encode()).hexdigest()[:32]
+
+        if token == expected_token:
+            # 找到匹配的用户
+            return user
+
+    # 没有匹配的用户，抛出认证错误
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="无效令牌"
+    )
 
 
 # ============ API 路由 ============
@@ -76,8 +84,8 @@ async def wechat_login(
     # TODO: 实际应调用微信 auth.code2Session 接口
     # 临时模拟返回
     
-    # 生成唯一 openid（实际应从微信获取）
-    openid = hashlib.md5(f"{code}:{secrets.token_hex(8)}".encode()).hexdigest()[:28]
+    # 生成唯一 openid（相同code固定生成相同openid，便于调试）
+    openid = hashlib.md5(f"{code}:fixed_salt".encode()).hexdigest()[:28]
     
     # 查询用户是否存在
     result = await db.execute(select(User).where(User.openid == openid))
@@ -179,6 +187,8 @@ async def update_user_profile(
     gender: Optional[str] = None,
     height: Optional[float] = None,
     bmr: Optional[int] = None,
+    diet_preferences: Optional[dict] = None,
+    exercise_habits: Optional[dict] = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -205,13 +215,65 @@ async def update_user_profile(
         profile.height = height
     if bmr is not None:
         profile.bmr = bmr
+    if diet_preferences is not None:
+        profile.diet_preferences = diet_preferences
+    if exercise_habits is not None:
+        profile.exercise_habits = exercise_habits
     
     profile.updated_at = datetime.utcnow()
     await db.commit()
     
+    # 清理用户画像缓存（如果有）
+    from services.user_profile_service import UserProfileService
+    await UserProfileService.invalidate_cache(current_user.id, db)
+    
     return {
         "success": True,
         "message": "资料更新成功"
+    }
+
+
+@router.put("/profile/bmr")
+async def update_user_bmr(
+    bmr: int = Body(..., embed=True),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    专门用于更新BMR的接口
+    
+    Args:
+        bmr: 基础代谢率值（千卡/天）
+    """
+    # 验证BMR值范围
+    if bmr < 500 or bmr > 5000:
+        raise HTTPException(
+            status_code=400,
+            detail="BMR值应在500-5000千卡/天范围内"
+        )
+    
+    # 更新或创建用户画像
+    result = await db.execute(
+        select(UserProfile).where(UserProfile.user_id == current_user.id)
+    )
+    profile = result.scalar_one_or_none()
+    
+    if not profile:
+        profile = UserProfile(user_id=current_user.id)
+        db.add(profile)
+    
+    profile.bmr = bmr
+    profile.updated_at = datetime.utcnow()
+    await db.commit()
+    
+    # 清理用户画像缓存
+    from services.user_profile_service import UserProfileService
+    await UserProfileService.invalidate_cache(current_user.id, db)
+    
+    return {
+        "success": True,
+        "message": "BMR更新成功",
+        "bmr": bmr
     }
 
 

@@ -300,6 +300,26 @@ async def get_profiling_progress(
     }
 
 
+@router.get("/profile-progress")
+async def get_profile_completion_progress(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """获取档案完善度进度（专门用于档案页面进度条）"""
+    user_id = int(current_user.id)
+    
+    # 获取用户档案
+    profile = await _get_user_profile(user_id, db)
+    
+    # 计算档案完善度
+    profile_completion = await _calculate_profile_completion(profile, user_id, db)
+    
+    return {
+        "success": True,
+        "profile_completion": profile_completion
+    }
+
+
 @router.get("/summary")
 async def get_user_profile_summary(
     current_user: User = Depends(get_current_user),

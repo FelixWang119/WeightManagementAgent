@@ -46,6 +46,11 @@ class CalorieBalanceService:
         )
         profile = profile_result.scalar_one_or_none()
         
+        # 调试日志：检查查询结果
+        print(f"DEBUG: User {user_id} profile query result - profile exists: {profile is not None}")
+        if profile:
+            print(f"DEBUG: User {user_id} BMR value: {profile.bmr}, type: {type(profile.bmr)}")
+        
         # 获取每日摄入热量（餐食记录）
         intake_query = select(
             func.date(MealRecord.record_time).label("record_date"),
@@ -62,16 +67,17 @@ class CalorieBalanceService:
         intake_data = {row.record_date: row.total_calories for row in intake_result}
         
         # 获取每日消耗热量（运动记录）
+        # 优先使用checkin_date字段（运动打卡专用），其次使用record_time
         exercise_query = select(
-            func.date(ExerciseRecord.record_time).label("record_date"),
+            func.coalesce(ExerciseRecord.checkin_date, func.date(ExerciseRecord.record_time)).label("record_date"),
             func.sum(ExerciseRecord.calories_burned).label("calories_burned")
         ).where(
             and_(
                 ExerciseRecord.user_id == user_id,
-                func.date(ExerciseRecord.record_time) >= start_date,
-                func.date(ExerciseRecord.record_time) <= end_date
+                func.coalesce(ExerciseRecord.checkin_date, func.date(ExerciseRecord.record_time)) >= start_date,
+                func.coalesce(ExerciseRecord.checkin_date, func.date(ExerciseRecord.record_time)) <= end_date
             )
-        ).group_by(func.date(ExerciseRecord.record_time))
+        ).group_by(func.coalesce(ExerciseRecord.checkin_date, func.date(ExerciseRecord.record_time)))
         
         exercise_result = await db.execute(exercise_query)
         exercise_data = {row.record_date: row.calories_burned for row in exercise_result}
@@ -84,14 +90,31 @@ class CalorieBalanceService:
         bmr = None
         tdee = None
         
+        # 检查用户是否真的有有效的BMR数据
+        has_real_bmr_data = False
+        
         if profile is not None and profile.bmr is not None:
-            bmr = float(profile.bmr)
-            # 使用轻度活动作为默认
-            tdee = CalorieCalculator.calculate_tdee(bmr, activity_level="light")
+            bmr_value = float(profile.bmr)
+            # 只有当BMR是有效值（大于0）时才视为有真实数据
+            # 不再检查是否为1500，因为1500可能也是用户真实测算的值
+            if bmr_value > 0:
+                has_real_bmr_data = True
+                bmr = bmr_value
+                tdee = CalorieCalculator.calculate_tdee(bmr, activity_level="light")
+            else:
+                # BMR值无效（小于等于0）
+                has_real_bmr_data = False
+                bmr = 1500
+                tdee = 1800
         else:
-            # 默认BMR（基于平均数据）
+            # 没有BMR数据
+            has_real_bmr_data = False
             bmr = 1500
             tdee = 1800
+        
+        # 统一日期键格式（确保查询结果和当前日期匹配）
+        intake_data = {date.fromisoformat(k) if isinstance(k, str) else k: v for k, v in intake_data.items()}
+        exercise_data = {date.fromisoformat(k) if isinstance(k, str) else k: v for k, v in exercise_data.items()}
         
         while current_date <= end_date:
             date_str = current_date.isoformat()
@@ -126,7 +149,13 @@ class CalorieBalanceService:
                 "total_burned": int(total_burned),
                 "balance": int(balance),
                 "status": status,
-                "is_today": current_date == date.today()
+                "is_today": current_date == date.today(),
+                # 添加详细说明，帮助用户理解数据含义
+                "explanation": {
+                    "base_burned": "基础代谢消耗（身体维持基本功能所需）",
+                    "exercise_burned": "运动消耗（通过运动打卡记录）",
+                    "total_burned": "总消耗 = 基础代谢 + 运动消耗"
+                }
             })
             
             current_date += timedelta(days=1)
@@ -159,7 +188,7 @@ class CalorieBalanceService:
             "user_stats": {
                 "bmr": bmr,
                 "estimated_tdee": tdee,
-                "has_bmr_data": profile and profile.bmr is not None
+                "has_bmr_data": has_real_bmr_data
             },
             "daily_data": daily_data,
             "summary": {
@@ -358,8 +387,8 @@ class CalorieBalanceService:
         ).where(
             and_(
                 ExerciseRecord.user_id == user_id,
-                func.date(ExerciseRecord.record_time) >= start_date,
-                func.date(ExerciseRecord.record_time) <= end_date
+                func.coalesce(ExerciseRecord.checkin_date, func.date(ExerciseRecord.record_time)) >= start_date,
+                func.coalesce(ExerciseRecord.checkin_date, func.date(ExerciseRecord.record_time)) <= end_date
             )
         ).group_by(ExerciseRecord.exercise_type)
         

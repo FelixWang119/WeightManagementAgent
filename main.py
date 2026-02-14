@@ -1,13 +1,8 @@
-#!/usr/bin/env python3
 """
-项目主入口文件
-
-使用示例：
-    python main.py
-    python main.py --config config.yaml
+体重管理助手 - 主程序入口
+FastAPI 应用
 """
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -15,198 +10,297 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-# 统一日志配置
-from config.logging_config import setup_logging, get_module_logger
-from config.settings import get_config, create_default_config_file
-from utils.exceptions import protect_main, error_handler, retry_on_error
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
 
-# 模块级 logger（必须：每个模块顶部初始化一次）
+from config.settings import fastapi_settings
+from models.database import init_db
+from config.logging_config import get_module_logger
+
 logger = get_module_logger(__name__)
 
 
-def parse_arguments() -> argparse.Namespace:
-    """解析命令行参数"""
-    parser = argparse.ArgumentParser(
-        description="项目主程序",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-示例:
-    python main.py                    # 使用默认配置运行
-    python main.py --debug            # 调试模式运行
-    python main.py --config prod.yaml # 使用指定配置文件
-        """
+# ============ 生命周期管理 ============
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时执行
+    logger.info("正在启动应用...")
+    await init_db()
+
+    # 初始化通知渠道
+    from services.channels import init_channels
+
+    init_channels()
+
+    # 启动通知调度器
+    from services.notification_scheduler import scheduler
+
+    scheduler.start()
+
+    logger.info(
+        "应用已启动: %s v%s", fastapi_settings.APP_NAME, fastapi_settings.APP_VERSION
     )
-    
-    parser.add_argument(
-        "--config",
-        type=str,
-        help="配置文件路径 (默认: config.yaml)"
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="启用调试模式"
-    )
-    parser.add_argument(
-        "--init-config",
-        action="store_true",
-        help="创建默认配置文件并退出"
-    )
-    
-    return parser.parse_args()
+    logger.info("访问地址: http://%s:%s", fastapi_settings.HOST, fastapi_settings.PORT)
+
+    yield
+
+    # 关闭时执行
+    from services.notification_scheduler import scheduler
+
+    scheduler.stop()
+    logger.info("应用正在关闭...")
 
 
-@error_handler(default_return=None, log_level="error")
-def initialize_app(args: argparse.Namespace) -> bool:
-    """
-    初始化应用程序
+# ============ FastAPI 应用实例 ============
+
+app = FastAPI(
+    title="体重管理助手 API",
+    version="1.0.0",
+    description="""
+    AI驱动的个性化体重管理助手API
     
-    Args:
-        args: 命令行参数
+    ## 模块
+    - **用户管理**：登录、注册、档案管理
+    - **体重管理**：记录、查询、趋势分析
+    - **运动管理**：记录、消耗计算
+    - **饮食管理**：餐食记录、卡路里计算
+    - **AI对话**：智能建议、聊天历史
     
-    Returns:
-        初始化是否成功
-    """
-    logger.info("=" * 60)
-    logger.info("开始初始化应用程序")
-    logger.info("=" * 60)
-    
-    # 创建默认配置文件（如果需要）
-    if args.init_config:
-        create_default_config_file()
-        return True
-    
-    # 加载配置
-    config = get_config()
-    
-    # 设置日志系统
-    log_config = config.get_logging_config()
-    if args.debug:
-        log_config["level"] = "DEBUG"
-    
-    setup_logging(**log_config)
-    logger.info("日志系统初始化完成")
-    
-    # 显示配置信息
-    logger.info("应用名称: %s", config.get("app.name"))
-    logger.info("调试模式: %s", "开启" if args.debug else "关闭")
-    logger.info("环境: %s", config.get("app.env"))
-    
-    logger.info("应用程序初始化完成")
-    return True
+    ## 文档导航
+    - 接口契约规范：`docs/api_contract.md`
+    - 详细接口手册：`docs/api_reference.md`
+    """,
+    lifespan=lifespan,
+    docs_url="/docs",  # 始终启用
+    redoc_url="/redoc",  # 始终启用
+)
+
+# ============ 中间件配置 ============
+
+# CORS 配置
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 生产环境应限制具体域名
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ============ 静态文件 ============
+
+# 上传文件目录
+import os
+
+os.makedirs(fastapi_settings.UPLOAD_DIR, exist_ok=True)
+app.mount(
+    "/uploads", StaticFiles(directory=fastapi_settings.UPLOAD_DIR), name="uploads"
+)
+
+# 静态文件目录（前端页面）
+static_dir = project_root / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+    logger.info("静态文件目录: %s", static_dir)
 
 
-@retry_on_error(max_attempts=3, delay=1.0)
-def fetch_data_example(url: str) -> dict:
-    """
-    示例：获取远程数据（带重试机制）
-    
-    Args:
-        url: 数据 URL
-    
-    Returns:
-        数据字典
-    """
-    logger.info("正在获取数据: %s", url)
-    
-    # 模拟网络请求（实际使用时替换为真实请求）
-    import random
-    if random.random() < 0.5:
-        raise ConnectionError("网络连接失败")
-    
-    return {"status": "success", "data": "示例数据"}
+# 管理后台快捷访问 - 重定向到静态文件
+@app.get("/admin")
+async def admin_redirect():
+    """重定向到管理后台登录页"""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/static/admin/login.html")
 
 
-@error_handler(default_return={"error": "处理失败"}, log_level="warning")
-def process_data(data: dict) -> dict:
-    """
-    示例：处理数据（带错误处理）
-    
-    Args:
-        data: 输入数据
-    
-    Returns:
-        处理后的数据
-    """
-    logger.info("开始处理数据")
-    
-    # 模拟数据处理
-    result = {
-        "input": data,
-        "processed": True,
-        "timestamp": "2024-01-01T00:00:00"
+@app.get("/admin/login.html")
+async def admin_login_page():
+    """重定向到登录页"""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/static/admin/login.html")
+
+
+@app.get("/admin/index.html")
+async def admin_index_page():
+    """重定向到管理后台首页"""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/static/admin/index.html")
+
+
+# 用户端页面路由
+@app.get("/goals.html")
+async def goals_page():
+    """目标管理页面"""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/static/goals.html")
+
+
+@app.get("/reminders.html")
+async def reminders_page():
+    """提醒设置页面"""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/static/reminders.html")
+
+
+@app.get("/calculator.html")
+async def calculator_page():
+    """热量计算器页面"""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/static/calculator.html")
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    """favicon"""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/static/favicon.svg")
+
+
+@app.get("/favicon.svg")
+async def favicon_svg():
+    """favicon svg"""
+    from fastapi.responses import FileResponse
+    from pathlib import Path
+
+    favicon_path = Path(__file__).parent / "static" / "favicon.svg"
+    return FileResponse(favicon_path, media_type="image/svg+xml")
+
+
+@app.get("/login.html")
+async def login_page():
+    """用户登录页"""
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url="/static/login.html")
+
+
+# ============ API 路由 ============
+
+
+@app.get("/")
+async def root():
+    """根路径 - API 信息"""
+    return {
+        "name": "体重管理助手 API",
+        "version": "1.0.0",
+        "status": "running",
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "contract_docs": "docs/api_contract.md",
+        "reference_docs": "docs/api_reference.md",
     }
-    
-    logger.info("数据处理完成")
-    return result
 
 
-def main() -> int:
-    """
-    主函数
-    
-    Returns:
-        退出码 (0=成功, 1=失败)
-    """
-    # 解析命令行参数
-    args = parse_arguments()
-    
-    # 初始化应用
-    if not initialize_app(args):
-        logger.error("应用程序初始化失败")
-        return 1
-    
-    # 如果只是创建配置，直接退出
-    if args.init_config:
-        return 0
-    
+@app.get("/health")
+async def health_check():
+    """健康检查接口（包含数据库连接检测）"""
+    from datetime import datetime
+    from sqlalchemy import text
+
+    health_status = {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": fastapi_settings.APP_VERSION,
+        "checks": {},
+    }
+
+    # 检查数据库连接
     try:
-        logger.info("=" * 60)
-        logger.info("开始主程序逻辑")
-        logger.info("=" * 60)
-        
-        # 示例 1：使用重试机制获取数据
-        logger.info("\n【示例 1】带重试的数据获取")
-        try:
-            data = fetch_data_example("https://api.example.com/data")
-            logger.info("获取数据成功: %s", data)
-        except Exception as e:
-            logger.error("获取数据失败: %s", str(e))
-        
-        # 示例 2：使用错误处理装饰器处理数据
-        logger.info("\n【示例 2】带错误处理的数据处理")
-        result = process_data({"key": "value"})
-        logger.info("处理结果: %s", result)
-        
-        # 示例 3：不同类型的日志
-        logger.info("\n【示例 3】日志级别示例")
-        logger.debug("这是一条 DEBUG 日志（仅在调试模式显示）")
-        logger.info("这是一条 INFO 日志")
-        logger.warning("这是一条 WARNING 日志")
-        logger.error("这是一条 ERROR 日志（测试用）")
-        
-        # 示例 4：使用占位符（性能优化，推荐）
-        stock_code = "000001"
-        score = 85.5
-        count = 100
-        logger.info("处理股票 %s，评分 %.2f，数量 %d", stock_code, score, count)
-        
-        logger.info("\n" + "=" * 60)
-        logger.info("主程序执行完成")
-        logger.info("=" * 60)
-        
-        return 0
-        
-    except KeyboardInterrupt:
-        logger.info("\n程序被用户中断")
-        return 130
-    except Exception as e:
-        logger.exception("主程序发生未预期错误: %s", str(e))
-        return 1
+        from models.database import engine
 
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        health_status["checks"]["database"] = "ok"
+    except Exception as e:
+        health_status["status"] = "unhealthy"
+        health_status["checks"]["database"] = f"error: {str(e)}"
+
+    return health_status
+
+
+# 导入并注册 API 路由
+from api.routes import (
+    chat,
+    weight,
+    user,
+    meal,
+    exercise,
+    water,
+    sleep,
+    report,
+    reminder,
+    profiling,
+    config,
+    calories,
+    goals,
+)
+from api.routes.admin import auth as admin_auth
+from api.routes.admin import prompts as admin_prompts
+from api.routes.admin import users as admin_users
+from api.routes.admin import chat_records_v2 as admin_chat_records  # 使用V2版本
+from api.routes.admin import system as admin_system
+from api.routes.admin import reminders as admin_reminders
+
+app.include_router(user.router, prefix="/api/user", tags=["用户"])
+app.include_router(chat.router, prefix="/api/chat", tags=["对话"])
+app.include_router(weight.router, prefix="/api/weight", tags=["体重"])
+app.include_router(meal.router, prefix="/api/meal", tags=["餐食"])
+app.include_router(exercise.router, prefix="/api/exercise", tags=["运动"])
+app.include_router(water.router, prefix="/api/water", tags=["饮水"])
+app.include_router(sleep.router, prefix="/api/sleep", tags=["睡眠"])
+app.include_router(report.router, prefix="/api/report", tags=["周报"])
+app.include_router(reminder.router, prefix="/api/reminder", tags=["提醒"])
+app.include_router(profiling.router, prefix="/api/profiling", tags=["用户画像"])
+app.include_router(config.router, prefix="/api/config", tags=["配置"])
+app.include_router(calories.router, prefix="/api/calories", tags=["热量计算"])
+app.include_router(goals.router, prefix="/api/goals", tags=["目标管理"])
+
+# 管理员路由
+app.include_router(admin_auth.router, prefix="/admin/auth", tags=["管理员认证"])
+app.include_router(admin_prompts.router, prefix="/admin/prompts", tags=["提示词管理"])
+app.include_router(admin_users.router, prefix="/admin/users", tags=["用户管理"])
+app.include_router(
+    admin_chat_records.router, prefix="/admin/chat-records", tags=["聊天记录管理"]
+)
+app.include_router(admin_system.router, prefix="/admin/system", tags=["系统管理"])
+app.include_router(
+    admin_reminders.router, prefix="/admin/reminders", tags=["提醒配置管理"]
+)
+
+
+# ============ 错误处理 ============
+
+from fastapi.responses import JSONResponse
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """HTTP 异常处理"""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": exc.detail, "status_code": exc.status_code},
+    )
+
+
+# ============ 启动入口 ============
 
 if __name__ == "__main__":
-    # 使用 protect_main 保护入口
-    # 自动处理异常、记录日志、设置退出码
-    from utils.exceptions import protect_main
-    sys.exit(protect_main(main, exit_on_error=False))
+    import uvicorn
+
+    uvicorn.run(
+        "main:app",
+        host=fastapi_settings.HOST,
+        port=fastapi_settings.PORT,
+        reload=fastapi_settings.DEBUG,
+        log_level=fastapi_settings.LOG_LEVEL.lower(),
+    )

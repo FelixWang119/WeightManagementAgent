@@ -221,6 +221,14 @@ const chatAPI = {
         return fullContent;
     },
 
+    // 发送消息（支持图片）
+    sendMessageWithImage: (requestData) => {
+        return request('/api/chat/send', {
+            method: 'POST',
+            body: JSON.stringify(requestData)
+        });
+    },
+
     // 获取聊天历史
     getHistory: (limit = 50) => {
         return request(`/api/chat/history?limit=${limit}`);

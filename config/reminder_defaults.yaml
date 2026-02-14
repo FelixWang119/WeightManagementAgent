@@ -1,0 +1,41 @@
+weight:
+  enabled: true
+  time: 07:00
+  interval: null
+  message_template: 记得记录今日体重哦！
+breakfast:
+  enabled: true
+  time: 07:30
+  interval: null
+  message_template: 早餐时间到啦，记得吃营养早餐！
+lunch:
+  enabled: true
+  time: '11:30'
+  interval: null
+  message_template: 午餐时间，记得合理搭配饮食！
+dinner:
+  enabled: true
+  time: '17:30'
+  interval: null
+  message_template: 晚餐时间，建议清淡饮食！
+exercise:
+  enabled: true
+  time: '18:00'
+  interval: null
+  message_template: 运动时间到了，动起来吧！
+water:
+  enabled: true
+  time: 09:00
+  interval: 120
+  message_template: 该喝水啦，保持水分充足！
+sleep:
+  enabled: true
+  time: '21:30'
+  interval: null
+  message_template: 准备休息了吗？良好的睡眠有助于健康！
+global_settings:
+  do_not_disturb_default:
+    start: '22:00'
+    end: 07:00
+  max_daily_notifications: 50
+  smart_adjustment_enabled: true

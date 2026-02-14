@@ -184,6 +184,107 @@
             color: var(--meal-color);
         }
         
+        /* 确认状态标签 */
+        .confirm-status {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: var(--warning-color);
+            color: white;
+            margin-left: auto;
+        }
+        
+        .confirm-status.confirmed {
+            background: var(--success-color);
+        }
+        
+        /* 调整滑块 */
+        .food-adjustment {
+            margin-top: 8px;
+            padding: 8px 0;
+        }
+        
+        .adjustment-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        
+        .adjustment-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .adjustment-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+        
+        .adjustment-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            border: none;
+        }
+        
+        /* 调整提示 */
+        .adjustment-hint {
+            background: rgba(52, 152, 219, 0.1);
+            padding: 12px;
+            border-radius: var(--border-radius);
+            margin: 16px 0;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        /* 重新描述区域 */
+        .reanalysis-section {
+            margin: 16px 0;
+            padding: 16px;
+            background: var(--background);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border);
+        }
+        
+        .reanalysis-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            justify-content: flex-end;
+        }
+        
+        /* 确认操作按钮 */
+        .confirmation-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .confirmation-actions .btn {
+            flex: 1;
+        }
+        
+        /* 食物项调整模式 */
+        .food-item.adjustable {
+            background: rgba(52, 152, 219, 0.05);
+            border: 1px dashed var(--primary-color);
+        }
+        
         /* 餐食类型选择 */
         .meal-type-section {
             margin-top: 20px;
@@ -364,7 +465,7 @@
         <!-- 顶部导航 -->
         <header class="page-header">
             <div class="header-brand">
-                <button class="menu-toggle" onclick="history.back()" style="margin-right: 12px;">
+                <button class="back-button" onclick="history.back()" style="margin-right: 12px;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
@@ -487,13 +588,38 @@
                         </div>
 
                         <!-- AI分析结果 -->
+                        <!-- AI识别确认卡片 -->
                         <div class="analysis-result" id="analysis-result" style="display: none;">
                             <div class="analysis-header">
                                 <span>🤖</span>
                                 <span>AI识别结果</span>
+                                <span class="confirm-status" id="confirm-status">待确认</span>
                             </div>
+                            
+                            <!-- 食物列表（可调整） -->
                             <div id="food-list">
                                 <!-- 动态生成 -->
+                            </div>
+                            
+                            <!-- 调整提示 -->
+                            <div class="adjustment-hint" id="adjustment-hint" style="display: none;">
+                                <span>💡</span> 拖动滑块调整分量，或点击"重新描述"让AI重新分析
+                            </div>
+                            
+                            <!-- 重新描述输入框 -->
+                            <div class="reanalysis-section" id="reanalysis-section" style="display: none;">
+                                <textarea id="reanalysis-input" class="form-textarea" rows="2" placeholder="重新描述食物，例如：一碗米饭、两份青菜、一块鸡胸肉"></textarea>
+                                <div class="reanalysis-actions">
+                                    <button class="btn btn-secondary btn-sm" onclick="cancelReanalysis()">取消</button>
+                                    <button class="btn btn-primary btn-sm" onclick="submitReanalysis()">重新分析</button>
+                                </div>
+                            </div>
+                            
+                            <!-- 操作按钮 -->
+                            <div class="confirmation-actions" id="confirmation-actions">
+                                <button class="btn btn-secondary" onclick="showReanalysis()">📝 重新描述</button>
+                                <button class="btn btn-outline" onclick="cancelConfirmation()">❌ 不对</button>
+                                <button class="btn btn-primary" id="confirm-btn" onclick="confirmMeal()">✓ 确认</button>
                             </div>
                         </div>
 
@@ -627,7 +753,10 @@
             analyzeImage(file);
         }
         
-        // AI分析图片 - 调用真实后端API
+        // 确认ID（用于确认流程）
+        let currentConfirmId = null;
+        
+        // AI分析图片 - 使用确认流程
         async function analyzeImage(file) {
             const overlay = document.getElementById('analyzing-overlay');
             overlay.style.display = 'flex';
@@ -638,8 +767,8 @@
                 formData.append('file', file);
                 formData.append('meal_type', selectedMealType);
                 
-                // 调用后端AI分析API
-                const response = await fetch(`${API.base}/api/meal/analyze`, {
+                // 调用新的确认流程API
+                const response = await fetch(`${API.base}/api/meal/analyze-with-confirm`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${Auth.getToken()}`
@@ -653,20 +782,23 @@
                     throw new Error(result.message || 'AI分析失败');
                 }
                 
-                // 获取AI分析结果
+                // 获取AI分析结果和确认ID
                 const aiAnalysis = result.data.ai_analysis;
+                currentConfirmId = result.data.confirm_id;
                 
                 if (aiAnalysis && aiAnalysis.foods && aiAnalysis.foods.length > 0) {
-                    // 转换为前端需要的格式
+                    // 转换为前端需要的格式，并保存原始热量用于调整
                     analyzedFoods = aiAnalysis.foods.map(food => ({
                         name: food.name,
                         amount: food.amount,
                         calories: food.calories,
-                        icon: food.icon || '🍽️'
+                        original_calories: food.calories,
+                        icon: food.icon || '🍽️',
+                        adjustment: 1.0  // 调整系数
                     }));
                     
-                    displayAnalysisResult(analyzedFoods, aiAnalysis.suggestions);
-                    Utils.toast(`AI识别成功：共${analyzedFoods.length}种食物`, 'success');
+                    displayAnalysisResult(analyzedFoods, aiAnalysis.suggestions, true);
+                    Utils.toast(`AI识别成功：共${analyzedFoods.length}种食物，请确认或调整`, 'success');
                 } else {
                     throw new Error('AI未能识别出食物');
                 }
@@ -674,8 +806,6 @@
             } catch (error) {
                 console.error('AI分析失败:', error);
                 Utils.toast(error.message || 'AI分析失败，请手动输入', 'error');
-                
-                // 显示手动输入提示
                 document.getElementById('analysis-result').style.display = 'none';
             } finally {
                 overlay.style.display = 'none';
@@ -683,22 +813,42 @@
         }
         
         // 显示分析结果
-        function displayAnalysisResult(foods, suggestions) {
+        function displayAnalysisResult(foods, suggestions, editable = false) {
             const container = document.getElementById('food-list');
             const resultSection = document.getElementById('analysis-result');
+            const adjustmentHint = document.getElementById('adjustment-hint');
+            const confirmActions = document.getElementById('confirmation-actions');
+            const confirmStatus = document.getElementById('confirm-status');
             
             const totalCalories = foods.reduce((sum, f) => sum + f.calories, 0);
             
-            let html = foods.map(food => `
-                <div class="food-item">
+            let html = foods.map((food, index) => {
+                const adjustmentSlider = editable ? `
+                    <div class="food-adjustment">
+                        <div class="adjustment-label">
+                            <span>0.5x</span>
+                            <span id="adj-value-${index}">1.0x</span>
+                            <span>1.5x</span>
+                        </div>
+                        <input type="range" 
+                               class="adjustment-slider" 
+                               min="0.5" max="1.5" step="0.1" value="1.0"
+                               oninput="adjustFoodCalories(${index}, this.value)"
+                               id="slider-${index}">
+                    </div>
+                ` : '';
+                
+                return `
+                <div class="food-item ${editable ? 'adjustable' : ''}" id="food-item-${index}">
                     <span class="food-icon">${food.icon}</span>
                     <div class="food-info">
                         <div class="food-name">${food.name}</div>
                         <div class="food-detail">${food.amount}</div>
                     </div>
-                    <div class="food-calories">${food.calories} kcal</div>
+                    <div class="food-calories" id="calories-${index}">${food.calories} kcal</div>
+                    ${adjustmentSlider}
                 </div>
-            `).join('');
+            `}).join('');
             
             // 添加总计
             html += `
@@ -707,7 +857,7 @@
                     <div class="food-info">
                         <div class="food-name" style="font-weight: 600;">预估总热量</div>
                     </div>
-                    <div class="food-calories" style="font-size: 1.25rem;">${totalCalories} kcal</div>
+                    <div class="food-calories" style="font-size: 1.25rem;" id="total-calories">${totalCalories} kcal</div>
                 </div>
             `;
             
@@ -725,6 +875,198 @@
             
             container.innerHTML = html;
             resultSection.style.display = 'block';
+            
+            // 显示/隐藏调整相关的UI
+            if (editable) {
+                adjustmentHint.style.display = 'block';
+                confirmActions.style.display = 'flex';
+                confirmStatus.textContent = '待确认';
+                confirmStatus.className = 'confirm-status';
+            } else {
+                adjustmentHint.style.display = 'none';
+                confirmActions.style.display = 'none';
+                confirmStatus.textContent = '已确认';
+                confirmStatus.className = 'confirm-status confirmed';
+            }
+        }
+        
+        // 调整食物热量
+        function adjustFoodCalories(index, adjustment) {
+            if (index < 0 || index >= analyzedFoods.length) return;
+            
+            const food = analyzedFoods[index];
+            const newCalories = Math.round(food.original_calories * parseFloat(adjustment));
+            
+            // 更新数据
+            food.calories = newCalories;
+            food.adjustment = parseFloat(adjustment);
+            
+            // 更新UI
+            document.getElementById(`calories-${index}`).textContent = `${newCalories} kcal`;
+            document.getElementById(`adj-value-${index}`).textContent = `${parseFloat(adjustment).toFixed(1)}x`;
+            
+            // 更新总热量
+            updateTotalCalories();
+        }
+        
+        // 更新总热量显示
+        function updateTotalCalories() {
+            const totalCalories = analyzedFoods.reduce((sum, f) => sum + f.calories, 0);
+            const totalEl = document.getElementById('total-calories');
+            if (totalEl) {
+                totalEl.textContent = `${totalCalories} kcal`;
+            }
+        }
+        
+        // 显示重新描述输入框
+        function showReanalysis() {
+            document.getElementById('reanalysis-section').style.display = 'block';
+            document.getElementById('reanalysis-input').focus();
+        }
+        
+        // 取消重新描述
+        function cancelReanalysis() {
+            document.getElementById('reanalysis-section').style.display = 'none';
+            document.getElementById('reanalysis-input').value = '';
+        }
+        
+        // 提交重新描述
+        async function submitReanalysis() {
+            const description = document.getElementById('reanalysis-input').value.trim();
+            if (!description) {
+                Utils.toast('请输入食物描述', 'warning');
+                return;
+            }
+            
+            if (!currentConfirmId) {
+                Utils.toast('确认ID无效，请重新上传照片', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API.base}/api/meal/reanalyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    },
+                    body: `confirm_id=${encodeURIComponent(currentConfirmId)}&description=${encodeURIComponent(description)}`
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || '重新分析失败');
+                }
+                
+                // 更新分析结果
+                const newFoods = result.data.foods.map(food => ({
+                    name: food.name,
+                    amount: food.amount,
+                    calories: food.calories,
+                    original_calories: food.calories,
+                    icon: food.icon || '🍽️',
+                    adjustment: 1.0
+                }));
+                
+                analyzedFoods = newFoods;
+                displayAnalysisResult(analyzedFoods, result.data.suggestions, true);
+                
+                // 隐藏重新描述区域
+                document.getElementById('reanalysis-section').style.display = 'none';
+                document.getElementById('reanalysis-input').value = '';
+                
+                Utils.toast('重新分析完成', 'success');
+                
+            } catch (error) {
+                console.error('重新分析失败:', error);
+                Utils.toast(error.message || '重新分析失败', 'error');
+            }
+        }
+        
+        // 确认餐食记录
+        async function confirmMeal() {
+            if (!currentConfirmId) {
+                Utils.toast('确认ID无效', 'error');
+                return;
+            }
+            
+            try {
+                // 构建调整数据
+                const adjustments = {
+                    foods: analyzedFoods.map(f => ({
+                        name: f.name,
+                        amount: f.amount,
+                        calories: f.calories,
+                        icon: f.icon
+                    })),
+                    total_calories: analyzedFoods.reduce((sum, f) => sum + f.calories, 0)
+                };
+                
+                const response = await fetch(`${API.base}/api/meal/confirm`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    },
+                    body: `confirm_id=${encodeURIComponent(currentConfirmId)}&adjustments=${encodeURIComponent(JSON.stringify(adjustments))}`
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || '确认失败');
+                }
+                
+                // 更新UI为已确认状态
+                displayAnalysisResult(analyzedFoods, null, false);
+                
+                // 隐藏操作按钮
+                document.getElementById('confirmation-actions').style.display = 'none';
+                document.getElementById('adjustment-hint').style.display = 'none';
+                
+                // 隐藏滑块
+                document.querySelectorAll('.food-adjustment').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.food-item').forEach(el => el.classList.remove('adjustable'));
+                
+                Utils.toast('餐食记录已保存', 'success');
+                
+                // 刷新今日记录
+                await loadTodayMeals();
+                
+                // 清空状态
+                currentConfirmId = null;
+                
+            } catch (error) {
+                console.error('确认失败:', error);
+                Utils.toast(error.message || '确认失败', 'error');
+            }
+        }
+        
+        // 取消确认（识别不对）
+        async function cancelConfirmation() {
+            if (!currentConfirmId) {
+                clearImage();
+                return;
+            }
+            
+            try {
+                await fetch(`${API.base}/api/meal/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    },
+                    body: `confirm_id=${encodeURIComponent(currentConfirmId)}`
+                });
+            } catch (e) {
+                console.error('取消请求失败:', e);
+            }
+            
+            // 清空状态
+            currentConfirmId = null;
+            clearImage();
+            Utils.toast('已取消，请重新上传或手动输入', 'info');
         }
         
         // 清除图片
@@ -754,6 +1096,12 @@
         async function saveMeal() {
             if (!selectedImage && analyzedFoods.length === 0) {
                 Utils.toast('请先上传餐食照片', 'warning');
+                return;
+            }
+            
+            // 如果有待确认的识别结果，提示用户先确认
+            if (currentConfirmId) {
+                Utils.toast('请先确认AI识别结果', 'warning');
                 return;
             }
             
@@ -805,7 +1153,24 @@
                 analyzedFoods = [];
                 
                 // 刷新今日记录
-                loadTodayMeals();
+                console.log('准备调用 loadTodayMeals()...');
+                // 稍等一下，确保数据库事务已提交
+                setTimeout(async () => {
+                    try {
+                        await loadTodayMeals();
+                        console.log('loadTodayMeals() 完成');
+                    } catch (err) {
+                        console.error('loadTodayMeals() 失败:', err);
+                    }
+                }, 300);
+                
+                // 刷新首页热量平衡数据（如果首页已打开）
+                if (window.opener && typeof window.opener.loadCalorieBalance === 'function') {
+                    window.opener.loadCalorieBalance();
+                }
+                
+                // 使用 localStorage 事件通知其他页面更新数据
+                localStorage.setItem('mealUpdated', Date.now().toString());
                 
             } catch (error) {
                 console.error('保存失败:', error);
@@ -823,12 +1188,17 @@
             try {
                 // 调用真实API获取今日记录
                 const response = await API.meal.getToday();
+
+                console.log('=== loadTodayMeals 响应 ===');
+                console.log('完整响应:', response);
+                console.log('total_calories:', response.total_calories);
+                console.log('records 数量:', (response.records || []).length);
                 
                 if (!response.success) {
                     throw new Error(response.message || '加载失败');
                 }
                 
-                const meals = response.data || [];
+                const meals = response.records || [];
                 
                 if (meals.length === 0) {
                     container.innerHTML = `
@@ -882,6 +1252,12 @@
                 
                 // 更新统计 - 使用API返回的总热量
                 const apiTotalCalories = response.total_calories || totalCalories;
+                console.log('更新统计:', {
+                    apiTotalCalories,
+                    responseTotal: response.total_calories,
+                    calculatedTotal: totalCalories
+                });
+
                 document.getElementById('today-calories').textContent = apiTotalCalories;
                 const target = 2000; // 目标热量
                 const remaining = target - apiTotalCalories;

@@ -283,7 +283,7 @@
     <div class="page">
         <header class="page-header">
             <div class="header-brand">
-                <button class="menu-toggle" onclick="history.back()" style="margin-right: 12px;">
+                <button class="back-button" onclick="history.back()" style="margin-right: 12px;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 </button>
                 <span class="header-brand-icon">🏃</span>
@@ -509,28 +509,31 @@
             
             container.innerHTML = exerciseTypes.map((type, index) => `
                 <button class="quick-option ${index === 0 ? 'active' : ''}" 
-                        onclick="selectExercise('${type.type}')"
                         data-type="${type.type}">
                     ${type.type}
                 </button>
             `).join('');
             
+            // 添加事件监听器
+            document.querySelectorAll('#exercise-types .quick-option').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const type = this.dataset.type;
+                    console.log('选择运动类型:', type);  // 调试日志
+                    selectedExercise = type;
+                    
+                    // 更新UI
+                    document.querySelectorAll('#exercise-types .quick-option').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.type === type);
+                    });
+                    
+                    updateCalorieEstimate();
+                });
+            });
+            
             if (exerciseTypes.length > 0) {
                 selectedExercise = exerciseTypes[0].type;
                 updateCalorieEstimate();
             }
-        }
-        
-        // 选择运动类型
-        function selectExercise(type) {
-            selectedExercise = type;
-            
-            // 更新UI
-            document.querySelectorAll('#exercise-types .quick-option').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.type === type);
-            });
-            
-            updateCalorieEstimate();
         }
         
         // 设置时长
@@ -587,28 +590,28 @@
             updateCalorieEstimate();
         }
         
-        // 更新热量估算
+        // 更新热量估算（仅用于显示预期，实际计算由后端完成）
         function updateCalorieEstimate() {
             if (!selectedExercise) return;
             
             const type = exerciseTypes.find(t => t.type === selectedExercise);
             if (!type) return;
             
-            // 基础热量（每小时）
+            // 基础热量（每小时）- 仅用于估算
             const baseCalories = type.calories_per_hour || 200;
             
-            // 强度系数
+            // 强度系数 - 仅用于估算
             const intensityFactor = {
                 'low': 0.8,
                 'medium': 1.0,
                 'high': 1.2
             }[selectedIntensity] || 1.0;
             
-            // 计算总热量
+            // 估算热量（仅供用户参考，实际值由后端计算）
             const calories = Math.round(baseCalories * selectedDuration / 60 * intensityFactor);
             
             document.getElementById('calorie-estimate').innerHTML = 
-                `约 <strong>${calories}</strong> 千卡`;
+                `预计消耗约 <strong>${calories}</strong> 千卡`;
         }
         
         // 提交打卡
@@ -617,6 +620,12 @@
                 Utils.toast('请选择运动类型', 'error');
                 return;
             }
+            
+            console.log('提交打卡参数:', {  // 调试日志
+                exercise_type: selectedExercise,
+                duration_minutes: selectedDuration,
+                intensity: selectedIntensity
+            });
             
             const btn = document.getElementById('checkin-btn');
             const originalText = btn.innerHTML;
@@ -696,12 +705,17 @@
         // 渲染统计卡片
         function renderStats() {
             const container = document.getElementById('stats-grid');
-            
+
             if (!currentStats) {
                 container.innerHTML = '<div class="alert alert-error">加载统计失败</div>';
                 return;
             }
-            
+
+            // 判断今天是否打卡
+            const today = new Date().toISOString().split('T')[0];
+            const lastCheckin = currentStats.last_checkin ? currentStats.last_checkin.split('T')[0] : null;
+            const hasCheckedInToday = lastCheckin === today;
+
             container.innerHTML = `
                 <div class="stat-card">
                     <div class="stat-value">${currentStats.current_streak || 0}</div>
@@ -712,8 +726,8 @@
                     <div class="stat-label">总打卡次数</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${currentStats.last_checkin ? '✓' : '--'}</div>
-                    <div class="stat-label">${currentStats.last_checkin ? '今日已打卡' : '今日未打卡'}</div>
+                    <div class="stat-value">${hasCheckedInToday ? '✓' : '--'}</div>
+                    <div class="stat-label">${hasCheckedInToday ? '今日已打卡' : '今日未打卡'}</div>
                 </div>
             `;
         }

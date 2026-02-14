@@ -352,7 +352,7 @@
     <div class="page">
         <header class="page-header">
             <div class="header-brand">
-                <button class="menu-toggle" onclick="history.back()" style="margin-right: 12px;">
+                <button class="back-button" onclick="history.back()" style="margin-right: 12px;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 </button>
                 <span class="header-brand-icon">⚙️</span>
@@ -668,26 +668,38 @@
                     document.getElementById('current-bmr').textContent = 
                         bmr ? `${bmr} 千卡/天` : '未设置';
                     
-                    // 如果已有BMR，填充到输入框
+                    // 如果已有BMR，填充到输入框并显示数据来源
                     if (bmr) {
                         document.getElementById('bmr-input').value = bmr;
+                        showBmrSource('profile');
                     }
                     
                     // 如果已有年龄、性别、身高，填充到计算器
                     if (profileResult.profile.age) {
                         document.getElementById('calc-age').value = profileResult.profile.age;
+                        document.getElementById('calc-age').style.borderColor = '#4CAF50';
+                        document.getElementById('calc-age').title = '从用户档案获取的数据';
                     } else {
                         document.getElementById('calc-age').placeholder = '请先设置年龄';
+                        document.getElementById('calc-age').style.borderColor = '#ff9800';
                     }
                     if (profileResult.profile.gender) {
                         document.getElementById('calc-gender').value = 
                             profileResult.profile.gender.toLowerCase();
+                        document.getElementById('calc-gender').style.borderColor = '#4CAF50';
+                        document.getElementById('calc-gender').title = '从用户档案获取的数据';
                     }
                     if (profileResult.profile.height) {
                         document.getElementById('calc-height').value = profileResult.profile.height;
+                        document.getElementById('calc-height').style.borderColor = '#4CAF50';
+                        document.getElementById('calc-height').title = '从用户档案获取的数据';
                     } else {
                         document.getElementById('calc-height').placeholder = '请先设置身高';
+                        document.getElementById('calc-height').style.borderColor = '#ff9800';
                     }
+                    
+                    // 显示档案完整性提示
+                    showProfileCompleteness(profileResult.profile);
                 }
                 
                 // 加载最新体重记录
@@ -696,11 +708,12 @@
                     if (weightResult.success && weightResult.data && weightResult.data.latest) {
                         const latestWeight = weightResult.data.latest.weight;
                         document.getElementById('calc-weight').value = latestWeight;
+                        document.getElementById('calc-weight').style.borderColor = '#4CAF50';
+                        document.getElementById('calc-weight').title = '从最新体重记录获取的数据';
                     } else if (weightResult.success && !weightResult.data) {
                         // 没有体重记录，显示提示
-                        console.log('暂无体重记录，请先记录体重');
-                        // 可以在体重输入框添加placeholder提示
                         document.getElementById('calc-weight').placeholder = '请先记录体重';
+                        document.getElementById('calc-weight').style.borderColor = '#ff9800';
                     }
                 } catch (error) {
                     console.error('加载体重数据失败:', error);
@@ -708,6 +721,44 @@
                 }
             } catch (error) {
                 console.error('加载配置失败:', error);
+            }
+        }
+        
+        // 显示BMR数据来源
+        function showBmrSource(source) {
+            const bmrInput = document.getElementById('bmr-input');
+            const sourceTexts = {
+                'profile': '从用户档案获取',
+                'calculated': '通过公式计算',
+                'manual': '手动输入'
+            };
+            
+            bmrInput.style.borderColor = '#4CAF50';
+            bmrInput.title = sourceTexts[source] || 'BMR数据';
+        }
+        
+        // 显示档案完整性提示
+        function showProfileCompleteness(profile) {
+            const missingFields = [];
+            
+            if (!profile.age) missingFields.push('年龄');
+            if (!profile.gender) missingFields.push('性别');
+            if (!profile.height) missingFields.push('身高');
+            if (!profile.bmr) missingFields.push('基础代谢率');
+            
+            if (missingFields.length > 0) {
+                const tip = document.createElement('div');
+                tip.className = 'profile-tip';
+                tip.innerHTML = `
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px 12px; margin: 12px 0; font-size: 0.875rem;">
+                        <strong>💡 档案完善建议：</strong> 完善 ${missingFields.join('、')} 信息，可获得更准确的BMR计算
+                    </div>
+                `;
+                
+                const bmrSection = document.querySelector('.profile-section:nth-child(4)');
+                if (bmrSection) {
+                    bmrSection.insertBefore(tip, bmrSection.firstChild);
+                }
             }
         }
         
@@ -768,15 +819,29 @@
             btn.innerHTML = '<span class="loading-spinner" style="width: 16px; height: 16px;"></span>';
             
             try {
-                const result = await API.user.updateProfile({
-                    bmr: bmrValue
+                // 使用专门的BMR更新接口
+                const result = await fetch(`${API.base}/api/user/profile/bmr`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${Auth.getToken()}`
+                    },
+                    body: JSON.stringify({ bmr: bmrValue })
                 });
                 
-                if (result.success) {
+                const response = await result.json();
+                
+                if (response.success) {
                     Utils.toast('BMR保存成功！', 'success');
                     document.getElementById('current-bmr').textContent = `${bmrValue} 千卡/天`;
+                    showBmrSource('manual');
+                    
+                    // 如果这是通过计算应用的，更新计算器中的BMR输入框
+                    if (calculatedBmr && calculatedBmr === bmrValue) {
+                        document.getElementById('bmr-input').value = bmrValue;
+                    }
                 } else {
-                    throw new Error(result.message || '保存失败');
+                    throw new Error(response.message || '保存失败');
                 }
             } catch (error) {
                 console.error('保存BMR失败:', error);
@@ -801,7 +866,7 @@
             }
             
             try {
-                // 调用后端计算服务
+                // 调用后端计算服务（改进版，包含数据来源跟踪）
                 const response = await fetch(`${API.base}/api/calories/calculate`, {
                     method: 'POST',
                     headers: {
@@ -832,6 +897,70 @@
                     document.getElementById('result-tdee').textContent = calculatedTdee;
                     document.getElementById('bmr-result').style.display = 'block';
                     document.getElementById('apply-bmr-btn').disabled = false;
+                    
+                    // 显示数据来源信息
+                    showBmrSource('calculated');
+                    
+                    // 显示数据来源详情
+                    let sources = [];
+                    if (result.data_sources) {
+                        const sourceTexts = {
+                            'bmr_used': {
+                                'user_provided': '手动输入',
+                                'profile': '档案数据',
+                                'calculated': '公式计算'
+                            },
+                            'age_used': {
+                                'user_provided': '当前输入',
+                                'profile': '档案数据',
+                                'not_provided': '未提供'
+                            },
+                            'gender_used': {
+                                'user_provided': '当前选择',
+                                'profile': '档案数据',
+                                'not_provided': '未提供'
+                            },
+                            'height_used': {
+                                'user_provided': '当前输入',
+                                'profile': '档案数据',
+                                'not_provided': '未提供'
+                            },
+                            'weight_used': {
+                                'user_provided': '当前输入',
+                                'not_provided': '未提供'
+                            }
+                        };
+                        
+                        for (const [key, value] of Object.entries(result.data_sources)) {
+                            const fieldName = {
+                                'bmr_used': 'BMR来源',
+                                'age_used': '年龄',
+                                'gender_used': '性别',
+                                'height_used': '身高',
+                                'weight_used': '体重'
+                            }[key];
+                            
+                            if (fieldName && value !== 'not_provided') {
+                                sources.push(`${fieldName}: ${sourceTexts[key][value] || value}`);
+                            }
+                        }
+                    }
+                    
+                    if (sources.length > 0) {
+                        const sourceInfo = document.createElement('div');
+                        sourceInfo.className = 'result-note';
+                        sourceInfo.innerHTML = `<strong>数据来源:</strong> ${sources.join(' | ')}`;
+                        
+                        const resultCard = document.getElementById('bmr-result');
+                        const existingSource = resultCard.querySelector('.result-note.source-info');
+                        if (existingSource) {
+                            existingSource.remove();
+                        }
+                        
+                        sourceInfo.classList.add('source-info');
+                        resultCard.querySelector('.result-content').appendChild(sourceInfo);
+                    }
+                    
                 } else {
                     throw new Error(result.message || '计算失败');
                 }

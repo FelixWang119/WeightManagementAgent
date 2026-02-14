@@ -1,0 +1,164 @@
+/* 用户切换功能样式 */
+
+/* 用户切换弹窗样式 */
+.user-switch-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.user-switch-modal.show {
+    display: flex;
+}
+
+.user-switch-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    max-height: 80vh;
+    overflow: hidden;
+    animation: slideInUp 0.3s ease;
+}
+
+.user-switch-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-switch-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.user-switch-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.user-switch-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.user-switch-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 4px;
+}
+
+.user-switch-item:hover {
+    background: var(--background);
+}
+
+.user-switch-item.active {
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid var(--primary-color);
+}
+
+.user-switch-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.user-switch-info {
+    flex: 1;
+}
+
+.user-switch-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.user-switch-id {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.user-switch-check {
+    color: var(--primary-color);
+    font-size: 1.25rem;
+}
+
+.user-switch-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+}
+
+.user-switch-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.user-switch-btn.secondary {
+    background: var(--background);
+    color: var(--text-primary);
+}
+
+.user-switch-btn.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.user-switch-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.sidebar-switch-btn {
+    width: 100%;
+    padding: 10px;
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px dashed var(--primary-color);
+    border-radius: 8px;
+    color: var(--primary-color);
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+
+.sidebar-switch-btn:hover {
+    background: rgba(102, 126, 234, 0.2);
+}

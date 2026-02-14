@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提醒配置管理 - 体重管理助手</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 250px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 3px 0 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        .sidebar-logo {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .sidebar-logo h3 {
+            margin: 0;
+            font-weight: 700;
+        }
+        .sidebar-logo p {
+            margin: 5px 0 0;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .nav-item {
+            margin-bottom: 5px;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: block;
+        }
+        .nav-link:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+        .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.2);
+        }
+        .nav-link i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: white;
+            border-bottom: 1px solid #eee;
+            font-weight: 600;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        .logout-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+        }
+
+        /* 提醒卡片样式 */
+        .reminder-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .reminder-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        .reminder-card.enabled {
+            border-color: #667eea;
+        }
+        .reminder-card.disabled {
+            opacity: 0.7;
+        }
+        .reminder-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .reminder-icon.weight { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .reminder-icon.breakfast { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        .reminder-icon.lunch { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+        .reminder-icon.dinner { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
+        .reminder-icon.exercise { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
+        .reminder-icon.water { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); color: white; }
+        .reminder-icon.sleep { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; }
+
+        /* 开关样式 */
+        .form-switch .form-check-input {
+            width: 3em;
+            height: 1.5em;
+            cursor: pointer;
+        }
+        .form-switch .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+        }
+
+        /* 时间选择器样式 */
+        .time-input {
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        /* 全局设置区域 */
+        .global-settings {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #dee2e6;
+        }
+        .global-settings .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        /* 按钮样式 */
+        .btn-save {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 40px;
+            font-weight: 600;
+        }
+        .btn-save:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .btn-reset {
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+
+        /* Toast 样式 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .toast {
+            min-width: 300px;
+        }
+
+        /* 加载动画 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 250px;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+        }
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 0;
+                overflow: hidden;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .loading-overlay {
+                left: 0;
+            }
+        }
+
+        /* 表单验证样式 */
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        }
+        .invalid-feedback {
+            display: none;
+            color: #dc3545;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+        }
+        .form-control.is-invalid ~ .invalid-feedback {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <h3>体重管理助手</h3>
+            <p>管理后台</p>
+        </div>
+        
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a href="index.html" class="nav-link">
+                    <i class="bi bi-speedometer2"></i> 仪表板
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="index.html" class="nav-link">
+                    <i class="bi bi-chat-square-text"></i> 提示词管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="index.html" class="nav-link">
+                    <i class="bi bi-people"></i> 用户管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="index.html" class="nav-link">
+                    <i class="bi bi-chat-left-text"></i> 聊天记录
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="index.html" class="nav-link">
+                    <i class="bi bi-gear"></i> 系统管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="reminders.html" class="nav-link active">
+                    <i class="bi bi-bell"></i> 提醒配置
+                </a>
+            </li>
+        </ul>
+        
+        <button class="btn btn-outline-light logout-btn" onclick="logout()">
+            <i class="bi bi-box-arrow-right"></i> 退出登录
+        </button>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="container-fluid">
+                <span class="navbar-brand mb-0 h1">
+                    <i class="bi bi-bell"></i> 提醒配置管理
+                </span>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-primary">
+                        <i class="bi bi-shield-check"></i> 管理员
+                    </span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- 页面说明 -->
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+            <div>
+                <strong>配置说明：</strong>设置各类健康提醒的时间、消息模板和全局规则。用户将根据这些配置接收个性化提醒。
+            </div>
+        </div>
+
+        <!-- 提醒类型配置卡片 -->
+        <div class="row">
+            <!-- 体重提醒 -->
+            <div class="col-md-4 mb-4">
+                <div class="card reminder-card" id="card-weight">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="reminder-icon weight">
+                                <i class="bi bi-scale"></i>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="weight-enabled" data-type="weight">
+                            </div>
+                        </div>
+                        <h5 class="card-title">体重记录</h5>
+                        <p class="card-text text-muted small">提醒用户每日记录体重数据</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">提醒时间</label>
+                            <input type="time" class="form-control time-input" id="weight-time" value="08:00">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label">消息模板</label>
+                            <textarea class="form-control" id="weight-template" rows="2" placeholder="输入提醒消息...">早上好！记得记录今天的体重哦，坚持就是胜利！</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 早餐提醒 -->
+            <div class="col-md-4 mb-4">
+                <div class="card reminder-card" id="card-breakfast">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="reminder-icon breakfast">
+                                <i class="bi bi-sunrise"></i>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="breakfast-enabled" data-type="breakfast">
+                            </div>
+                        </div>
+                        <h5 class="card-title">早餐记录</h5>
+                        <p class="card-text text-muted small">提醒用户记录早餐摄入</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">提醒时间</label>
+                            <input type="time" class="form-control time-input" id="breakfast-time" value="08:30">
+                        </div>
+                        
+        <div class="mb-2">
+                            <label class="form-label">消息模板</label>
+                            <textarea class="form-control" id="breakfast-template" rows="2" placeholder="输入提醒消息...">早餐时间到！记得记录早餐内容，开启元气满满的一天！</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 午餐提醒 -->
+            <div class="col-md-4 mb-4">
+                <div class="card reminder-card" id="card-lunch">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="reminder-icon lunch">
+                                <i class="bi bi-sun"></i>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="lunch-enabled" data-type="lunch">
+                            </div>
+                        </div>
+                        <h5 class="card-title">午餐记录</h5>
+                        <p class="card-text text-muted small">提醒用户记录午餐摄入</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">提醒时间</label>
+                            <input type="time" class="form-control time-input" id="lunch-time" value="12:00">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label">消息模板</label>
+                            <textarea class="form-control" id="lunch-template" rows="2" placeholder="输入提醒消息...">午餐时间！记录午餐内容，注意营养均衡哦~</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 晚餐提醒 -->
+            <div class="col-md-4 mb-4">
+                <div class="card reminder-card" id="card-dinner">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="reminder-icon dinner">
+                                <i class="bi bi-moon"></i>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="dinner-enabled" data-type="dinner">
+                            </div>
+                        </div>
+                        <h5 class="card-title">晚餐记录</h5>
+                        <p class="card-text text-muted small">提醒用户记录晚餐摄入</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">提醒时间</label>
+                            <input type="time" class="form-control time-input" id="dinner-time" value="18:30">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label">消息模板</label>
+                            <textarea class="form-control" id="dinner-template" rows="2" placeholder="输入提醒消息...">晚餐时间！记得记录晚餐，晚餐建议清淡一些哦~</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 运动提醒 -->
+            <div class="col-md-4 mb-4">
+                <div class="card reminder-card" id="card-exercise">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="reminder-icon exercise">
+                                <i class="bi bi-heart-pulse"></i>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="exercise-enabled" data-type="exercise">
+                            </div>
+                        </div>
+                        <h5 class="card-title">运动提醒</h5>
+                        <p class="card-text text-muted small">提醒用户进行运动并记录</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">提醒时间</label>
+                            <input type="time" class="form-control time-input" id="exercise-time" value="19:00">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label">消息模板</label>
+                            <textarea class="form-control" id="exercise-template" rows="2" placeholder="输入提醒消息...">运动时间！起来活动一下吧，健康体魄从运动开始！</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 饮水提醒 -->
+            <div class="col-md-4 mb-4">
+                <div class="card reminder-card" id="card-water">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="reminder-icon water">
+                                <i class="bi bi-droplet"></i>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="water-enabled" data-type="water">
+                            </div>
+                        </div>
+                        <h5 class="card-title">饮水提醒</h5>
+                        <p class="card-text text-muted small">定时提醒用户补充水分</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">开始时间</label>
+                            <input type="time" class="form-control time-input" id="water-start-time" value="09:00">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">结束时间</label>
+                            <input type="time" class="form-control time-input" id="water-end-time" value="21:00">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">间隔分钟数</label>
+                            <input type="number" class="form-control" id="water-interval" value="120" min="30" max="300" step="10">
+                            <div class="form-text">建议 60-180 分钟</div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label">消息模板</label>
+                            <textarea class="form-control" id="water-template" rows="2" placeholder="输入提醒消息...">该喝水啦！保持充足水分，促进新陈代谢~</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 睡眠提醒 -->
+            <div class="col-md-4 mb-4">
+                <div class="card reminder-card" id="card-sleep">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="reminder-icon sleep">
+                                <i class="bi bi-moon-stars"></i>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="sleep-enabled" data-type="sleep">
+                            </div>
+                        </div>
+                        <h5 class="card-title">睡眠提醒</h5>
+                        <p class="card-text text-muted small">提醒用户准备入睡</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">提醒时间</label>
+                            <input type="time" class="form-control time-input" id="sleep-time" value="22:30">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="form-label">消息模板</label>
+                            <textarea class="form-control" id="sleep-template" rows="2" placeholder="输入提醒消息...">夜深了，该准备休息了。良好的睡眠是健康的基础，晚安！</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 全局设置 -->
+        <div class="card global-settings mb-4">
+            <div class="card-header">
+                <i class="bi bi-gear-wide-connected"></i> 全局设置
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">免打扰开始时间</label>
+                        <input type="time" class="form-control time-input" id="quiet-start" value="23:00">
+                        <div class="form-text">此时间后将停止发送提醒</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">免打扰结束时间</label>
+                        <input type="time" class="form-control time-input" id="quiet-end" value="07:00">
+                        <div class="form-text">此时间后开始恢复提醒</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">每日最大提醒次数</label>
+                        <input type="number" class="form-control" id="max-reminders" value="10" min="1" max="50">
+                        <div class="form-text">限制每日发送的最大提醒数量</div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="smart-adjust" checked>
+                            <label class="form-check-label" for="smart-adjust">
+                                <strong>智能调整</strong> - 根据用户行为自动调整提醒时间和频率
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="card">
+            <div class="card-body d-flex justify-content-center gap-3">
+                <button class="btn btn-save btn-primary" onclick="saveConfig()">
+                    <i class="bi bi-save"></i> 保存配置
+                </button>
+                <button class="btn btn-reset btn-outline-secondary" onclick="resetConfig()">
+                    <i class="bi bi-arrow-counterclockwise"></i> 重置为默认
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loading-overlay" style="display: none;">
+        <div class="spinner-border text-primary loading-spinner" role="status">
+            <span class="visually-hidden">加载中...</span>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // API 基础 URL
+        const API_BASE_URL = window.location.origin;
+        
+        // 提醒类型配置
+        const reminderTypes = ['weight', 'breakfast', 'lunch', 'dinner', 'exercise', 'water', 'sleep'];
+        
+        // 页面加载时获取配置
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+            setupEventListeners();
+        });
+        
+        // 设置事件监听
+        function setupEventListeners() {
+            // 为每个启用开关添加监听
+            reminderTypes.forEach(type => {
+                const checkbox = document.getElementById(`${type}-enabled`);
+                if (checkbox) {
+                    checkbox.addEventListener('change', function() {
+                        updateCardStyle(type, this.checked);
+                    });
+                }
+            });
+        }
+        
+        // 更新卡片样式
+        function updateCardStyle(type, enabled) {
+            const card = document.getElementById(`card-${type}`);
+            if (enabled) {
+                card.classList.add('enabled');
+                card.classList.remove('disabled');
+            } else {
+                card.classList.remove('enabled');
+                card.classList.add('disabled');
+            }
+        }
+        
+        // 获取认证令牌
+        function getAuthToken() {
+            return localStorage.getItem('admin_token');
+        }
+        
+        // 显示加载
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        
+        // 隐藏加载
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+        
+        // HTML转义函数，防止XSS攻击
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 显示 Toast 提示
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toastId = 'toast-' + Date.now();
+            
+            const iconClass = type === 'success' ? 'bi-check-circle-fill' : 
+                             type === 'error' ? 'bi-exclamation-circle-fill' : 
+                             'bi-info-circle-fill';
+            const bgClass = type === 'success' ? 'bg-success' : 
+                           type === 'error' ? 'bg-danger' : 'bg-primary';
+            
+            // 创建toast元素，使用DOM操作而非innerHTML
+            const toastDiv = document.createElement('div');
+            toastDiv.className = `toast align-items-center text-white ${bgClass} border-0`;
+            toastDiv.id = toastId;
+            toastDiv.setAttribute('role', 'alert');
+            toastDiv.setAttribute('aria-live', 'assertive');
+            toastDiv.setAttribute('aria-atomic', 'true');
+            
+            toastDiv.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi ${iconClass}"></i> <span class="toast-message"></span>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+            
+            // 使用textContent设置消息内容，防止XSS
+            toastDiv.querySelector('.toast-message').textContent = message;
+            
+            container.appendChild(toastDiv);
+            
+            const toast = new bootstrap.Toast(toastDiv, { delay: 3000 });
+            
+            // 保存事件处理器引用，避免内存泄漏
+            const hiddenHandler = function() {
+                toastDiv.remove();
+                toastDiv.removeEventListener('hidden.bs.toast', hiddenHandler);
+            };
+            
+            toastDiv.addEventListener('hidden.bs.toast', hiddenHandler);
+            toast.show();
+        }
+        
+        // 验证表单
+        function validateForm() {
+            let isValid = true;
+            
+            // 验证饮水间隔
+            const waterInterval = document.getElementById('water-interval');
+            const interval = parseInt(waterInterval.value);
+            if (isNaN(interval) || interval < 30 || interval > 300) {
+                waterInterval.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                waterInterval.classList.remove('is-invalid');
+            }
+            
+            // 验证最大提醒次数
+            const maxReminders = document.getElementById('max-reminders');
+            const max = parseInt(maxReminders.value);
+            if (isNaN(max) || max < 1 || max > 50) {
+                maxReminders.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                maxReminders.classList.remove('is-invalid');
+            }
+            
+            // 验证免打扰时间
+            const quietStart = document.getElementById('quiet-start').value;
+            const quietEnd = document.getElementById('quiet-end').value;
+            if (!quietStart || !quietEnd) {
+                showToast('请设置免打扰时间范围', 'error');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+        
+        // 加载配置
+        async function loadConfig() {
+            showLoading();
+            
+            try {
+                const token = getAuthToken();
+                if (!token) {
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/admin/reminders/config`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.status === 401) {
+                    localStorage.removeItem('admin_token');
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                fillForm(data);
+                showToast('配置加载成功');
+                
+            } catch (error) {
+                console.error('加载配置失败:', error);
+                showToast('加载配置失败: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 填充表单数据
+        function fillForm(data) {
+            // 填充提醒类型配置
+            if (data.reminders) {
+                reminderTypes.forEach(type => {
+                    const config = data.reminders[type];
+                    if (config) {
+                        const enabledCheckbox = document.getElementById(`${type}-enabled`);
+                        const templateInput = document.getElementById(`${type}-template`);
+                        
+                        if (enabledCheckbox) {
+                            enabledCheckbox.checked = config.enabled !== false;
+                            updateCardStyle(type, enabledCheckbox.checked);
+                        }
+                        
+                        if (templateInput && config.template) {
+                            templateInput.value = config.template;
+                        }
+                        
+                        // 饮水特殊处理
+                        if (type === 'water') {
+                            if (config.start_time) {
+                                document.getElementById('water-start-time').value = config.start_time;
+                            }
+                            if (config.end_time) {
+                                document.getElementById('water-end-time').value = config.end_time;
+                            }
+                            if (config.interval_minutes) {
+                                document.getElementById('water-interval').value = config.interval_minutes;
+                            }
+                        } else if (config.time) {
+                            const timeInput = document.getElementById(`${type}-time`);
+                            if (timeInput) {
+                                timeInput.value = config.time;
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // 填充全局设置
+            if (data.global) {
+                if (data.global.quiet_hours) {
+                    document.getElementById('quiet-start').value = data.global.quiet_hours.start || '23:00';
+                    document.getElementById('quiet-end').value = data.global.quiet_hours.end || '07:00';
+                }
+                if (data.global.max_daily_reminders) {
+                    document.getElementById('max-reminders').value = data.global.max_daily_reminders;
+                }
+                if (data.global.smart_adjust !== undefined) {
+                    document.getElementById('smart-adjust').checked = data.global.smart_adjust;
+                }
+            }
+        }
+        
+        // 收集表单数据
+        function collectFormData() {
+            const data = {
+                reminders: {},
+                global: {
+                    quiet_hours: {
+                        start: document.getElementById('quiet-start').value,
+                        end: document.getElementById('quiet-end').value
+                    },
+                    max_daily_reminders: parseInt(document.getElementById('max-reminders').value),
+                    smart_adjust: document.getElementById('smart-adjust').checked
+                }
+            };
+            
+            reminderTypes.forEach(type => {
+                const enabled = document.getElementById(`${type}-enabled`).checked;
+                const template = document.getElementById(`${type}-template`).value;
+                
+                data.reminders[type] = {
+                    enabled: enabled,
+                    template: template
+                };
+                
+                if (type === 'water') {
+                    data.reminders[type].start_time = document.getElementById('water-start-time').value;
+                    data.reminders[type].end_time = document.getElementById('water-end-time').value;
+                    data.reminders[type].interval_minutes = parseInt(document.getElementById('water-interval').value);
+                } else {
+                    data.reminders[type].time = document.getElementById(`${type}-time`).value;
+                }
+            });
+            
+            return data;
+        }
+        
+        // 保存配置
+        async function saveConfig() {
+            if (!validateForm()) {
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const token = getAuthToken();
+                if (!token) {
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+                
+                const config = collectFormData();
+                
+                const response = await fetch(`${API_BASE_URL}/admin/reminders/config`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                if (response.status === 401) {
+                    localStorage.removeItem('admin_token');
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                showToast('配置保存成功！');
+                
+            } catch (error) {
+                console.error('保存配置失败:', error);
+                showToast('保存失败: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 重置配置
+        async function resetConfig() {
+            if (!confirm('确定要重置为默认配置吗？这将覆盖当前的配置。')) {
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const token = getAuthToken();
+                if (!token) {
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/admin/reminders/reset`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.status === 401) {
+                    localStorage.removeItem('admin_token');
+                    window.location.href = '/admin/login.html';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                fillForm(result);
+                showToast('配置已重置为默认值');
+                
+            } catch (error) {
+                console.error('重置配置失败:', error);
+                showToast('重置失败: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // 退出登录
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                localStorage.removeItem('admin_token');
+                localStorage.removeItem('admin_user');
+                window.location.href = '/admin/login.html';
+            }
+        }
+    </script>
+</body>
+</html>

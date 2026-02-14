@@ -269,19 +269,54 @@
                 if (response && response.success) {
                     currentResult = response;
                     console.log('Showing results...');
-                    
+
+                    // 更新用户画像数据
+                    try {
+                        const updateData = {
+                            age: age,
+                            gender: selectedGender,
+                            height: height
+                        };
+
+                        // 更新活动水平到 exercise_habits
+                        try {
+                            const profileResponse = await API.user.getProfile();
+                            if (profileResponse && profileResponse.success && profileResponse.profile) {
+                                const existingHabits = profileResponse.profile.exercise_habits || {};
+                                updateData.exercise_habits = {
+                                    ...existingHabits,
+                                    activity_level: selectedActivity
+                                };
+                            }
+                        } catch (e) {
+                            console.log('获取现有活动习惯失败，使用新数据');
+                            updateData.exercise_habits = {
+                                activity_level: selectedActivity
+                            };
+                        }
+
+                        // 添加 BMR
+                        updateData.bmr = response.bmr;
+
+                        await API.user.updateProfile(updateData);
+                        console.log('Profile updated successfully');
+                    } catch (updateError) {
+                        console.log('Failed to update profile:', updateError);
+                        // 不影响计算结果显示
+                    }
+
                     const bmrEl = document.getElementById('bmr-value');
                     const tdeeEl = document.getElementById('tdee-value');
                     const resultSection = document.getElementById('result-section');
                     const saveSection = document.getElementById('save-section');
-                    
+
                     console.log('Elements:', bmrEl, tdeeEl, resultSection, saveSection);
-                    
+
                     if (bmrEl) bmrEl.textContent = response.bmr;
                     if (tdeeEl) tdeeEl.textContent = response.tdee;
                     if (resultSection) resultSection.style.cssText = 'display: block !important;';
                     if (saveSection) saveSection.style.cssText = 'display: block !important;';
-                    
+
                     console.log('Result section style after:', resultSection ? resultSection.style.cssText : 'null');
 
                     // 计算减重目标
@@ -295,20 +330,21 @@
 
                     if (targetResponse && targetResponse.success) {
                         const target = targetResponse.target;
-                        
+
                         const lossCard = document.getElementById('loss-target-card');
                         const calorieTarget = document.getElementById('calorie-target');
                         const descEl = document.getElementById('calorie-target-desc');
-                        
+
                         if (lossCard) lossCard.style.cssText = 'display: block !important; background: linear-gradient(135deg, #2ecc71, #27ae60) !important; border-radius: var(--border-radius) !important; padding: 20px !important; color: white !important; margin-bottom: 20px !important;';
-                        if (calorieTarget) calorieTarget.textContent = target.daily_calorie_intake + ' kcal';
-                        if (descEl) descEl.textContent = '每周减重 0.5kg | 热量缺口 ' + target.daily_calorie_deficit + ' kcal';
+                        if (calorieTarget) calorieTarget.textContent = (target.calorie_target || target.daily_calorie_intake || '--') + ' kcal';
+                        if (descEl) descEl.textContent = '每周减重 ' + target.target_weekly_loss_kg + 'kg | 热量缺口 ' + (target.daily_deficit || target.daily_calorie_deficit || '--') + ' kcal';
 
                         // 安全评估
                         const list = document.getElementById('safety-list');
                         if (list) {
                             const assessments = [];
-                            if (target.daily_calorie_intake < response.bmr) {
+                            const intake = target.calorie_target || target.daily_calorie_intake || 0;
+                            if (intake < response.bmr) {
                                 assessments.push({type: 'warning', text: '每日摄入低于基础代谢，长期可能影响健康'});
                             } else {
                                 assessments.push({type: 'success', text: '热量摄入充足，营养均衡'});
@@ -321,9 +357,15 @@
                         if (safetyCard) safetyCard.style.cssText = 'display: block !important;';
 
                         // 营养分配
-                        const protein = Math.round(target.daily_calorie_intake * 0.25 / 4);
-                        const carbs = Math.round(target.daily_calorie_intake * 0.45 / 4);
-                        const fat = Math.round(target.daily_calorie_intake * 0.30 / 9);
+                        const calorieIntake = target.calorie_target || target.daily_calorie_intake || 0;
+                        const protein = Math.round(calorieIntake * 0.25 / 4);
+                        const carbs = Math.round(calorieIntake * 0.45 / 4);
+                        const fat = Math.round(calorieIntake * 0.30 / 9);
+
+                        // 更新营养分配显示（带单位）
+                        if (proteinVal) proteinVal.textContent = protein + ' g';
+                        if (carbsVal) carbsVal.textContent = carbs + ' g';
+                        if (fatVal) fatVal.textContent = fat + ' g';
                         
                         const proteinBar = document.getElementById('protein-bar');
                         const carbsBar = document.getElementById('carbs-bar');
@@ -372,10 +414,54 @@
                 window.location.href = 'login.html';
                 return;
             }
+
             const user = Auth.getUser();
             if (user) {
                 document.querySelector('.user-name').textContent = user.nickname || user.name || '用户';
                 document.querySelector('.user-avatar').textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+            }
+
+            // 从用户画像加载数据作为默认值
+            try {
+                const profileResponse = await API.user.getProfile();
+                if (profileResponse && profileResponse.success) {
+                    const profile = profileResponse.profile;
+
+                    // 填充表单
+                    if (profile && profile.age) document.getElementById('age-input').value = profile.age;
+                    if (profile && profile.height) document.getElementById('height-input').value = profile.height;
+
+                    // 设置性别
+                    if (profile && profile.gender) {
+                        selectGender(profile.gender);
+                    }
+
+                    // 从 exercise_habits 中获取活动水平
+                    if (profile && profile.exercise_habits && profile.exercise_habits.activity_level) {
+                        selectActivity(profile.exercise_habits.activity_level);
+                    }
+                }
+
+                // 获取最新体重记录
+                try {
+                    const weightResponse = await fetch(`${API.base}/api/weight/history?days=7`, {
+                        headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                    });
+                    if (weightResponse.ok) {
+                        const weightData = await weightResponse.json();
+                        console.log('Weight response:', weightData);
+                        if (weightData.success && weightData.data && weightData.data.length > 0) {
+                            // data 数组已经按 record_date 降序排列，第一条就是最新记录
+                            const latestWeight = weightData.data[0].weight;
+                            console.log('Setting weight input:', latestWeight);
+                            document.getElementById('weight-input').value = latestWeight;
+                        }
+                    }
+                } catch (error) {
+                    console.log('获取体重记录失败:', error);
+                }
+            } catch (error) {
+                console.log('加载用户画像数据失败，使用默认值');
             }
         }
 

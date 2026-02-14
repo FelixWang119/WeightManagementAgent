@@ -152,8 +152,8 @@
             try {
                 const response = await API.water.getToday();
                 if (response.success) {
-                    records = response.data || [];
-                    todayAmount = response.total || 0;
+                    records = response.records || [];
+                    todayAmount = response.current_ml || 0;
                     updateDisplay();
                 }
             } catch (error) {

@@ -256,10 +256,12 @@
 .message-user {
   align-self: flex-end;
   flex-direction: row-reverse;
+  margin-left: auto;
 }
 
 .message-assistant {
   align-self: flex-start;
+  margin-right: auto;
 }
 
 .message-avatar {
@@ -603,4 +605,34 @@
 
 .profiling-field-input::placeholder {
   color: var(--text-muted);
+}
+
+/* ========== 打字机效果 ========== */
+.typewriter-text {
+  display: inline;
+}
+
+.typewriter-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background-color: var(--primary-color);
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.typewriter-complete .typewriter-cursor {
+  display: none;
+}
+
+/* 打字机内容容器 */
+.typewriter-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
