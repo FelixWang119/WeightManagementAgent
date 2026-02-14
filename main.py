@@ -244,6 +244,7 @@ from api.routes import (
     calories,
     goals,
     habit,
+    summary,
 )
 from api.routes.admin import auth as admin_auth
 from api.routes.admin import prompts as admin_prompts
@@ -266,6 +267,7 @@ app.include_router(config.router, prefix="/api/config", tags=["配置"])
 app.include_router(calories.router, prefix="/api/calories", tags=["热量计算"])
 app.include_router(goals.router, prefix="/api/goals", tags=["目标管理"])
 app.include_router(habit.router, prefix="/api/habit", tags=["习惯打卡"])
+app.include_router(summary.router, prefix="/api/summary", tags=["对话总结"])
 
 # 管理员路由
 app.include_router(admin_auth.router, prefix="/admin/auth", tags=["管理员认证"])

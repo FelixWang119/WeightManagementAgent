@@ -636,3 +636,293 @@
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+
+/* ========== 富媒体消息 ========== */
+
+/* 消息卡片基础样式 */
+.message-card {
+  background: var(--surface);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  max-width: 320px;
+  animation: slideInUp 0.3s ease;
+}
+
+.message-card .card-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.message-card .card-content {
+  padding: var(--spacing-md);
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.message-card .card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+
+.card-action-btn {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.card-action-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: rgba(52, 152, 219, 0.05);
+}
+
+/* 统计卡片 */
+.stats-card {
+  max-width: 360px;
+}
+
+.stats-card .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.stats-card .stat-item {
+  text-align: center;
+  padding: var(--spacing-sm);
+  background: var(--surface-hover);
+  border-radius: var(--border-radius-sm);
+}
+
+.stats-card .stat-item .stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 2px;
+}
+
+.stats-card .stat-item .stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* 进度卡片 */
+.progress-card {
+  max-width: 320px;
+}
+
+.progress-card .progress-container {
+  padding: var(--spacing-md);
+}
+
+.progress-card .progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: var(--spacing-sm);
+}
+
+.progress-card .progress-fill {
+  height: 100%;
+  background: var(--primary-gradient);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.progress-card .progress-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* 建议卡片 */
+.suggestion-card {
+  max-width: 340px;
+}
+
+.suggestion-card .suggestion-list {
+  list-style: none;
+  padding: var(--spacing-md);
+  margin: 0;
+}
+
+.suggestion-card .suggestion-list li {
+  padding: var(--spacing-sm) 0;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.suggestion-card .suggestion-list li:last-child {
+  border-bottom: none;
+}
+
+.suggestion-card .suggestion-list li::before {
+  content: "💡";
+  margin-right: var(--spacing-sm);
+}
+
+/* ========== 快捷操作按钮 ========== */
+.quick-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  padding: var(--spacing-sm) 0;
+}
+
+.quick-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.quick-action-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: rgba(52, 152, 219, 0.05);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.quick-action-btn .action-icon {
+  font-size: 1rem;
+}
+
+.quick-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--primary-color);
+  transition: all var(--transition-fast);
+}
+
+.quick-action-link:hover {
+  background: rgba(52, 152, 219, 0.05);
+  border-color: var(--primary-color);
+}
+
+/* ========== 表单消息 ========== */
+.message-form {
+  background: var(--surface);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-lg);
+  max-width: 360px;
+}
+
+.message-form .form-field {
+  margin-bottom: var(--spacing-md);
+}
+
+.message-form .form-field .form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.message-form .form-field .form-input,
+.message-form .form-field .form-select,
+.message-form .form-field .form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.9375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast);
+}
+
+.message-form .form-field .form-input:focus,
+.message-form .form-field .form-select:focus,
+.message-form .form-field .form-textarea:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.message-form .form-field .form-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.message-form .form-submit-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: white;
+  background: var(--primary-color);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.message-form .form-submit-btn:hover {
+  background: var(--primary-dark);
+}
+
+.message-form[data-form-type="slider"] .slider-field {
+  margin-bottom: var(--spacing-lg);
+}
+
+.message-form[data-form-type="slider"] .slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.message-form[data-form-type="slider"] .slider-value {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.message-form[data-form-type="slider"] input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.message-form[data-form-type="slider"] input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}

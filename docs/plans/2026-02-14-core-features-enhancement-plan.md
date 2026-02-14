@@ -67,15 +67,30 @@
   - `DELETE /api/meal/foods/favorites` - 取消收藏
   - `GET /api/meal/foods/quick` - 快速选择食物(系统+最近+收藏)
 
-### Week 3: 记忆摘要 + 富媒体消息
-- [ ] 对话摘要生成
-- [ ] 关键信息提取
-- [ ] 摘要存储与检索
-- [ ] 卡片消息渲染器
-- [ ] 表单消息组件
-- [ ] 快捷操作按钮
+### Week 3: 记忆摘要 + 富媒体消息 ✅
+- [x] 对话摘要生成
+- [x] 关键信息提取
+- [x] 摘要存储与检索
+- [x] 卡片消息渲染器
+- [x] 表单消息组件
+- [x] 快捷操作按钮
 
-**状态**: 待开始
+**状态**: 已完成
+**完成日期**: 2026-02-14
+**主要成果**:
+- 新建 `services/conversation_summary_service.py` - 对话摘要服务(617行)
+- 新建 `api/routes/summary.py` - 对话摘要API(5个端点)
+- 更新 `main.py` - 注册summary路由
+- 更新 `static/css/components.css` - 添加富媒体消息CSS样式
+- 新增API端点:
+  - `GET /api/summary/generate` - 生成对话摘要
+  - `POST /api/summary/save` - 保存摘要到用户画像
+  - `GET /api/summaries` - 获取历史摘要列表
+  - `GET /api/summary/search` - 搜索历史摘要
+  - 富媒体渲染器:
+    - `CardRenderer` - 卡片消息(基础/统计/进度/建议)
+    - `QuickActionsRenderer` - 快捷操作按钮
+    - `FormMessageRenderer` - 表单消息(输入/选择/滑块)
 
 ### Week 4: 周报增强 + 集成测试
 - [ ] 睡眠数据集成
@@ -221,6 +236,7 @@ Phase 3 (体验)
 | 2026-02-14 | 计划创建 | opencode |
 | 2026-02-14 | Week 1完成：睡眠分析系统(3个分析维度)、AI确认流程(4个API+前端UI) | opencode |
 | 2026-02-14 | Week 2完成：习惯打卡系统(5个API+前端页面)、快速食物选择(5个API) | opencode |
+| 2026-02-14 | Week 3完成：对话摘要服务(5个API)、富媒体消息渲染器(Card/Form/QuickActions) | opencode |
 
 ---
 
