@@ -3,7 +3,16 @@
 包含：餐食记录、AI识别、食物数据库
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+    UploadFile,
+    File,
+    Form,
+    Query,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
 from typing import List, Optional
@@ -16,6 +25,7 @@ from models.database import get_db, User, MealRecord, FoodItem, UserFood, MealTy
 from api.routes.user import get_current_user
 from config.settings import fastapi_settings
 from services.ai_service import ai_service
+from utils.alert_utils import alert_error, alert_warning, AlertCategory
 
 router = APIRouter()
 
@@ -161,31 +171,70 @@ async def record_meal(
     try:
         meal_enum = MealType(meal_type)
     except ValueError:
+        # 记录无效餐食类型告警
+        alert_warning(
+            category=AlertCategory.API,
+            message="无效的餐食类型参数",
+            details={
+                "user_id": current_user.id,
+                "meal_type": meal_type,
+                "endpoint": "/record",
+            },
+            module="api.routes.meal",
+        )
         raise HTTPException(status_code=400, detail="无效的餐食类型")
 
     # 如果没有提供热量，尝试从食物数据库计算
     if calories is None:
-        calories = await estimate_calories(content, db)
+        try:
+            calories = await estimate_calories(content, db)
+        except Exception as e:
+            # 记录热量估算失败告警
+            alert_warning(
+                category=AlertCategory.BUSINESS,
+                message="餐食热量估算失败",
+                details={
+                    "user_id": current_user.id,
+                    "content": content,
+                    "error": str(e),
+                },
+                module="api.routes.meal",
+            )
+            calories = 0  # 使用默认值
 
     # 检查今天是否已有同类型的餐食记录
     today = date.today()
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
 
-    result = await db.execute(
-        select(MealRecord)
-        .where(
-            and_(
-                MealRecord.user_id == current_user.id,
-                MealRecord.meal_type == meal_enum,
-                MealRecord.record_time >= today_start,
-                MealRecord.record_time <= today_end,
+    try:
+        result = await db.execute(
+            select(MealRecord)
+            .where(
+                and_(
+                    MealRecord.user_id == current_user.id,
+                    MealRecord.meal_type == meal_enum,
+                    MealRecord.record_time >= today_start,
+                    MealRecord.record_time <= today_end,
+                )
             )
+            .order_by(MealRecord.record_time.desc())  # 最新的排在前面
         )
-        .order_by(MealRecord.record_time.desc())  # 最新的排在前面
-    )
-    existing_records = result.scalars().all()
-    existing_record = existing_records[0] if existing_records else None
+        existing_records = result.scalars().all()
+        existing_record = existing_records[0] if existing_records else None
+    except Exception as e:
+        # 记录数据库查询失败告警
+        alert_error(
+            category=AlertCategory.DATABASE,
+            message="餐食记录查询失败",
+            details={
+                "user_id": current_user.id,
+                "meal_type": meal_type,
+                "error": str(e),
+            },
+            module="api.routes.meal",
+        )
+        raise HTTPException(status_code=500, detail="数据库查询失败")
 
     # 如果有多条旧记录，删除多余的（只保留最新的一条用于更新）
     if len(existing_records) > 1:
@@ -217,7 +266,22 @@ async def record_meal(
         record_id = record.id
         message = "餐食记录成功"
 
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception as e:
+        # 记录数据库提交失败告警
+        alert_error(
+            category=AlertCategory.DATABASE,
+            message="餐食记录保存失败",
+            details={
+                "user_id": current_user.id,
+                "meal_type": meal_type,
+                "error": str(e),
+            },
+            module="api.routes.meal",
+        )
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="餐食记录保存失败")
 
     return {
         "success": True,
@@ -358,6 +422,18 @@ async def analyze_meal_photo(
         import traceback
 
         traceback.print_exc()
+        # 记录API级别AI分析失败告警
+        alert_error(
+            category=AlertCategory.API,
+            message="餐食图片分析API调用失败",
+            details={
+                "user_id": current_user.id,
+                "meal_type": meal_type,
+                "error": str(e),
+                "endpoint": "/analyze",
+            },
+            module="api.routes.meal",
+        )
         # 返回错误信息，但仍然保存了图片
         return {
             "success": False,

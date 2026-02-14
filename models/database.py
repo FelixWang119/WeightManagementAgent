@@ -25,6 +25,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import declarative_base, relationship
 import enum
 
+from utils.alert_utils import alert_error, alert_warning, AlertCategory
+
 Base = declarative_base()
 
 
@@ -793,15 +795,42 @@ AsyncSessionLocal = async_sessionmaker(
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """获取数据库会话（用于 FastAPI Depends）"""
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+    try:
+        async with AsyncSessionLocal() as session:
+            try:
+                yield session
+            finally:
+                await session.close()
+    except Exception as e:
+        # 记录数据库连接失败告警
+        alert_error(
+            category=AlertCategory.DATABASE,
+            message="数据库连接失败",
+            details={"error": str(e), "function": "get_db"},
+            module="models.database",
+        )
+        raise
 
 
 async def init_db():
     """初始化数据库（创建所有表）"""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        # 记录数据库初始化成功信息
+        alert_warning(
+            category=AlertCategory.DATABASE,
+            message="数据库初始化成功",
+            details={"tables_created": len(Base.metadata.tables)},
+            module="models.database",
+        )
+    except Exception as e:
+        # 记录数据库初始化失败告警
+        alert_error(
+            category=AlertCategory.DATABASE,
+            message="数据库初始化失败",
+            details={"error": str(e)},
+            module="models.database",
+        )
+        raise
     print("✅ 数据库初始化完成")

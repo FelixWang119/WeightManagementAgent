@@ -11,11 +11,13 @@ from dataclasses import dataclass
 import openai
 
 from config.settings import fastapi_settings
+from utils.alert_utils import alert_error, alert_warning, AlertCategory
 
 
 @dataclass
 class AIResponse:
     """AI 响应数据类"""
+
     content: str
     model: str
     usage: Optional[Dict[str, int]] = None
@@ -24,7 +26,7 @@ class AIResponse:
 
 class BaseAIClient(ABC):
     """AI 客户端基类"""
-    
+
     @abstractmethod
     async def chat_completion(
         self,
@@ -32,17 +34,14 @@ class BaseAIClient(ABC):
         model: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
-        stream: bool = False
+        stream: bool = False,
     ) -> AIResponse:
         """聊天完成"""
         pass
-    
+
     @abstractmethod
     async def vision_analysis(
-        self,
-        image_url: str,
-        prompt: str,
-        model: Optional[str] = None
+        self, image_url: str, prompt: str, model: Optional[str] = None
     ) -> AIResponse:
         """图像分析（用于餐食识别）"""
         pass
@@ -50,26 +49,26 @@ class BaseAIClient(ABC):
 
 class OpenAIClient(BaseAIClient):
     """OpenAI 客户端"""
-    
+
     def __init__(self):
         if not fastapi_settings.OPENAI_API_KEY:
             raise ValueError("未配置 OPENAI_API_KEY")
-        
+
         self.client = openai.AsyncOpenAI(
             api_key=fastapi_settings.OPENAI_API_KEY,
-            base_url=fastapi_settings.OPENAI_API_BASE
+            base_url=fastapi_settings.OPENAI_API_BASE,
         )
         self.default_model = fastapi_settings.OPENAI_MODEL
         self.default_max_tokens = fastapi_settings.OPENAI_MAX_TOKENS
         self.default_temperature = fastapi_settings.OPENAI_TEMPERATURE
-    
+
     async def chat_completion(
         self,
         messages: List[Dict[str, str]],
         model: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
-        stream: bool = False
+        stream: bool = False,
     ) -> AIResponse:
         """OpenAI 聊天完成"""
         try:
@@ -78,30 +77,40 @@ class OpenAIClient(BaseAIClient):
                 messages=messages,
                 max_tokens=max_tokens or self.default_max_tokens,
                 temperature=temperature or self.default_temperature,
-                stream=stream
+                stream=stream,
             )
-            
+
             return AIResponse(
                 content=response.choices[0].message.content,
                 model=response.model,
                 usage={
                     "prompt_tokens": response.usage.prompt_tokens,
                     "completion_tokens": response.usage.completion_tokens,
-                    "total_tokens": response.usage.total_tokens
-                } if response.usage else None
+                    "total_tokens": response.usage.total_tokens,
+                }
+                if response.usage
+                else None,
             )
         except Exception as e:
+            # 记录AI服务错误告警
+            alert_error(
+                category=AlertCategory.AI_SERVICE,
+                message="OpenAI API调用失败",
+                details={
+                    "model": model or self.default_model,
+                    "error": str(e),
+                    "endpoint": "chat/completions",
+                },
+                module="ai_service.OpenAIClient",
+            )
             return AIResponse(
                 content="",
                 model=model or self.default_model,
-                error=f"OpenAI API 错误: {str(e)}"
+                error=f"OpenAI API 错误: {str(e)}",
             )
-    
+
     async def vision_analysis(
-        self,
-        image_url: str,
-        prompt: str,
-        model: Optional[str] = None
+        self, image_url: str, prompt: str, model: Optional[str] = None
     ) -> AIResponse:
         """OpenAI 视觉分析"""
         try:
@@ -110,74 +119,82 @@ class OpenAIClient(BaseAIClient):
                     "role": "user",
                     "content": [
                         {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": image_url}}
-                    ]
+                        {"type": "image_url", "image_url": {"url": image_url}},
+                    ],
                 }
             ]
-            
+
             response = await self.client.chat.completions.create(
                 model=model or "gpt-4-vision-preview",
                 messages=messages,
-                max_tokens=1000
+                max_tokens=1000,
             )
-            
+
             return AIResponse(
-                content=response.choices[0].message.content,
-                model=response.model
+                content=response.choices[0].message.content, model=response.model
             )
         except Exception as e:
+            # 记录AI视觉服务错误告警
+            alert_error(
+                category=AlertCategory.AI_SERVICE,
+                message="OpenAI Vision API调用失败",
+                details={
+                    "model": model or "gpt-4-vision-preview",
+                    "error": str(e),
+                    "endpoint": "chat/completions",
+                    "feature": "vision_analysis",
+                },
+                module="ai_service.OpenAIClient",
+            )
             return AIResponse(
                 content="",
                 model=model or "gpt-4-vision-preview",
-                error=f"OpenAI Vision 错误: {str(e)}"
+                error=f"OpenAI Vision 错误: {str(e)}",
             )
 
 
 class QwenClient(BaseAIClient):
     """通义千问(Qwen)客户端 - 阿里云 DashScope"""
-    
+
     def __init__(self):
         if not fastapi_settings.QWEN_API_KEY:
             raise ValueError("未配置 QWEN_API_KEY")
-        
+
         self.api_key = fastapi_settings.QWEN_API_KEY
         self.api_base = fastapi_settings.QWEN_API_BASE
         self.default_model = fastapi_settings.QWEN_MODEL
         self.default_max_tokens = fastapi_settings.QWEN_MAX_TOKENS
         self.default_temperature = fastapi_settings.QWEN_TEMPERATURE
-        
+
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-    
+
     async def chat_completion(
         self,
         messages: List[Dict[str, str]],
         model: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
-        stream: bool = False
+        stream: bool = False,
     ) -> AIResponse:
         """Qwen 聊天完成 - 使用OpenAI兼容接口"""
         try:
             # 使用OpenAI兼容接口，注意base_url不要带/api/v1后缀
-            base_url = self.api_base.replace('/api/v1', '')
+            base_url = self.api_base.replace("/api/v1", "")
             url = f"{base_url}/compatible-mode/v1/chat/completions"
 
             payload = {
                 "model": model or self.default_model,
                 "messages": messages,
                 "max_tokens": max_tokens or self.default_max_tokens,
-                "temperature": temperature or self.default_temperature
+                "temperature": temperature or self.default_temperature,
             }
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    url,
-                    headers=self.headers,
-                    json=payload,
-                    timeout=60.0
+                    url, headers=self.headers, json=payload, timeout=60.0
                 )
                 response.raise_for_status()
 
@@ -188,109 +205,139 @@ class QwenClient(BaseAIClient):
                     return AIResponse(
                         content=choice["message"]["content"],
                         model=data.get("model", model or self.default_model),
-                        usage=data.get("usage")
+                        usage=data.get("usage"),
                     )
                 else:
                     return AIResponse(
                         content="",
                         model=model or self.default_model,
-                        error=f"Qwen API 响应格式错误: {data}"
+                        error=f"Qwen API 响应格式错误: {data}",
                     )
-                    
+
         except httpx.HTTPError as e:
+            # 记录Qwen HTTP错误告警
+            alert_error(
+                category=AlertCategory.AI_SERVICE,
+                message="Qwen HTTP API调用失败",
+                details={
+                    "model": model or self.default_model,
+                    "error": str(e),
+                    "endpoint": "chat/completions",
+                    "provider": "qwen",
+                },
+                module="ai_service.QwenClient",
+            )
             return AIResponse(
                 content="",
                 model=model or self.default_model,
-                error=f"Qwen HTTP 错误: {str(e)}"
+                error=f"Qwen HTTP 错误: {str(e)}",
+            )
+        except Exception as e:
+            # 记录Qwen API错误告警
+            alert_error(
+                category=AlertCategory.AI_SERVICE,
+                message="Qwen API调用失败",
+                details={
+                    "model": model or self.default_model,
+                    "error": str(e),
+                    "endpoint": "chat/completions",
+                    "provider": "qwen",
+                },
+                module="ai_service.QwenClient",
+            )
+            return AIResponse(
+                content="",
+                model=model or self.default_model,
+                error=f"Qwen API 错误: {str(e)}",
             )
         except Exception as e:
             return AIResponse(
                 content="",
                 model=model or self.default_model,
-                error=f"Qwen API 错误: {str(e)}"
+                error=f"Qwen API 错误: {str(e)}",
             )
-    
+
     async def vision_analysis(
-        self,
-        image_url: str,
-        prompt: str,
-        model: Optional[str] = None
+        self, image_url: str, prompt: str, model: Optional[str] = None
     ) -> AIResponse:
         """Qwen 视觉分析（多模态）- 使用OpenAI兼容接口"""
         try:
             # 使用OpenAI兼容接口，注意base_url不要带/api/v1后缀
-            base_url = self.api_base.replace('/api/v1', '')
+            base_url = self.api_base.replace("/api/v1", "")
             url = f"{base_url}/compatible-mode/v1/chat/completions"
-            
+
             payload = {
                 "model": model or "qwen-vl-plus",
                 "messages": [
                     {
                         "role": "user",
                         "content": [
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": image_url
-                                }
-                            },
-                            {
-                                "type": "text",
-                                "text": prompt
-                            }
-                        ]
+                            {"type": "image_url", "image_url": {"url": image_url}},
+                            {"type": "text", "text": prompt},
+                        ],
                     }
                 ],
-                "max_tokens": 1000
+                "max_tokens": 1000,
             }
-            
+
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    url,
-                    headers=self.headers,
-                    json=payload,
-                    timeout=60.0
+                    url, headers=self.headers, json=payload, timeout=60.0
                 )
                 response.raise_for_status()
-                
+
                 data = response.json()
-                
+
                 if "choices" in data and len(data["choices"]) > 0:
                     choice = data["choices"][0]
                     return AIResponse(
                         content=choice["message"]["content"],
-                        model=data.get("model", model or "qwen-vl-plus")
+                        model=data.get("model", model or "qwen-vl-plus"),
                     )
                 else:
                     return AIResponse(
                         content="",
                         model=model or "qwen-vl-plus",
-                        error=f"Qwen Vision 响应格式错误: {data}"
+                        error=f"Qwen Vision 响应格式错误: {data}",
                     )
-                    
+
         except Exception as e:
             import traceback
+
             traceback.print_exc()
+            # 记录Qwen Vision错误告警
+            alert_error(
+                category=AlertCategory.AI_SERVICE,
+                message="Qwen Vision API调用失败",
+                details={
+                    "model": model or "qwen-vl-plus",
+                    "error": str(e),
+                    "endpoint": "compatible-mode/v1/chat/completions",
+                    "provider": "qwen",
+                    "feature": "vision_analysis",
+                },
+                module="ai_service.QwenClient",
+            )
             return AIResponse(
                 content="",
                 model=model or "qwen-vl-plus",
-                error=f"Qwen Vision 错误: {str(e)}"
+                error=f"Qwen Vision 错误: {str(e)}",
             )
 
 
 class AIService:
     """AI 服务统一接口"""
-    
+
     def __init__(self, provider: Optional[str] = None):
         """
         初始化 AI 服务
-        
+
         Args:
             provider: 模型提供商，'openai' 或 'qwen'，默认从配置读取
         """
         self.provider = provider or fastapi_settings.DEFAULT_AI_PROVIDER
         self._client: Optional[BaseAIClient] = None
-    
+
     def _get_client(self) -> BaseAIClient:
         """获取或创建客户端"""
         if self._client is None:
@@ -301,55 +348,43 @@ class AIService:
             else:
                 raise ValueError(f"不支持的 AI 提供商: {self.provider}")
         return self._client
-    
-    async def chat(
-        self,
-        messages: List[Dict[str, str]],
-        **kwargs
-    ) -> AIResponse:
+
+    async def chat(self, messages: List[Dict[str, str]], **kwargs) -> AIResponse:
         """
         通用聊天接口
-        
+
         Args:
             messages: 消息列表，格式 [{"role": "user", "content": "..."}]
             **kwargs: 其他参数（max_tokens, temperature 等）
-        
+
         Returns:
             AIResponse 对象
         """
         client = self._get_client()
         return await client.chat_completion(messages, **kwargs)
-    
-    async def analyze_image(
-        self,
-        image_url: str,
-        prompt: str,
-        **kwargs
-    ) -> AIResponse:
+
+    async def analyze_image(self, image_url: str, prompt: str, **kwargs) -> AIResponse:
         """
         图像分析接口（用于餐食识别）
-        
+
         Args:
             image_url: 图片 URL
             prompt: 分析提示词
             **kwargs: 其他参数
-        
+
         Returns:
             AIResponse 对象
         """
         client = self._get_client()
         return await client.vision_analysis(image_url, prompt, **kwargs)
-    
-    async def analyze_meal(
-        self,
-        image_url: str
-    ) -> Dict[str, Any]:
+
+    async def analyze_meal(self, image_url: str) -> Dict[str, Any]:
         """
         分析餐食照片
-        
+
         Args:
             image_url: 餐食照片 URL
-        
+
         Returns:
             解析后的餐食信息
         """
@@ -367,37 +402,48 @@ class AIService:
 1. 如果无法识别，请说明"无法清晰识别"
 2. 热量估算是大概值，仅供参考
 3. 如果是中餐，请尽量使用中文菜名"""
-        
+
         response = await self.analyze_image(image_url, prompt)
-        
+
         if response.error:
+            # 记录餐食分析失败告警
+            alert_error(
+                category=AlertCategory.AI_SERVICE,
+                message="餐食图片分析失败",
+                details={
+                    "image_url": image_url,
+                    "error": response.error,
+                    "model": response.model,
+                },
+                module="ai_service.AIService",
+            )
             return {
                 "success": False,
                 "error": response.error,
-                "raw_content": response.content
+                "raw_content": response.content,
             }
-        
+
         # 解析 AI 返回的内容
         content = response.content
         result = {
             "success": True,
             "model": response.model,
             "raw_content": content,
-            "parsed": {}
+            "parsed": {},
         }
-        
+
         # 尝试解析结构化数据
-        lines = content.strip().split('\n')
+        lines = content.strip().split("\n")
         for line in lines:
-            if '：' in line or ':' in line:
+            if "：" in line or ":" in line:
                 # 统一使用英文冒号
-                line = line.replace('：', ':')
-                parts = line.split(':', 1)
+                line = line.replace("：", ":")
+                parts = line.split(":", 1)
                 if len(parts) == 2:
                     key = parts[0].strip()
                     value = parts[1].strip()
                     result["parsed"][key] = value
-        
+
         return result
 
 
@@ -408,16 +454,16 @@ ai_service = AIService()
 async def test_ai():
     """测试 AI 服务"""
     print("🧪 测试 AI 服务...")
-    
+
     # 测试聊天
     messages = [
         {"role": "system", "content": "你是一个有帮助的助手。"},
-        {"role": "user", "content": "你好，请介绍一下你自己"}
+        {"role": "user", "content": "你好，请介绍一下你自己"},
     ]
-    
+
     print(f"\n使用模型: {fastapi_settings.DEFAULT_AI_PROVIDER}")
     response = await ai_service.chat(messages)
-    
+
     if response.error:
         print(f"❌ 错误: {response.error}")
     else:
@@ -430,4 +476,5 @@ async def test_ai():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(test_ai())
