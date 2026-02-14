@@ -306,6 +306,11 @@ class UserProfile(Base):
     )
     weak_points = Column(JSON, nullable=True, comment="薄弱环节（JSON）")
     memory_summary = Column(Text, nullable=True, comment="AI记忆摘要（自然语言描述）")
+    decision_mode = Column(
+        String(20),
+        default="balanced",
+        comment="决策模式: conservative/balanced/intelligent",
+    )
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = relationship("User", back_populates="profile")

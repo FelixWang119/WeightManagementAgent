@@ -126,14 +126,27 @@
 
 ## Phase 2: AI智能升级 (Week 5-8)
 
-### Week 5: 智能决策引擎
-- [ ] 决策模式配置(保守/平衡/智能)
-- [ ] 规则-AI权重动态调整
-- [ ] 商务应酬检测
-- [ ] 身体不适识别
-- [ ] 旅行出差模式
+### Week 5: 智能决策引擎 ✅
+- [x] 决策模式配置(保守/平衡/智能)
+- [x] 规则-AI权重动态调整
+- [x] 商务应酬检测
+- [x] 身体不适识别
+- [x] 旅行出差模式
 
-**状态**: 待开始
+**状态**: 已完成
+**完成日期**: 2026-02-14
+**主要成果**:
+- 更新 `models/database.py` - UserProfile添加decision_mode字段
+- 更新 `api/routes/config.py` - 新增决策模式配置API:
+  - `GET /api/config/decision-mode` - 获取决策模式
+  - `POST /api/config/decision-mode` - 更新决策模式
+  - `GET /api/config/context-events` - 获取用户上下文事件
+- 更新 `services/notification_worker.py` - 集成智能决策引擎
+- 更新 `services/configurable_event_detector.py` - 添加从用户历史检测事件方法
+- 决策模式说明:
+  - conservative: 80%规则 + 20%AI，适合新手
+  - balanced: 50%规则 + 50%AI，默认
+  - intelligent: 20%规则 + 80%AI，适合高级用户
 
 ### Week 6: AI洞察系统
 - [ ] 隐藏模式发现(睡眠-饮食关联)
@@ -258,7 +271,8 @@ Phase 3 (体验)
 | 2026-02-14 | Week 1完成：睡眠分析系统(3个分析维度)、AI确认流程(4个API+前端UI) | opencode |
 | 2026-02-14 | Week 2完成：习惯打卡系统(5个API+前端页面)、快速食物选择(5个API) | opencode |
 | 2026-02-14 | Week 3完成：对话摘要服务(5个API)、富媒体消息渲染器(Card/Form/QuickActions) | opencode |
-| 2026-02-14 | Week 4完成：周报增强(睡眠分析集成、习惯打卡统计、AI建议个性化) | opencode |
+| -14 | Week2026-02 4完成：周报增强(睡眠分析集成、习惯打卡统计、AI建议个性化) | opencode |
+| 2026-02-14 | Week 5完成：智能决策引擎(决策模式配置、上下文事件检测、通知智能调度) | opencode |
 
 ---
 
