@@ -92,14 +92,35 @@
     - `QuickActionsRenderer` - 快捷操作按钮
     - `FormMessageRenderer` - 表单消息(输入/选择/滑块)
 
-### Week 4: 周报增强 + 集成测试
-- [ ] 睡眠数据集成
-- [ ] 习惯打卡统计
-- [ ] 改进建议个性化
-- [ ] Phase 1功能联调
-- [ ] 数据流验证
+### Week 4: 周报增强 + 集成测试 ✅
+- [x] 睡眠数据集成
+- [x] 习惯打卡统计
+- [x] 改进建议个性化
+- [x] Phase 1功能联调
+- [x] 数据流验证
 
-**状态**: 待开始
+**状态**: 已完成
+**完成日期**: 2026-02-14
+**主要成果**:
+- 更新 `api/routes/report.py` - 增强周报数据收集和分析
+- 睡眠分析集成:
+  - 睡眠规律性分析 (get_sleep_pattern_analysis)
+  - 睡眠-体重关联分析 (analyze_sleep_weight_correlation)
+  - 睡眠质量趋势
+- 习惯打卡集成:
+  - 各维度连续打卡统计
+  - 习惯完成率计算
+  - 打卡类型数据
+- AI建议个性化:
+  - 用户画像数据融入提示词
+  - 动力类型识别
+  - 目标体重参考
+- 增强亮点/改进点生成逻辑
+- API响应新增字段:
+  - sleep_analysis.pattern
+  - sleep_analysis.weight_correlation
+  - habit_stats
+  - habit_completion_rate
 
 ---
 
@@ -237,6 +258,7 @@ Phase 3 (体验)
 | 2026-02-14 | Week 1完成：睡眠分析系统(3个分析维度)、AI确认流程(4个API+前端UI) | opencode |
 | 2026-02-14 | Week 2完成：习惯打卡系统(5个API+前端页面)、快速食物选择(5个API) | opencode |
 | 2026-02-14 | Week 3完成：对话摘要服务(5个API)、富媒体消息渲染器(Card/Form/QuickActions) | opencode |
+| 2026-02-14 | Week 4完成：周报增强(睡眠分析集成、习惯打卡统计、AI建议个性化) | opencode |
 
 ---
 
