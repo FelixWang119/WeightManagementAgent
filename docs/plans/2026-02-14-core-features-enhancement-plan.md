@@ -274,11 +274,43 @@
 - [ ] Excel导出实现
 - [ ] PDF报告生成
 - [ ] 导出任务队列
-- [ ] 食谱数据结构
-- [ ] 基础食谱录入
-- [ ] 食谱展示
+- [x] 食谱数据结构 - 独立食谱模型，支持复杂食谱
+- [x] 基础食谱录入 - 5个示例食谱，支持CRUD操作
+- [x] 食谱展示 - 列表、详情、搜索、推荐功能
 
-**状态**: 待开始
+**状态**: 进行中（食谱库部分完成）
+**完成日期**: 2026-02-14
+**主要成果**:
+- 新建数据库模型:
+  - `Recipe`: 食谱表（难度/分类/菜系/热量/营养成分）
+  - `RecipeIngredient`: 食谱食材表（关联FoodItem）
+  - `RecipeStep`: 食谱步骤表（带图片支持）
+  - `UserRecipe`: 用户食谱交互表（收藏/烹饪/评价）
+- 新建 `services/recipe_service.py` - 食谱服务(800+行):
+  - RecipeService: 食谱CRUD、搜索、过滤、推荐
+  - UserRecipeService: 用户收藏、烹饪记录、评价
+  - RecipeFilter: 高级过滤（分类/菜系/难度/热量/时间）
+- 新建 `api/routes/recipes.py` - 食谱API(15个端点):
+  - `GET /api/recipes` - 列出食谱（支持过滤和分页）
+  - `GET /api/recipes/{id}` - 获取食谱详情
+  - `POST /api/recipes` - 创建食谱
+  - `PUT /api/recipes/{id}` - 更新食谱
+  - `DELETE /api/recipes/{id}` - 删除食谱
+  - `GET /api/recipes/recommended` - 获取推荐食谱
+  - `GET /api/recipes/search` - 搜索食谱
+  - `POST /api/recipes/{id}/favorite` - 添加到收藏
+  - `DELETE /api/recipes/{id}/favorite` - 从收藏移除
+  - `POST /api/recipes/{id}/cook` - 标记为已烹饪
+  - `POST /api/recipes/{id}/rate` - 评价食谱
+  - `GET /api/recipes/favorites` - 获取用户收藏
+  - `GET /api/recipes/cooked` - 获取烹饪记录
+- 新建 `scripts/init_sample_recipes.py` - 初始化5个示例食谱:
+  - 鸡胸肉沙拉（低卡高蛋白）
+  - 燕麦早餐碗（营养早餐）
+  - 番茄鸡蛋面（中式面食）
+  - 蔬菜豆腐汤（素食汤品）
+  - 希腊酸奶杯（高蛋白零食）
+- 更新 `main.py` - 注册recipes路由
 
 ### Week 11: 性能优化 + 监控告警
 - [ ] 大数据查询优化

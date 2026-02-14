@@ -149,6 +149,37 @@ class ConsultationStatus(str, enum.Enum):
     COMPLETED = "completed"
 
 
+class RecipeDifficulty(str, enum.Enum):
+    """食谱难度"""
+
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+
+
+class RecipeCategory(str, enum.Enum):
+    """食谱分类"""
+
+    BREAKFAST = "breakfast"
+    LUNCH = "lunch"
+    DINNER = "dinner"
+    SNACK = "snack"
+    DESSERT = "dessert"
+    SOUP = "soup"
+
+
+class RecipeCuisine(str, enum.Enum):
+    """食谱菜系"""
+
+    CHINESE = "chinese"
+    WESTERN = "western"
+    JAPANESE = "japanese"
+    KOREAN = "korean"
+    VEGETARIAN = "vegetarian"
+    LOW_CALORIE = "low_calorie"
+    HIGH_PROTEIN = "high_protein"
+
+
 # ============ 数据库模型 ============
 
 
@@ -413,6 +444,106 @@ class UserFood(Base):
     food_name = Column(String(100), comment="食物名称")
     calories = Column(Integer, comment="热量（千卡）")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Recipe(Base):
+    """食谱表"""
+
+    __tablename__ = "recipes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), comment="食谱名称")
+    description = Column(Text, nullable=True, comment="食谱描述")
+    prep_time = Column(Integer, comment="准备时间（分钟）")
+    cook_time = Column(Integer, comment="烹饪时间（分钟）")
+    total_time = Column(Integer, comment="总时间（分钟）")
+    servings = Column(Integer, comment="份量")
+    difficulty = Column(Enum(RecipeDifficulty), comment="难度")
+    category = Column(Enum(RecipeCategory), comment="分类")
+    cuisine = Column(Enum(RecipeCuisine), comment="菜系")
+    calories_per_serving = Column(Integer, comment="每份热量（千卡）")
+    protein_per_serving = Column(Float, nullable=True, comment="每份蛋白质（g）")
+    fat_per_serving = Column(Float, nullable=True, comment="每份脂肪（g）")
+    carbs_per_serving = Column(Float, nullable=True, comment="每份碳水化合物（g）")
+    image_url = Column(String(500), nullable=True, comment="图片URL")
+    is_public = Column(Boolean, default=True, comment="是否公开")
+    created_by = Column(
+        Integer, ForeignKey("users.id"), nullable=True, comment="创建者"
+    )
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 关系
+    ingredients = relationship(
+        "RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan"
+    )
+    steps = relationship(
+        "RecipeStep", back_populates="recipe", cascade="all, delete-orphan"
+    )
+    user_interactions = relationship(
+        "UserRecipe", back_populates="recipe", cascade="all, delete-orphan"
+    )
+
+
+class RecipeIngredient(Base):
+    """食谱食材表"""
+
+    __tablename__ = "recipe_ingredients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    recipe_id = Column(Integer, ForeignKey("recipes.id"), index=True)
+    food_item_id = Column(
+        Integer, ForeignKey("food_items.id"), nullable=True, comment="关联食物ID"
+    )
+    ingredient_name = Column(String(200), comment="食材名称")
+    quantity = Column(Float, comment="数量")
+    unit = Column(String(50), comment="单位")
+    notes = Column(String(200), nullable=True, comment="备注")
+    order_index = Column(Integer, default=0, comment="排序索引")
+
+    # 关系
+    recipe = relationship("Recipe", back_populates="ingredients")
+    food_item = relationship("FoodItem")
+
+
+class RecipeStep(Base):
+    """食谱步骤表"""
+
+    __tablename__ = "recipe_steps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    recipe_id = Column(Integer, ForeignKey("recipes.id"), index=True)
+    step_number = Column(Integer, comment="步骤序号")
+    description = Column(Text, comment="步骤描述")
+    image_url = Column(String(500), nullable=True, comment="步骤图片URL")
+    order_index = Column(Integer, default=0, comment="排序索引")
+
+    # 关系
+    recipe = relationship("Recipe", back_populates="steps")
+
+
+class UserRecipe(Base):
+    """用户食谱交互表"""
+
+    __tablename__ = "user_recipes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    recipe_id = Column(Integer, ForeignKey("recipes.id"), index=True)
+    is_favorite = Column(Boolean, default=False, comment="是否收藏")
+    last_cooked = Column(DateTime, nullable=True, comment="最后烹饪时间")
+    cooked_count = Column(Integer, default=0, comment="烹饪次数")
+    rating = Column(Integer, nullable=True, comment="评分（1-5）")
+    notes = Column(Text, nullable=True, comment="用户笔记")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # 关系
+    user = relationship("User")
+    recipe = relationship("Recipe", back_populates="user_interactions")
+
+    # 复合唯一索引
+    __table_args__ = (Index("idx_user_recipe", "user_id", "recipe_id", unique=True),)
 
 
 class WeeklyReport(Base):
