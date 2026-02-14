@@ -325,9 +325,9 @@
 - 更新 `main.py` - 注册recipes路由
 
 ### Week 11: 错误告警系统 ✅
-- [x] 告警处理器配置 - 实现错误检测、告警触发、通知发送
-- [x] 告警工具模块 - 创建告警配置、告警历史、告警统计
-- [x] 关键服务集成 - 集成睡眠分析、AI决策、记忆增强服务
+- [x] 告警处理器配置 - 扩展日志配置添加告警处理器
+- [x] 告警工具模块 - 创建统一告警发送接口
+- [x] 关键服务集成 - 集成AI服务、数据库服务、API路由
 - [ ] 大数据查询优化（已取消）
 - [ ] 前端渲染优化（已取消）
 - [ ] 缓存策略完善（已取消）
@@ -337,12 +337,18 @@
 **状态**: 已完成
 **完成日期**: 2026-02-14
 **主要成果**:
-- 新建 `services/alert_handler.py` - 告警处理器(412行)
-- 新建 `utils/alert_tools.py` - 告警工具模块(356行)
-- 更新 `services/sleep_analysis_service.py` - 集成告警检测
-- 更新 `services/ai_decision_engine.py` - 集成告警检测
-- 更新 `services/memory_enhancement_service.py` - 集成告警检测
-- 新增告警配置、告警历史、告警统计功能
+- 更新 `config/logging_config.py` - 添加告警处理器，支持结构化告警日志
+- 新建 `utils/alert_utils.py` - 告警工具模块(354行)，支持多级别多分类告警
+- 更新 `services/ai_service.py` - 集成告警到AI服务错误处理
+- 更新 `models/database.py` - 集成告警到数据库连接和初始化
+- 更新 `api/routes/meal.py` - 集成告警到API路由错误处理
+- 新建 `tests/utils/test_alert_utils.py` - 告警工具测试(8个测试用例)
+- 新建 `tests/services/test_ai_service_alerts.py` - AI服务告警集成测试
+- 告警特性:
+  - 结构化JSON格式告警记录
+  - 7种告警分类（系统、数据库、API、AI服务等）
+  - 4种告警级别（INFO、WARNING、ERROR、CRITICAL）
+  - 自动日志轮转（10MB文件大小限制）
 
 ### Week 12: 全链路测试 + 文档
 - [ ] 端到端测试
