@@ -172,15 +172,36 @@
   - `GET /api/insights/dashboard` - 洞察仪表盘
 - 更新 `main.py` - 注册insights路由
 
-### Week 7: 记忆增强 + 监控
-- [ ] 向量检索优化
-- [ ] 长期记忆压缩
-- [ ] 记忆权重管理
-- [ ] 识别准确率追踪
-- [ ] 响应时间监控
-- [ ] 质量评估
+### Week 7: 记忆增强 + 监控 ✅
+- [x] 向量检索优化
+- [x] 长期记忆压缩
+- [x] 记忆权重管理
+- [x] 识别准确率追踪
+- [x] 响应时间监控
+- [x] 质量评估
 
-**状态**: 待开始
+**状态**: 已完成
+**完成日期**: 2026-02-14
+**主要成果**:
+- 新建 `services/memory_enhancement_service.py` - 记忆增强与监控服务(500+行):
+  - MemoryCache: 记忆缓存层(LRU, 5分钟TTL)
+  - MemoryCompressionService: 长期记忆压缩(保留最重要记忆)
+  - MemoryWeightManager: 记忆权重管理(基于反馈动态调整)
+  - PerformanceMonitor: 性能监控(响应时间、错误率、P95)
+  - AccuracyTracker: 识别准确率追踪
+  - QualityAssessment: 质量评估(响应质量、数据质量)
+- 新建 `api/routes/monitoring.py` - 监控API(11个端点):
+  - `GET /api/monitoring/performance` - 性能统计
+  - `GET /api/monitoring/performance/{operation}` - 特定操作统计
+  - `POST /api/monitoring/performance/reset` - 重置统计
+  - `GET /api/monitoring/accuracy` - 准确率统计
+  - `POST /api/monitoring/accuracy/prediction` - 记录预测
+  - `POST /api/monitoring/accuracy/feedback` - 记录反馈
+  - `GET /api/monitoring/cache` - 缓存统计
+  - `POST /api/monitoring/quality/response` - 响应质量评估
+  - `POST /api/monitoring/quality/data` - 数据质量评估
+  - `GET /api/monitoring/dashboard` - 监控仪表盘
+- 更新 `main.py` - 注册monitoring路由
 
 ### Week 8: 智能建议升级
 - [ ] 上下文感知建议
@@ -289,6 +310,7 @@ Phase 3 (体验)
 | -14 | Week2026-02 4完成：周报增强(睡眠分析集成、习惯打卡统计、AI建议个性化) | opencode |
 | 2026-02-14 | Week 5完成：智能决策引擎(决策模式配置、上下文事件检测、通知智能调度) | opencode |
 | 2026-02-14 | Week 6完成：AI洞察系统(隐藏模式发现、异常检测、趋势预测、提醒策略优化) | opencode |
+| 2026-02-14 | Week 7完成：记忆增强与监控(向量检索优化、记忆压缩、权重管理、准确率追踪、性能监控) | opencode |
 
 ---
 

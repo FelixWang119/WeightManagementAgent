@@ -246,6 +246,7 @@ from api.routes import (
     habit,
     summary,
     insights,
+    monitoring,
 )
 from api.routes.admin import auth as admin_auth
 from api.routes.admin import prompts as admin_prompts
@@ -270,6 +271,7 @@ app.include_router(goals.router, prefix="/api/goals", tags=["目标管理"])
 app.include_router(habit.router, prefix="/api/habit", tags=["习惯打卡"])
 app.include_router(summary.router, prefix="/api/summary", tags=["对话总结"])
 app.include_router(insights.router, prefix="/api/insights", tags=["AI洞察"])
+app.include_router(monitoring.router, prefix="/api/monitoring", tags=["监控"])
 
 # 管理员路由
 app.include_router(admin_auth.router, prefix="/admin/auth", tags=["管理员认证"])
