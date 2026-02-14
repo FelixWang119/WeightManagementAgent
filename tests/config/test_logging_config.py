@@ -4,7 +4,6 @@ import os
 import tempfile
 import shutil
 import logging
-from pathlib import Path
 
 
 def test_alert_handler_configuration():
@@ -60,8 +59,8 @@ def test_alert_handler_disabled():
         # 设置日志，禁用告警日志
         setup_logging(log_dir=temp_dir, enable_alert_log=False)
 
-        # 获取logger
-        logger = get_module_logger("test_alert_disabled")
+        # 获取logger（用于验证日志系统正常工作）
+        _ = get_module_logger("test_alert_disabled")
 
         # 检查根logger是否有告警处理器
         root_logger = logging.getLogger()

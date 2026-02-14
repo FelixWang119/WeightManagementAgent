@@ -53,7 +53,8 @@ class ColoredFormatter(logging.Formatter):
         # 添加颜色
         if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
             color = self.COLORS.get(record.levelname, self.COLORS["RESET"])
-            record.levelname = f"{color}{record.levelname}{self.COLORS['RESET']}"
+            reset_color = self.COLORS["RESET"]
+            record.levelname = f"{color}{record.levelname}{reset_color}"
 
         # 格式化
         result = super().format(record)
