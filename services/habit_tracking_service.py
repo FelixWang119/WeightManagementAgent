@@ -468,7 +468,12 @@ class HabitTrackingService:
             )
             .distinct()
         )
-        checkin_dates[CheckinType.WEIGHT] = {row.record_date for row in weight_result}
+        checkin_dates[CheckinType.WEIGHT] = {
+            row.record_date
+            if isinstance(row.record_date, date)
+            else datetime.strptime(row.record_date, "%Y-%m-%d").date()
+            for row in weight_result
+        }
 
         # 餐食记录（按类型分组）
         meal_result = await db.execute(
@@ -486,14 +491,19 @@ class HabitTrackingService:
             .distinct()
         )
         for row in meal_result:
+            record_date = (
+                row.record_date
+                if isinstance(row.record_date, date)
+                else datetime.strptime(row.record_date, "%Y-%m-%d").date()
+            )
             if row.meal_type == MealType.BREAKFAST:
-                checkin_dates[CheckinType.BREAKFAST].add(row.record_date)
+                checkin_dates[CheckinType.BREAKFAST].add(record_date)
             elif row.meal_type == MealType.LUNCH:
-                checkin_dates[CheckinType.LUNCH].add(row.record_date)
+                checkin_dates[CheckinType.LUNCH].add(record_date)
             elif row.meal_type == MealType.DINNER:
-                checkin_dates[CheckinType.DINNER].add(row.record_date)
+                checkin_dates[CheckinType.DINNER].add(record_date)
             elif row.meal_type == MealType.SNACK:
-                checkin_dates[CheckinType.SNACK].add(row.record_date)
+                checkin_dates[CheckinType.SNACK].add(record_date)
 
         # 运动记录
         exercise_result = await db.execute(
@@ -520,7 +530,10 @@ class HabitTrackingService:
             .distinct()
         )
         checkin_dates[CheckinType.EXERCISE] = {
-            row.record_date for row in exercise_result
+            row.record_date
+            if isinstance(row.record_date, date)
+            else datetime.strptime(row.record_date, "%Y-%m-%d").date()
+            for row in exercise_result
         }
 
         # 饮水记录
@@ -535,7 +548,12 @@ class HabitTrackingService:
             )
             .distinct()
         )
-        checkin_dates[CheckinType.WATER] = {row.record_date for row in water_result}
+        checkin_dates[CheckinType.WATER] = {
+            row.record_date
+            if isinstance(row.record_date, date)
+            else datetime.strptime(row.record_date, "%Y-%m-%d").date()
+            for row in water_result
+        }
 
         # 睡眠记录
         sleep_result = await db.execute(
@@ -549,7 +567,12 @@ class HabitTrackingService:
             )
             .distinct()
         )
-        checkin_dates[CheckinType.SLEEP] = {row.record_date for row in sleep_result}
+        checkin_dates[CheckinType.SLEEP] = {
+            row.record_date
+            if isinstance(row.record_date, date)
+            else datetime.strptime(row.record_date, "%Y-%m-%d").date()
+            for row in sleep_result
+        }
 
         return checkin_dates
 

@@ -20,6 +20,8 @@ from models.database import (
     WaterRecord,
     SleepRecord,
     UserProfile,
+    Goal,
+    GoalStatus,
 )
 from api.routes.user import get_current_user
 from services.ai_service import ai_service
@@ -520,10 +522,23 @@ async def collect_week_data(
     user_preferences = {}
     if user_profile:
         user_preferences = {
-            "motivation_type": user_profile.motivation_type,
+            "motivation_type": user_profile.motivation_type.value
+            if user_profile.motivation_type
+            else None,
             "communication_style": user_profile.communication_style,
-            "target_weight": user_profile.target_weight,
         }
+
+    # 获取目标体重
+    goal_result = await db.execute(
+        select(Goal)
+        .where(and_(Goal.user_id == user_id, Goal.status == GoalStatus.ACTIVE))
+        .order_by(Goal.created_at.desc())
+        .limit(1)
+    )
+    goal = goal_result.scalar_one_or_none()
+    if goal and goal.target_weight:
+        user_preferences["target_weight"] = goal.target_weight
+
     data["user_preferences"] = user_preferences
 
     # 生成亮点和改进点（增强版）

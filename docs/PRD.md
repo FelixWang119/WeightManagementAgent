@@ -246,9 +246,17 @@ graph LR
   - 积分统计：当前积分、累计获得、累计消耗
 
 #### **3.5.3 数据导出**
-- 🔄 **格式支持**: Excel、PDF格式导出（待实现）
-- 🔄 **数据范围**: 可选择时间范围导出（待实现）
-- 🔄 **内容包含**: 原始数据+分析报告（待实现）
+- ✅ **格式支持**: Excel、PDF格式导出（2026-02-14已完成）
+  - Excel导出：多工作表，支持日期过滤和数据类型选择
+  - PDF报告：HTML格式报告（基础实现）
+- ✅ **数据范围**: 可选择时间范围导出（2026-02-14已完成）
+  - 支持自定义开始和结束日期
+  - 支持全部数据导出
+  - 日期范围验证和错误处理
+- ✅ **内容包含**: 原始数据+分析报告（2026-02-14已完成）
+  - 7种数据类型：体重、餐食、运动、饮水、睡眠、周报、食谱
+  - 数据摘要统计
+  - 多工作表Excel文件
 
 ### 3.6 后台管理系统
 
@@ -481,6 +489,7 @@ User (用户)
 | 热量计算 | `/api/calories` | 计算、消耗 | `api/routes/calories.py` |
 | 成就积分 | `/api/achievements` | 成就徽章、积分管理 | `api/routes/achievements.py` |
 | 食谱管理 | `/api/recipes` | 食谱查询、收藏、推荐 | `api/routes/recipes.py` |
+| 数据导出 | `/api/export` | Excel/PDF数据导出 | `api/routes/export.py` |
 | 管理后台 | `/admin/*` | 后台管理 | `api/routes/admin/*.py` |
 
 ### 6.2 关键API端点
@@ -554,6 +563,12 @@ User (用户)
 - `POST /api/recipes/{id}/rate` - 评价食谱（1-5星）
 - `GET /api/recipes/favorites` - 获取用户收藏的食谱
 - `GET /api/recipes/cooked` - 获取用户烹饪过的食谱
+
+#### **数据导出端点**
+- `GET /api/export/summary` - 获取导出数据摘要（记录数量统计）
+- `POST /api/export/excel` - 导出数据到Excel（支持自定义配置）
+- `GET /api/export/excel/quick` - 快速导出到Excel（默认配置）
+- `GET /api/export/test` - 测试导出功能（最近7天数据）
 
 ## 七、非功能性需求
 

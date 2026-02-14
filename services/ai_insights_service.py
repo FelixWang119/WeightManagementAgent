@@ -18,6 +18,8 @@ from models.database import (
     WaterRecord,
     SleepRecord,
     UserProfile,
+    Goal,
+    GoalStatus,
 )
 from config.logging_config import get_module_logger
 
@@ -627,9 +629,18 @@ class TrendPredictionService:
 
         tdee = int(bmr * activity_factor)
 
+        # Get target weight from Goal table
+        goal_result = await db.execute(
+            select(Goal)
+            .where(and_(Goal.user_id == user_id, Goal.status == GoalStatus.ACTIVE))
+            .order_by(Goal.created_at.desc())
+            .limit(1)
+        )
+        goal = goal_result.scalar_one_or_none()
+
         weight_goal = (
-            profile.target_weight
-            if profile and profile.target_weight
+            goal.target_weight
+            if goal and goal.target_weight
             else latest_weight.weight
             if latest_weight
             else 70

@@ -402,6 +402,166 @@ GET /admin/users/list?page=1&page_size=20&search=keyword
 
 ---
 
+## 10. 习惯打卡模块 (`api/routes/habit.py`)
+
+### GET /api/habit/streaks
+**用途**：获取连续打卡统计
+
+**查询参数**：
+- `days`: 统计天数 (7-365, 默认90)
+
+**响应**：
+```json
+{
+  "success": true,
+  "data": {
+    "weight": {"current_streak": 5, "max_streak": 10, "completion_rate": 71.4},
+    "exercise": {"current_streak": 3, "max_streak": 7, "completion_rate": 42.9}
+  }
+}
+```
+
+### GET /api/habit/heatmap
+**用途**：获取打卡热力图
+
+### GET /api/habit/progress
+**用途**：获取习惯养成进度
+
+### GET /api/habit/dashboard
+**用途**：获取习惯打卡仪表盘
+
+---
+
+## 11. 成就积分模块 (`api/routes/achievements.py`)
+
+### GET /api/achievements/achievements
+**用途**：获取用户成就列表
+
+### GET /api/achievements/points
+**用途**：获取用户积分
+
+**响应**：
+```json
+{
+  "success": true,
+  "data": {
+    "points": 150,
+    "total_points_earned": 200,
+    "total_points_spent": 50
+  }
+}
+```
+
+### POST /api/achievements/points/earn
+**用途**：获得积分
+
+**请求体**：
+```json
+{"reason": "连续打卡7天", "amount": 20}
+```
+
+### POST /api/achievements/points/spend
+**用途**：消费积分
+
+### GET /api/achievements/dashboard
+**用途**：获取成就仪表盘
+
+---
+
+## 12. 智能建议模块 (`api/routes/suggestions.py`)
+
+### GET /api/suggestions/suggestions
+**用途**：获取智能建议
+
+### GET /api/suggestions/suggestions/context
+**用途**：获取上下文建议
+
+### GET /api/suggestions/suggestions/predictive
+**用途**：获取预测性建议
+
+### POST /api/suggestions/suggestions/feedback
+**用途**：提交建议反馈
+
+### GET /api/suggestions/suggestions/effects
+**用途**：获取建议效果统计
+
+---
+
+## 13. 配置管理模块 (`api/routes/config.py`)
+
+### GET /api/config/decision-mode
+**用途**：获取用户决策模式
+
+### POST /api/config/decision-mode
+**用途**：更新决策模式
+
+**请求体**：
+```json
+{"decision_mode": "balanced"}
+```
+
+**可选值**: `conservative`, `balanced`, `intelligent`
+
+### GET /api/config/context-events
+**用途**：获取上下文事件
+
+### GET /api/config/default-suggestions
+**用途**：获取默认建议配置
+
+---
+
+## 14. 数据导出模块 (`api/routes/export.py`)
+
+### GET /api/export/export/summary
+**用途**：获取导出数据摘要
+
+**查询参数**：
+- `start_date`: 开始日期 (YYYY-MM-DD)
+- `end_date`: 结束日期 (YYYY-MM-DD)
+
+### POST /api/export/export/excel
+**用途**：导出数据到Excel
+
+**请求体**：
+```json
+{
+  "start_date": "2026-01-01",
+  "end_date": "2026-02-14",
+  "include_types": ["weight", "meal", "exercise", "water", "sleep"]
+}
+```
+
+### GET /api/export/export/excel/quick
+**用途**：快速导出Excel (默认配置)
+
+### GET /api/export/export/test
+**用途**：测试导出功能 (最近7天)
+
+---
+
+## 15. AI洞察模块 (`api/routes/insights.py`)
+
+### GET /api/insights/hidden-patterns
+**用途**：获取隐藏模式发现
+
+### GET /api/insights/anomalies
+**用途**：获取异常检测结果
+
+### GET /api/insights/predictions
+**用途**：获取趋势预测
+
+---
+
+## 16. 首页仪表盘模块 (`api/routes/summary.py`)
+
+### GET /api/summary/daily
+**用途**：获取每日数据汇总
+
+### GET /api/summary/weekly
+**用途**：获取每周数据汇总
+
+---
+
 ## 🚨 常见问题
 
 ### Q: 接口返回404错误？
@@ -418,5 +578,5 @@ A: 启动服务后访问`/docs`查看Swagger文档，可以直接测试接口
 
 ---
 
-*最后更新：2024-01-01*  
-*文档版本：v1.0*
+*最后更新：2026-02-14*  
+*文档版本：v1.2*

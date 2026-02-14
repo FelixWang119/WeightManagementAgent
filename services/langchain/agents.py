@@ -3,12 +3,12 @@ Agent入口点 - 兼容现有代码
 
 这个文件作为现有代码的入口点，确保向后兼容。
 实际实现已经移动到其他文件：
-- agent.py: 主实现（最新版本）
-- agent_simple.py: 简化版（推荐使用）
+- agent.py: 主实现（高级版本 advanced）
+- agent_standard.py: 标准版（standard）
 
 使用环境变量 AGENT_VERSION 控制使用的版本：
-- new: 最新版本（默认）
-- simple: 简化版（推荐）
+- standard: 标准版（轻量、快速、基础功能，推荐）
+- advanced: 高级版（完整功能、高级特性）
 """
 
 import logging
@@ -26,12 +26,12 @@ def get_current_agent_version() -> str:
     Returns:
         agent版本字符串
     """
-    version = os.environ.get("AGENT_VERSION", "simple").lower()
-    valid_versions = ["new", "simple"]
+    version = os.environ.get("AGENT_VERSION", "standard").lower()
+    valid_versions = ["advanced", "standard"]
 
     if version not in valid_versions:
-        logger.warning(f"无效的AGENT_VERSION: {version}, 使用默认值: simple")
-        version = "simple"
+        logger.warning(f"无效的AGENT_VERSION: {version}, 使用默认值: standard")
+        version = "standard"
 
     logger.info(f"当前Agent版本: {version}")
     return version
@@ -48,11 +48,11 @@ def _import_agent_factory(version: str):
     Returns:
         AgentFactory类
     """
-    if version == "simple":
-        from .agent_simple import AgentFactory
+    if version == "standard":
+        from .agent_standard import AgentFactory
 
         return AgentFactory
-    else:  # "new" or default
+    else:  # "advanced" or default
         from .agent import AgentFactory
 
         return AgentFactory
