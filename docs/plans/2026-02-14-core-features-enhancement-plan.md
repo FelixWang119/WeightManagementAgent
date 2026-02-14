@@ -148,14 +148,29 @@
   - balanced: 50%规则 + 50%AI，默认
   - intelligent: 20%规则 + 80%AI，适合高级用户
 
-### Week 6: AI洞察系统
-- [ ] 隐藏模式发现(睡眠-饮食关联)
-- [ ] 异常检测
-- [ ] 趋势预测
-- [ ] 基于用户画像的提醒策略
-- [ ] 触发条件优化
+### Week 6: AI洞察系统 ✅
+- [x] 隐藏模式发现(睡眠-饮食关联)
+- [x] 异常检测
+- [x] 趋势预测
+- [x] 基于用户画像的提醒策略
+- [x] 触发条件优化
 
-**状态**: 待开始
+**状态**: 已完成
+**完成日期**: 2026-02-14
+**主要成果**:
+- 新建 `services/ai_insights_service.py` - AI洞察服务(600+行):
+  - AIInsightsService: 隐藏模式发现(睡眠-饮食关联、情绪性进食、运动-热量模式、饮水-体重关系)
+  - AnomalyDetectionService: 异常检测(体重波动、热量异常、睡眠异常)
+  - TrendPredictionService: 趋势预测(体重趋势、热量需求预测)
+  - ReminderStrategyOptimizer: 提醒策略优化
+- 新建 `api/routes/insights.py` - AI洞察API(6个端点):
+  - `GET /api/insights/patterns` - 隐藏模式发现
+  - `GET /api/insights/anomalies` - 异常检测
+  - `GET /api/insights/prediction/weight` - 体重趋势预测
+  - `GET /api/insights/prediction/calorie-needs` - 热量需求预测
+  - `GET /api/insights/reminder-optimization` - 提醒策略优化
+  - `GET /api/insights/dashboard` - 洞察仪表盘
+- 更新 `main.py` - 注册insights路由
 
 ### Week 7: 记忆增强 + 监控
 - [ ] 向量检索优化
@@ -273,6 +288,7 @@ Phase 3 (体验)
 | 2026-02-14 | Week 3完成：对话摘要服务(5个API)、富媒体消息渲染器(Card/Form/QuickActions) | opencode |
 | -14 | Week2026-02 4完成：周报增强(睡眠分析集成、习惯打卡统计、AI建议个性化) | opencode |
 | 2026-02-14 | Week 5完成：智能决策引擎(决策模式配置、上下文事件检测、通知智能调度) | opencode |
+| 2026-02-14 | Week 6完成：AI洞察系统(隐藏模式发现、异常检测、趋势预测、提醒策略优化) | opencode |
 
 ---
 
