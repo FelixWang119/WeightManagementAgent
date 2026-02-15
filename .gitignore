@@ -95,3 +95,6 @@ reports/*
 # 用户token文件（包含敏感信息）
 test_users_tokens.json
 test_users_mapping.json
+
+# Worktrees
+.worktrees/
