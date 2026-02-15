@@ -11,6 +11,7 @@ from datetime import datetime, date, timedelta
 
 from models.database import get_db, User, WaterRecord
 from api.routes.user import get_current_user
+from services.event_triggers import publish_water_recorded_event
 
 router = APIRouter()
 
@@ -41,6 +42,18 @@ async def record_water(
 
     db.add(record)
     await db.commit()
+    await db.refresh(record)
+
+    # Publish event to event bus
+    try:
+        await publish_water_recorded_event(
+            user_id=current_user.id, amount_ml=amount_ml, record_id=record.id
+        )
+    except Exception as e:
+        # Log error but don't fail the API call
+        import logging
+
+        logging.getLogger(__name__).warning(f"Failed to publish water event: {e}")
 
     # 计算今日总饮水量
     today_total = await get_today_water_total(current_user.id, db)

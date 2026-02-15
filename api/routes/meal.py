@@ -26,6 +26,7 @@ from models.database import get_db, User, MealRecord, FoodItem, UserFood, MealTy
 from api.routes.user import get_current_user
 from config.settings import fastapi_settings
 from services.ai_service import ai_service
+from services.event_triggers import publish_meal_recorded_event
 from utils.alert_utils import alert_error, alert_warning, AlertCategory
 
 router = APIRouter()
@@ -302,6 +303,23 @@ async def record_meal(
         )
         await db.rollback()
         raise HTTPException(status_code=500, detail="餐食记录保存失败")
+
+    # Publish event to event bus
+    try:
+        food_items = [{"name": content, "calories": calories}]
+        await publish_meal_recorded_event(
+            user_id=current_user.id,
+            meal_type=meal_type,
+            total_calories=calories or 0,
+            food_items=food_items,
+            record_id=record_id,
+            photo_url=photo_url,
+        )
+    except Exception as e:
+        # Log error but don't fail the API call
+        import logging
+
+        logging.getLogger(__name__).warning(f"Failed to publish meal event: {e}")
 
     return {
         "success": True,

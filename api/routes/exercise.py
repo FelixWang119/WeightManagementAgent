@@ -11,6 +11,7 @@ from datetime import datetime, date, timedelta
 
 from models.database import get_db, User, ExerciseRecord, ExerciseIntensity
 from api.routes.user import get_current_user
+from services.event_triggers import publish_exercise_recorded_event
 
 router = APIRouter()
 
@@ -82,6 +83,23 @@ async def record_exercise(
 
     db.add(record)
     await db.commit()
+    await db.refresh(record)
+
+    # Publish event to event bus
+    try:
+        await publish_exercise_recorded_event(
+            user_id=current_user.id,
+            exercise_type=exercise_type,
+            duration_minutes=duration_minutes,
+            calories_burned=calories_burned,
+            intensity=intensity,
+            record_id=record.id,
+        )
+    except Exception as e:
+        # Log error but don't fail the API call
+        import logging
+
+        logging.getLogger(__name__).warning(f"Failed to publish exercise event: {e}")
 
     return {
         "success": True,

@@ -12,6 +12,7 @@ from datetime import datetime, date, timedelta
 from models.database import get_db, User, SleepRecord
 from api.routes.user import get_current_user
 from services.sleep_analysis_service import SleepAnalysisService
+from services.event_triggers import publish_sleep_recorded_event
 
 router = APIRouter()
 
@@ -121,6 +122,22 @@ async def record_sleep(
     db.add(record)
     await db.commit()
     await db.refresh(record)
+
+    # Publish event to event bus
+    try:
+        await publish_sleep_recorded_event(
+            user_id=current_user.id,
+            bed_time=bed_datetime,
+            wake_time=wake_datetime,
+            total_minutes=int(duration),
+            quality=quality,
+            record_id=record.id,
+        )
+    except Exception as e:
+        # Log error but don't fail the API call
+        import logging
+
+        logging.getLogger(__name__).warning(f"Failed to publish sleep event: {e}")
 
     quality_assessment = assess_sleep_quality(int(duration), quality)
 
