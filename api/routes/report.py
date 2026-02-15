@@ -100,7 +100,7 @@ async def generate_weekly_report(
             exercise_days=data["exercise_days"],
             highlights=data["highlights"],
             improvements=data["improvements"],
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(),
         )
         db.add(report)
         message = "周报生成成功"

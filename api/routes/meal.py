@@ -12,6 +12,7 @@ from fastapi import (
     File,
     Form,
     Query,
+    Body,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
@@ -153,10 +154,10 @@ async def init_food_database(db: AsyncSession):
 
 @router.post("/record")
 async def record_meal(
-    meal_type: str,
-    content: str,  # 食物描述或AI识别结果
-    calories: Optional[int] = None,
-    photo_url: Optional[str] = None,
+    meal_type: str = Form(...),
+    content: str = Form(...),  # 食物描述或AI识别结果
+    calories: Optional[int] = Form(None),
+    photo_url: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -168,8 +169,15 @@ async def record_meal(
     - **calories**: 热量（千卡，可选）
     - **photo_url**: 照片URL（可选）
     """
+    print(f"🔍 [DEBUG] record_meal 被调用:")
+    print(f"   用户ID: {current_user.id}")
+    print(f"   接收到的 meal_type: '{meal_type}'")
+    print(f"   content: '{content[:50]}...'")
+    print(f"   calories: {calories}")
+
     try:
         meal_enum = MealType(meal_type)
+        print(f"   ✅ meal_type 转换成功: {meal_enum}")
     except ValueError:
         # 记录无效餐食类型告警
         alert_warning(
@@ -207,6 +215,11 @@ async def record_meal(
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
 
+    print(f"   🔍 查询条件:")
+    print(f"     用户ID: {current_user.id}")
+    print(f"     餐食类型: {meal_enum}")
+    print(f"     时间范围: {today_start} 到 {today_end}")
+
     try:
         result = await db.execute(
             select(MealRecord)
@@ -222,6 +235,13 @@ async def record_meal(
         )
         existing_records = result.scalars().all()
         existing_record = existing_records[0] if existing_records else None
+
+        print(f"   🔍 查询结果:")
+        print(f"     找到 {len(existing_records)} 条记录")
+        if existing_record:
+            print(f"     现有记录ID: {existing_record.id}")
+            print(f"     现有记录类型: {existing_record.meal_type}")
+            print(f"     现有记录时间: {existing_record.record_time}")
     except Exception as e:
         # 记录数据库查询失败告警
         alert_error(
@@ -246,7 +266,7 @@ async def record_meal(
         existing_record.food_items = [{"name": content, "calories": calories}]
         existing_record.total_calories = calories or 0
         existing_record.photo_url = photo_url
-        existing_record.record_time = datetime.utcnow()
+        existing_record.record_time = datetime.now()
         message = "餐食记录已更新"
         record_id = existing_record.id
     else:
@@ -254,7 +274,7 @@ async def record_meal(
         record = MealRecord(
             user_id=current_user.id,
             meal_type=meal_enum,
-            record_time=datetime.utcnow(),
+            record_time=datetime.now(),
             photo_url=photo_url,
             food_items=[{"name": content, "calories": calories}],
             total_calories=calories or 0,
@@ -292,7 +312,7 @@ async def record_meal(
             "content": content,
             "calories": calories,
             "is_update": existing_record is not None,
-            "record_time": datetime.utcnow().isoformat(),
+            "record_time": datetime.now().isoformat(),
         },
     }
 
@@ -515,6 +535,50 @@ async def get_today_meals(
     }
 
 
+@router.get("/history")
+async def get_meal_history(
+    days: int = Query(30, ge=1, le=365, description="查询天数"),
+    limit: int = Query(50, ge=1, le=200, description="返回记录数"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取饮食历史记录"""
+    start_date = date.today() - timedelta(days=days)
+    start_datetime = datetime.combine(start_date, datetime.min.time())
+
+    result = await db.execute(
+        select(MealRecord)
+        .where(
+            and_(
+                MealRecord.user_id == current_user.id,
+                MealRecord.record_time >= start_datetime,
+            )
+        )
+        .order_by(MealRecord.record_time.desc())
+        .limit(limit)
+    )
+
+    records = result.scalars().all()
+
+    return {
+        "success": True,
+        "count": len(records),
+        "data": [
+            {
+                "id": r.id,
+                "meal_type": r.meal_type.value,
+                "food_items": r.food_items,
+                "total_calories": r.total_calories,
+                "photo_url": r.photo_url,
+                "user_confirmed": r.user_confirmed,
+                "record_time": r.record_time.isoformat() if r.record_time else None,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in records
+        ],
+    }
+
+
 @router.get("/search")
 async def search_food(
     keyword: str,
@@ -662,7 +726,7 @@ async def analyze_meal_with_confirm(
         "user_id": current_user.id,
         "meal_type": meal_type,
         "data": result["data"],
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(),
     }
 
     # 添加确认ID到返回结果
@@ -674,10 +738,9 @@ async def analyze_meal_with_confirm(
 
 @router.post("/confirm")
 async def confirm_meal_record(
-    confirm_id: str,
-    adjustments: Optional[
-        str
-    ] = None,  # JSON字符串: {"foods": [{"name": "...", "calories": 300, "adjustment": 1.2}], "total_calories": 600}
+    confirm_id: str = Body(..., embed=True),
+    meal_type: Optional[str] = Body(None, embed=True),
+    adjustments: Optional[str] = Body(None, embed=True),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -685,6 +748,7 @@ async def confirm_meal_record(
     确认AI识别结果并保存餐食记录
 
     - **confirm_id**: 确认ID（从 analyze-with-confirm 获得）
+    - **meal_type**: 餐食类型（可选），如果提供则覆盖AI分析时的类型
     - **adjustments**: 用户调整（可选），JSON格式包含修正后的食物列表和总热量
     """
     # 验证确认ID
@@ -698,12 +762,20 @@ async def confirm_meal_record(
         raise HTTPException(status_code=403, detail="无权访问此确认ID")
 
     # 检查是否过期（30分钟）
-    if datetime.utcnow() - temp_data["created_at"] > timedelta(minutes=30):
+    if datetime.now() - temp_data["created_at"] > timedelta(minutes=30):
         del _temp_ai_results[confirm_id]
         raise HTTPException(status_code=400, detail="确认已过期，请重新上传")
 
     ai_data = temp_data["data"]
-    meal_type = temp_data["meal_type"]
+    # 优先使用前端发送的 meal_type，如果没有则使用临时数据中的值
+    original_meal_type = temp_data["meal_type"]
+    meal_type = meal_type if meal_type is not None else original_meal_type
+
+    print(f"🔍 [DEBUG] confirm_meal_record:")
+    print(f"   原始 meal_type (从AI分析): '{original_meal_type}'")
+    print(f"   前端发送的 meal_type: '{meal_type}'")
+    print(f"   最终使用的 meal_type: '{meal_type}'")
+    print(f"   是否更新了餐食类型? {meal_type != original_meal_type}")
 
     # 解析用户调整
     foods = ai_data["foods"].copy()
@@ -758,7 +830,7 @@ async def confirm_meal_record(
         existing_record.food_items = foods
         existing_record.total_calories = total_calories
         existing_record.photo_url = ai_data.get("photo_url")
-        existing_record.record_time = datetime.utcnow()
+        existing_record.record_time = datetime.now()
         message = "餐食记录已更新"
     else:
         # 创建新记录
@@ -768,7 +840,7 @@ async def confirm_meal_record(
             food_items=foods,
             total_calories=total_calories,
             photo_url=ai_data.get("photo_url"),
-            record_time=datetime.utcnow(),
+            record_time=datetime.now(),
         )
         db.add(record)
         message = "餐食记录成功"
@@ -787,7 +859,7 @@ async def confirm_meal_record(
             "total_calories": total_calories,
             "food_count": len(foods),
             "adjusted": adjustments is not None,
-            "record_time": datetime.utcnow().isoformat(),
+            "record_time": datetime.now().isoformat(),
         },
     }
 

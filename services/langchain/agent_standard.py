@@ -94,7 +94,7 @@ class ContextualTool:
             duration_minutes: int,
             calories_burned: Optional[int] = None,
         ) -> str:
-            """记录用户运动。当用户提到运动时调用，如'跑步30分钟'、'游泳一小时'"""
+            """记录用户运动。当用户提到运动时调用，如'跑步30分钟'、'游泳一小时'、'慢跑5公里50分钟'"""
             return f"准备记录运动: {exercise_type} {duration_minutes}分钟"
 
         return record_exercise
@@ -202,12 +202,15 @@ class AsyncToolExecutor:
     async def record_weight(self, weight: float, note: str = "") -> str:
         """记录体重"""
         from models.database import WeightRecord
+        from datetime import date
 
+        now = datetime.utcnow()
         record = WeightRecord(
             user_id=self.user_id,
             weight=weight,
             note=note,
-            record_time=datetime.utcnow(),
+            record_time=now,
+            record_date=now.date(),
         )
         self.db.add(record)
         await self.db.commit()
@@ -269,6 +272,7 @@ class AsyncToolExecutor:
             duration_minutes=duration_minutes,
             calories_burned=calories_burned,
             record_time=datetime.utcnow(),
+            is_checkin=False,  # AI记录的不是手动打卡
         )
         self.db.add(record)
         await self.db.commit()
@@ -996,11 +1000,20 @@ TOOL_CALL: {"tool": "record_exercise", "args": {"exercise_type": "跑步", "dura
                 r"(\d+\.?\d*)\s*公斤",
                 r"(\d+\.?\d*)\s*kg",
                 r"(\d+\.?\d*)\s*千克",
+                r"体重\s*(\d+\.?\d*)",  # 新增：匹配"体重65.5"
+                r"(\d+\.?\d*)\s*斤",  # 新增：匹配"130斤"（转换为公斤）
             ]
             for pattern in weight_patterns:
                 match = re.search(pattern, message_lower)
                 if match:
-                    extracted["weight"] = float(match.group(1))
+                    weight = float(match.group(1))
+                    # 如果是斤，转换为公斤
+                    if "斤" in message_lower:
+                        weight = weight / 2
+                    extracted["weight"] = weight
+                    self.logger.info(
+                        f"Extracted weight: {weight}kg from message: {message}"
+                    )
                     break
 
         elif tool_name == "record_meal":
@@ -1016,10 +1029,35 @@ TOOL_CALL: {"tool": "record_exercise", "args": {"exercise_type": "跑步", "dura
 
         elif tool_name == "record_exercise":
             # 提取运动类型和时长
-            exercise_types = ["跑步", "散步", "瑜伽", "游泳", "健身", "骑行", "跳绳"]
+            exercise_types = [
+                "跑步",
+                "慢跑",
+                "散步",
+                "瑜伽",
+                "游泳",
+                "健身",
+                "骑行",
+                "跳绳",
+                "快走",
+            ]
             for ex_type in exercise_types:
                 if ex_type in message:
                     extracted["exercise_type"] = ex_type
+                    break
+
+            # 提取距离（如"5公里"）
+            distance_patterns = [
+                r"(\d+\.?\d*)\s*公里",
+                r"(\d+\.?\d*)\s*km",
+                r"(\d+\.?\d*)\s*千米",
+            ]
+            for pattern in distance_patterns:
+                match = re.search(pattern, message_lower)
+                if match:
+                    distance = float(match.group(1))
+                    # 如果提到距离但没提到运动类型，默认为跑步
+                    if "exercise_type" not in extracted:
+                        extracted["exercise_type"] = "跑步"
                     break
 
             # 提取时长
@@ -1028,12 +1066,14 @@ TOOL_CALL: {"tool": "record_exercise", "args": {"exercise_type": "跑步", "dura
                 r"(\d+)\s*分",
                 r"(\d+)\s*小时",
                 r"(\d+)\s*个?小时",
+                r"(\d+)\s*半小时",
+                r"半个\s*小时",
             ]
             for pattern in duration_patterns:
                 match = re.search(pattern, message_lower)
                 if match:
-                    duration = int(match.group(1))
-                    if "小时" in message_lower:
+                    duration = int(match.group(1)) if match.group(1) else 30
+                    if "小时" in message_lower or "半小时" in message_lower:
                         duration *= 60
                     extracted["duration_minutes"] = duration
                     break

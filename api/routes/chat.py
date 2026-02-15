@@ -12,7 +12,7 @@ from fastapi import (
     Body,
     UploadFile,
     File,
-    Body,
+    Query,
 )
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -121,7 +121,7 @@ async def save_message_to_db(
                 content=content,
                 msg_type=msg_type,
                 meta_data=meta_data or {},
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(),
             )
             db.add(message)
             await db.commit()
@@ -221,7 +221,7 @@ async def send_message(
             content=full_content,
             msg_type=MessageType(msg_type),
             meta_data={"image_url": image_url} if image_url else None,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(),
         )
         db.add(message)
         await db.commit()
@@ -284,7 +284,7 @@ async def send_message(
                     "data": {
                         "content": "抱歉，我现在有点忙，请稍后再试~",
                         "role": "assistant",
-                        "timestamp": datetime.utcnow().isoformat(),
+                        "timestamp": datetime.now().isoformat(),
                         "is_error": True,
                     },
                 }
@@ -304,7 +304,7 @@ async def send_message(
             role=MessageRole.ASSISTANT,
             content=assistant_reply,
             msg_type=MessageType.TEXT,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(),
         )
         db.add(reply_message)
         await db.commit()
@@ -315,7 +315,7 @@ async def send_message(
             "data": {
                 "content": assistant_reply,
                 "role": "assistant",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now().isoformat(),
                 "model": "langchain-agent-v2",
                 "message_type": structured_response.get("type", "text"),
                 "actions": structured_response.get("actions", []),
@@ -418,7 +418,7 @@ async def send_message_async(
             role=MessageRole.USER,
             content=content,
             msg_type=MessageType(msg_type),
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(),
         )
         db.add(message)
         await db.commit()
@@ -432,7 +432,7 @@ async def send_message_async(
             "data": {
                 "status": "processing",
                 "check_url": f"/api/chat/history?limit=1",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now().isoformat(),
             },
         }
 
@@ -712,18 +712,15 @@ async def stream_chat_post(
 
 @router.get("/history")
 async def get_chat_history(
-    limit: int = 50,
-    before_id: Optional[int] = None,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0, description="偏移量，用于分页"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """获取对话历史"""
     query = select(ChatHistory).where(ChatHistory.user_id == current_user.id)
 
-    if before_id:
-        query = query.where(ChatHistory.id < before_id)
-
-    query = query.order_by(desc(ChatHistory.created_at)).limit(limit)
+    query = query.order_by(desc(ChatHistory.created_at)).offset(offset).limit(limit)
 
     result = await db.execute(query)
     records = result.scalars().all()
@@ -776,7 +773,7 @@ async def get_context_info(
     )
     total_messages = result.scalar()
 
-    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     result = await db.execute(
         select(func.count(ChatHistory.id)).where(
             and_(
@@ -1145,7 +1142,7 @@ async def send_message_langchain(
             content=full_content,
             msg_type=MessageType(msg_type),
             meta_data={"image_url": image_url} if image_url else None,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(),
         )
         db.add(message)
         await db.commit()
@@ -1197,7 +1194,7 @@ async def send_message_langchain(
             role=MessageRole.ASSISTANT,
             content=assistant_reply,
             msg_type=MessageType.TEXT,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(),
         )
         db.add(reply_message)
         await db.commit()
@@ -1229,7 +1226,7 @@ async def send_message_langchain(
             "data": {
                 "content": assistant_reply,
                 "role": "assistant",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now().isoformat(),
                 "model": "langchain-react-agent",
                 "intermediate_steps": [format_step(step) for step in intermediate_steps]
                 if intermediate_steps

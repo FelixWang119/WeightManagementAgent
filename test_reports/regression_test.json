@@ -1,0 +1,28 @@
+{
+  "test_name": "回归测试",
+  "timestamp": "2026-02-15T09:15:18.576429",
+  "steps": [
+    {
+      "name": "用户登录",
+      "success": true,
+      "timestamp": "2026-02-15T09:15:18.655920",
+      "details": {
+        "user_id": 39,
+        "nickname": "用户5f576d",
+        "exercise_count": 0,
+        "weight_count": 0
+      }
+    },
+    {
+      "name": "创建测试数据",
+      "success": true,
+      "timestamp": "2026-02-15T09:15:18.767473",
+      "details": {
+        "exercise_count": 2,
+        "weight_count": 2,
+        "include_ai_records": true,
+        "success": true
+      }
+    }
+  ]
+}

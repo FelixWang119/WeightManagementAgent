@@ -54,8 +54,30 @@ const UserSwitch = {
             const isActive = currentUser &&
                 ((user.isCodeMode && user.openid === currentUser.id) || (!user.isCodeMode && user.id === currentUser.id));
 
-            const displayName = user.isCodeMode ? user.nickname : `${user.nickname}`;
-            const subText = user.isCodeMode ? '使用登录码' : `ID: ${user.id}`;
+            // 改进显示逻辑
+            let displayName, subText;
+            if (user.isCodeMode) {
+                // 测试用户：显示更友好的名称
+                const code = user.openid;
+                if (code === 'user001') displayName = '测试用户 1';
+                else if (code === 'user002') displayName = '测试用户 2';
+                else if (code === 'user003') displayName = '测试用户 3';
+                else if (code === 'test123') displayName = '测试用户 (test123)';
+                else if (code === 'demo') displayName = '演示用户';
+                else displayName = `测试用户: ${code}`;
+                subText = `登录码: ${user.openid}`;
+            } else {
+                // 真实用户：如果昵称是默认格式，显示更友好
+                if (user.nickname && user.nickname.startsWith('用户') && user.nickname.length === 8) {
+                    // 默认格式"用户XXXXXX"，显示为"用户 (XXXXXX)"
+                    const suffix = user.nickname.substring(2);
+                    displayName = `用户 (${suffix})`;
+                } else {
+                    displayName = user.nickname || `用户 ${user.id}`;
+                }
+                subText = `ID: ${user.id}`;
+            }
+            
             const clickAction = user.isCodeMode ? `UserSwitch.switch('${user.openid}')` : `UserSwitch.switchById(${user.id})`;
 
             return `

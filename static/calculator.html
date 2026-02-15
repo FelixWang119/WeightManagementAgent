@@ -93,6 +93,7 @@
                             <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
                             <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
                             <li><a href="calculator.html" class="nav-item active"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+                            <li><a href="recipes.html" class="nav-item"><span class="nav-item-icon">📖</span><span class="nav-item-text">健康食谱</span></a></li>
                             <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
                         </ul>
                     </div>
@@ -362,11 +363,7 @@
                         const carbs = Math.round(calorieIntake * 0.45 / 4);
                         const fat = Math.round(calorieIntake * 0.30 / 9);
 
-                        // 更新营养分配显示（带单位）
-                        if (proteinVal) proteinVal.textContent = protein + ' g';
-                        if (carbsVal) carbsVal.textContent = carbs + ' g';
-                        if (fatVal) fatVal.textContent = fat + ' g';
-                        
+                        // 获取DOM元素
                         const proteinBar = document.getElementById('protein-bar');
                         const carbsBar = document.getElementById('carbs-bar');
                         const fatBar = document.getElementById('fat-bar');
@@ -374,6 +371,12 @@
                         const carbsVal = document.getElementById('carbs-value');
                         const fatVal = document.getElementById('fat-value');
                         const nutritionCard = document.getElementById('nutrition-card');
+                        
+                        // 更新营养分配显示（带单位）
+                        if (proteinVal) proteinVal.textContent = protein + ' g';
+                        if (carbsVal) carbsVal.textContent = carbs + ' g';
+                        if (fatVal) fatVal.textContent = fat + ' g';
+                        
                         if (nutritionCard) nutritionCard.style.cssText = 'display: block !important;';
                     }
                 } else {
@@ -394,10 +397,170 @@
         async function saveCalorieTarget() {
             if (!currentResult) return;
             try {
-                await API.user.updateProfile({daily_calorie_target: parseInt(document.getElementById('calorie-target').textContent)});
-                alert('热量目标已保存！');
+                const calorieTargetEl = document.getElementById('calorie-target');
+                if (!calorieTargetEl) {
+                    alert('找不到热量目标元素');
+                    return;
+                }
+                
+                const targetText = calorieTargetEl.textContent;
+                // 提取数字部分（移除 " kcal" 单位）
+                const calorieMatch = targetText.match(/(\d+)/);
+                if (!calorieMatch) {
+                    alert('热量目标格式错误');
+                    return;
+                }
+                
+                const calorieTarget = parseInt(calorieMatch[1]);
+                if (isNaN(calorieTarget) || calorieTarget <= 0) {
+                    alert('热量目标值无效');
+                    return;
+                }
+                
+                // 首先保存BMR到用户profile（确保首页能显示BMR数据）
+                console.log('保存BMR到用户profile...');
+                try {
+                    const age = parseInt(document.getElementById('age-input').value);
+                    const height = parseFloat(document.getElementById('height-input').value);
+                    const weight = parseFloat(document.getElementById('weight-input').value);
+                    
+                    if (age && height && weight) {
+                        const updateData = {
+                            age: age,
+                            gender: selectedGender,
+                            height: height,
+                            bmr: currentResult.bmr
+                        };
+                        
+                        // 更新活动水平
+                        try {
+                            const profileResponse = await API.user.getProfile();
+                            if (profileResponse && profileResponse.success && profileResponse.profile) {
+                                const existingHabits = profileResponse.profile.exercise_habits || {};
+                                updateData.exercise_habits = {
+                                    ...existingHabits,
+                                    activity_level: selectedActivity
+                                };
+                            }
+                        } catch (e) {
+                            console.log('获取现有活动习惯失败，使用新数据');
+                            updateData.exercise_habits = {
+                                activity_level: selectedActivity
+                            };
+                        }
+                        
+                        await API.user.updateProfile(updateData);
+                        console.log('BMR保存成功');
+                    } else {
+                        console.log('缺少必要信息，跳过BMR保存');
+                    }
+                } catch (updateError) {
+                    console.error('保存BMR失败:', updateError);
+                    // 继续保存目标，但提示用户
+                    alert('BMR保存失败，但热量目标仍会保存。首页可能无法显示BMR数据。');
+                }
+                
+                // 获取用户当前体重
+                let currentWeight = null;
+                try {
+                    const weightResponse = await fetch(`${API.base}/api/weight/history?days=7`, {
+                        headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                    });
+                    if (weightResponse.ok) {
+                        const weightData = await weightResponse.json();
+                        if (weightData.success && weightData.data && weightData.data.length > 0) {
+                            currentWeight = weightData.data[0].weight;
+                        }
+                    }
+                } catch (error) {
+                    console.log('获取体重记录失败:', error);
+                }
+                
+                if (!currentWeight) {
+                    alert('请先记录您的当前体重');
+                    return;
+                }
+                
+                // 首先检查用户是否有当前目标
+                let goalResponse;
+                try {
+                    goalResponse = await fetch(`${API.base}/api/goals/current`, {
+                        headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                    });
+                } catch (e) {
+                    console.log('检查目标失败，尝试创建新目标:', e);
+                    goalResponse = { ok: false };
+                }
+                
+                if (goalResponse.ok) {
+                    const goalData = await goalResponse.json();
+                    if (goalData.success && goalData.has_goal && goalData.goal) {
+                        // 更新现有目标
+                        const updateResponse = await fetch(`${API.base}/api/goals/${goalData.goal.id}`, {
+                            method: 'PUT',
+                            headers: { 
+                                'Authorization': `Bearer ${Auth.getToken()}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                daily_calorie_target: calorieTarget
+                            })
+                        });
+                        
+                         if (updateResponse.ok) {
+                            alert('热量目标已更新！BMR数据也已保存，首页热量平衡模块将正常显示。');
+                        } else {
+                            throw new Error('更新目标失败');
+                        }
+                    } else {
+                        // 创建新目标（使用当前体重计算合理的目标体重）
+                        const targetWeight = Math.max(50, currentWeight - 5); // 至少减5kg，最低50kg
+                        const createResponse = await fetch(`${API.base}/api/goals`, {
+                            method: 'POST',
+                            headers: { 
+                                'Authorization': `Bearer ${Auth.getToken()}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                target_weight: targetWeight, // 基于当前体重计算
+                                target_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 90天后
+                                weekly_plan: 0.5, // 每周减重0.5kg
+                                daily_calorie_target: calorieTarget
+                            })
+                        });
+                        
+                         if (createResponse.ok) {
+                            alert('热量目标已保存为新目标！BMR数据也已保存，首页热量平衡模块将正常显示。');
+                        } else {
+                            throw new Error('创建目标失败');
+                        }
+                    }
+                } else {
+                    // 直接尝试创建新目标
+                    const targetWeight = Math.max(50, currentWeight - 5); // 至少减5kg，最低50kg
+                    const createResponse = await fetch(`${API.base}/api/goals`, {
+                        method: 'POST',
+                        headers: { 
+                            'Authorization': `Bearer ${Auth.getToken()}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            target_weight: targetWeight, // 基于当前体重计算
+                            target_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                            weekly_plan: 0.5,
+                            daily_calorie_target: calorieTarget
+                        })
+                    });
+                    
+                     if (createResponse.ok) {
+                        alert('热量目标已保存！BMR数据也已保存，首页热量平衡模块将正常显示。');
+                    } else {
+                        throw new Error('保存失败');
+                    }
+                }
             } catch (error) {
-                alert('保存失败');
+                console.error('保存热量目标失败:', error);
+                alert('保存失败: ' + (error.message || '未知错误'));
             }
         }
 

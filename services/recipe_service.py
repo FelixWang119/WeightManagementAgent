@@ -152,16 +152,8 @@ class RecipeService:
             食谱详情字典
         """
         try:
+            # 先获取食谱基本信息
             query = select(Recipe).where(Recipe.id == recipe_id)
-
-            if include_details:
-                query = query.options(
-                    joinedload(Recipe.ingredients).joinedload(
-                        RecipeIngredient.food_item
-                    ),
-                    joinedload(Recipe.steps),
-                )
-
             result = await db.execute(query)
             recipe = result.scalar_one_or_none()
 
@@ -187,15 +179,23 @@ class RecipeService:
                 "is_public": recipe.is_public,
                 "created_by": recipe.created_by,
                 "created_at": recipe.created_at.isoformat()
-                if recipe.created_at
+                if hasattr(recipe.created_at, "isoformat")
                 else None,
                 "updated_at": recipe.updated_at.isoformat()
-                if recipe.updated_at
+                if recipe.updated_at and hasattr(recipe.updated_at, "isoformat")
                 else None,
             }
 
             if include_details:
-                # 食材列表
+                # 单独获取食材
+                ingredients_query = (
+                    select(RecipeIngredient)
+                    .where(RecipeIngredient.recipe_id == recipe_id)
+                    .options(joinedload(RecipeIngredient.food_item))
+                )
+                ingredients_result = await db.execute(ingredients_query)
+                ingredients = ingredients_result.scalars().all()
+
                 recipe_dict["ingredients"] = [
                     {
                         "id": ing.id,
@@ -216,10 +216,18 @@ class RecipeService:
                             else None
                         ),
                     }
-                    for ing in recipe.ingredients
+                    for ing in ingredients
                 ]
 
-                # 步骤列表
+                # 单独获取步骤
+                steps_query = (
+                    select(RecipeStep)
+                    .where(RecipeStep.recipe_id == recipe_id)
+                    .order_by(RecipeStep.step_number)
+                )
+                steps_result = await db.execute(steps_query)
+                steps = steps_result.scalars().all()
+
                 recipe_dict["steps"] = [
                     {
                         "id": step.id,
@@ -227,7 +235,7 @@ class RecipeService:
                         "description": step.description,
                         "image_url": step.image_url,
                     }
-                    for step in recipe.steps
+                    for step in steps
                 ]
 
             return recipe_dict

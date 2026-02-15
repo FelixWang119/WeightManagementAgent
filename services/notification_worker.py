@@ -74,7 +74,8 @@ class NotificationWorker:
                         ReminderSetting.reminder_type == notification.reminder_type,
                     )
                 )
-                reminder = reminder_result.scalar_one_or_none()
+            )
+            reminder = reminder_result.scalar_one_or_none()
 
             if not reminder or not reminder.enabled:
                 notification.status = "skipped"
@@ -91,41 +92,47 @@ class NotificationWorker:
                 select(UserProfile).where(UserProfile.user_id == notification.user_id)
             )
             profile = profile_result.scalar_one_or_none()
-            
+
             decision_mode = profile.decision_mode if profile else "balanced"
-            
+
             reminder_type_str = (
                 notification.reminder_type.value
                 if hasattr(notification.reminder_type, "value")
                 else str(notification.reminder_type)
             )
-            
+
             notification_result = await intelligent_notification_service.generate_intelligent_notification(
                 user_id=notification.user_id,
                 notification_type=reminder_type_str,
-                plan_data={"scheduled_time": reminder.reminder_time.isoformat() if reminder.reminder_time else None},
-                user_profile={"decision_mode": decision_mode} if profile else None
+                plan_data={
+                    "scheduled_time": reminder.reminder_time.isoformat()
+                    if reminder.reminder_time
+                    else None
+                },
+                user_profile={"decision_mode": decision_mode} if profile else None,
             )
-            
+
             if not notification_result.get("send", True):
                 notification.status = "skipped"
                 notification.sent_at = datetime.now()
-                notification.error_message = notification_result.get("reason", "智能决策跳过")
+                notification.error_message = notification_result.get(
+                    "reason", "智能决策跳过"
+                )
                 logger.info(
                     "通知 %d: 智能决策跳过 - %s",
                     notification.id,
                     notification_result.get("reason", "未知原因"),
                 )
                 return
-            
+
             message = notification_result.get("message", "")
             notification.message = message
-            
+
             if notification_result.get("adjusted"):
                 notification.metadata = {
                     "adjusted": True,
                     "reasoning": notification_result.get("reasoning", ""),
-                    "new_schedule": notification_result.get("new_schedule", {})
+                    "new_schedule": notification_result.get("new_schedule", {}),
                 }
 
             success = await self._send_via_channel(notification, message, user)

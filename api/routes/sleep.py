@@ -115,7 +115,7 @@ async def record_sleep(
         wake_time=wake_datetime,
         total_minutes=int(duration),
         quality=quality,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(),
     )
 
     db.add(record)

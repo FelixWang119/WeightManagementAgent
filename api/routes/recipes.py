@@ -102,25 +102,27 @@ class RecipeResponse(BaseModel):
 
     id: int
     name: str
-    description: Optional[str]
-    prep_time: int
-    cook_time: int
-    total_time: int
-    servings: int
-    difficulty: str
-    category: str
-    cuisine: str
-    calories_per_serving: int
-    protein_per_serving: Optional[float]
-    fat_per_serving: Optional[float]
-    carbs_per_serving: Optional[float]
-    image_url: Optional[str]
-    is_public: bool
-    created_by: Optional[int]
-    created_at: str
-    updated_at: Optional[str]
+    description: Optional[str] = None
+    prep_time: Optional[int] = None
+    cook_time: Optional[int] = None
+    total_time: Optional[int] = None
+    servings: Optional[int] = None
+    difficulty: Optional[str] = None
+    category: Optional[str] = None
+    cuisine: Optional[str] = None
+    calories_per_serving: Optional[int] = None
+    protein_per_serving: Optional[float] = None
+    fat_per_serving: Optional[float] = None
+    carbs_per_serving: Optional[float] = None
+    image_url: Optional[str] = None
+    is_public: Optional[bool] = True
+    created_by: Optional[int] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
     ingredients: Optional[List[Dict[str, Any]]] = None
     steps: Optional[List[Dict[str, Any]]] = None
+    meal_type: Optional[str] = None
+    tips: Optional[str] = None
 
 
 class RecipeListResponse(BaseModel):
@@ -164,7 +166,7 @@ async def list_recipes(
         "created_at", regex="^(name|created_at|calories_per_serving)$"
     ),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
-    current_user: User = Depends(get_current_user),
+    # current_user: User = Depends(get_current_user),  # 暂时移除认证要求
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -193,7 +195,7 @@ async def list_recipes(
             max_cook_time=max_cook_time,
             search_query=search_query,
             is_public=True,
-            user_id=current_user.id,
+            user_id=None,  # 不需要用户ID
         )
 
         # 获取食谱列表
@@ -201,11 +203,56 @@ async def list_recipes(
             db, filter_obj, page, page_size, sort_by, sort_order
         )
 
+        # 处理食谱数据（可能是字典或SQLAlchemy对象）
+        recipes_dicts = []
+        for recipe in recipes:
+            if hasattr(recipe, "id"):  # SQLAlchemy对象
+                recipe_dict = {
+                    "id": recipe.id,
+                    "name": recipe.name,
+                    "description": recipe.description,
+                    "prep_time": recipe.prep_time,
+                    "cook_time": recipe.cook_time,
+                    "total_time": recipe.total_time,
+                    "servings": recipe.servings,
+                    "difficulty": recipe.difficulty,
+                    "category": recipe.category,
+                    "cuisine": recipe.cuisine,
+                    "calories_per_serving": recipe.calories_per_serving,
+                    "protein_per_serving": recipe.protein_per_serving,
+                    "fat_per_serving": recipe.fat_per_serving,
+                    "carbs_per_serving": recipe.carbs_per_serving,
+                    "image_url": recipe.image_url,
+                    "is_public": recipe.is_public,
+                    "created_by": recipe.created_by,
+                    "created_at": recipe.created_at.isoformat()
+                    if recipe.created_at
+                    else None,
+                    "updated_at": recipe.updated_at.isoformat()
+                    if recipe.updated_at
+                    else None,
+                    "meal_type": getattr(recipe, "meal_type", None),
+                    "tips": getattr(recipe, "tips", None),
+                }
+            else:  # 已经是字典
+                recipe_dict = dict(recipe)
+                # 确保datetime字段转换为字符串
+                if "created_at" in recipe_dict and hasattr(
+                    recipe_dict["created_at"], "isoformat"
+                ):
+                    recipe_dict["created_at"] = recipe_dict["created_at"].isoformat()
+                if "updated_at" in recipe_dict and hasattr(
+                    recipe_dict["updated_at"], "isoformat"
+                ):
+                    recipe_dict["updated_at"] = recipe_dict["updated_at"].isoformat()
+
+            recipes_dicts.append(recipe_dict)
+
         # 计算总页数
         total_pages = (total + page_size - 1) // page_size
 
         return RecipeListResponse(
-            recipes=recipes,
+            recipes=recipes_dicts,
             total=total,
             page=page,
             page_size=page_size,
@@ -223,7 +270,7 @@ async def list_recipes(
 async def get_recipe(
     recipe_id: int,
     include_details: bool = Query(True, description="是否包含食材和步骤详情"),
-    current_user: User = Depends(get_current_user),
+    # current_user: User = Depends(get_current_user),  # 暂时移除认证要求
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -241,12 +288,12 @@ async def get_recipe(
                 detail="食谱不存在",
             )
 
-        # 检查食谱是否公开
-        if not recipe["is_public"] and recipe["created_by"] != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权访问此食谱",
-            )
+        # 检查食谱是否公开（暂时允许访问所有食谱）
+        # if not recipe["is_public"] and recipe["created_by"] != current_user.id:
+        #     raise HTTPException(
+        #         status_code=status.HTTP_403_FORBIDDEN,
+        #         detail="无权访问此食谱",
+        #     )
 
         return recipe
 

@@ -229,9 +229,9 @@ const chatAPI = {
         });
     },
 
-    // 获取聊天历史
-    getHistory: (limit = 50) => {
-        return request(`/api/chat/history?limit=${limit}`);
+    // 获取聊天历史（支持分页）
+    getHistory: (limit = 10, offset = 0) => {
+        return request(`/api/chat/history?limit=${limit}&offset=${offset}`);
     },
 
     // 清空历史
@@ -295,15 +295,23 @@ const weightAPI = {
 const mealAPI = {
     // 记录餐食
     record: (data) => {
-        const params = new URLSearchParams();
-        params.append('meal_type', data.mealType);
-        params.append('content', data.foodName || data.content);
-        if (data.calories) params.append('calories', data.calories);
-        if (data.note) params.append('note', data.note);
+        console.log('🔍 [API.meal.record] 调用:', data);
+        const formData = new FormData();
+        formData.append('meal_type', data.mealType);
+        formData.append('content', data.foodName || data.content);
+        if (data.calories) formData.append('calories', data.calories.toString());
+        if (data.note) formData.append('note', data.note);
+        
+        console.log('🔍 [API.meal.record] 发送的 meal_type 值:', data.mealType);
 
-        return request(`/api/meal/record?${params.toString()}`, {
-            method: 'POST'
-        });
+        // 使用FormData发送，让浏览器设置正确的Content-Type
+        return fetch(`${API_BASE}/api/meal/record`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        }).then(response => response.json());
     },
 
     // 获取今日餐食
@@ -588,6 +596,73 @@ const caloriesAPI = {
 };
 
 /**
+ * 食谱API
+ */
+const recipesAPI = {
+    // 获取所有食谱
+    getAll: (params = {}) => {
+        const query = new URLSearchParams(params).toString();
+        return request(`/api/recipes/recipes${query ? '?' + query : ''}`);
+    },
+
+    // 获取单个食谱详情
+    getById: (recipeId) => {
+        return request(`/api/recipes/recipes/${recipeId}`);
+    },
+
+    // 搜索食谱
+    search: (query, params = {}) => {
+        const searchParams = new URLSearchParams({ q: query, ...params }).toString();
+        return request(`/api/recipes/recipes/search${searchParams ? '?' + searchParams : ''}`);
+    },
+
+    // 获取推荐食谱
+    getRecommended: (params = {}) => {
+        const query = new URLSearchParams(params).toString();
+        return request(`/api/recipes/recipes/recommended${query ? '?' + query : ''}`);
+    },
+
+    // 添加到收藏
+    addToFavorites: (recipeId) => {
+        return request(`/api/recipes/recipes/${recipeId}/favorite`, {
+            method: 'POST'
+        });
+    },
+
+    // 从收藏移除
+    removeFromFavorites: (recipeId) => {
+        return request(`/api/recipes/recipes/${recipeId}/favorite`, {
+            method: 'DELETE'
+        });
+    },
+
+    // 获取用户收藏
+    getFavorites: () => {
+        return request('/api/recipes/recipes/favorites');
+    },
+
+    // 标记为已烹饪
+    markAsCooked: (recipeId) => {
+        return request(`/api/recipes/recipes/${recipeId}/cook`, {
+            method: 'POST'
+        });
+    },
+
+    // 获取烹饪记录
+    getCooked: () => {
+        return request('/api/recipes/recipes/cooked');
+    },
+
+    // 评价食谱
+    rate: (recipeId, rating, comment = '') => {
+        return request(`/api/recipes/recipes/${recipeId}/rate`, {
+            method: 'POST',
+            body: JSON.stringify({ rating, comment })
+        });
+    }
+};
+
+/**
  * 健康检查API
  */
 const healthAPI = {
@@ -609,6 +684,7 @@ window.API = {
     sleep: sleepAPI,
     report: reportAPI,
     reminder: reminderAPI,
+    recipes: recipesAPI,
     goals: goalsAPI,
     calories: caloriesAPI,
     health: healthAPI

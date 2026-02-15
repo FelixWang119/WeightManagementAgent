@@ -1,0 +1,17 @@
+{
+  "test_name": "AI助手测试",
+  "timestamp": "2026-02-15T09:15:18.379899",
+  "steps": [
+    {
+      "name": "用户登录",
+      "success": true,
+      "timestamp": "2026-02-15T09:15:18.476755",
+      "details": {
+        "user_id": 38,
+        "nickname": "用户8e59d9",
+        "exercise_count": 0,
+        "weight_count": 0
+      }
+    }
+  ]
+}

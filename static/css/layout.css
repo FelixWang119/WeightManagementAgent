@@ -29,13 +29,15 @@
   flex: 1;
   margin-top: var(--header-height);
   display: flex;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .page-main {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-md);
+    flex: 1;
+    overflow: visible;
+    padding: 0;
+    min-height: 0;
+    position: relative;
 }
 
 /* ========== 头部导航 ========== */
@@ -136,18 +138,19 @@
 }
 
 .sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: var(--menu-width);
-  height: 100vh;
-  background: var(--surface);
-  box-shadow: var(--shadow-lg);
-  z-index: 201;
-  transform: translateX(100%);
-  transition: transform var(--transition-normal);
-  display: flex;
-  flex-direction: column;
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: var(--menu-width);
+    max-width: 60vw;
+    height: 100vh;
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+    z-index: 201;
+    transform: translateX(100%);
+    transition: transform var(--transition-normal);
+    display: flex;
+    flex-direction: column;
 }
 
 .menu-open .sidebar {
@@ -335,12 +338,7 @@
   height: calc(100vh - var(--header-height));
 }
 
-.chat-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--spacing-md);
-  background: var(--background);
-}
+
 
 .chat-input-area {
   background: var(--surface);
@@ -438,7 +436,7 @@
   }
   
   .page-main {
-    padding-bottom: 80px; /* 为底部栏留出空间 */
+    padding-bottom: 100px;
   }
 }
 

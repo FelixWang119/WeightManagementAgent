@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>富媒体消息测试</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .test-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        
+        .test-section {
+            margin-bottom: 32px;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+        }
+        
+        .test-section h2 {
+            color: #007aff;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+        
+        .test-button {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 8px;
+            transition: background 0.2s;
+        }
+        
+        .test-button:hover {
+            background: #0056cc;
+        }
+        
+        .test-button.secondary {
+            background: #6c757d;
+        }
+        
+        .test-button.secondary:hover {
+            background: #545b62;
+        }
+        
+        .result-area {
+            margin-top: 20px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            min-height: 200px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .message {
+            margin: 12px 0;
+            padding: 12px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+        
+        .message.user {
+            background: #d1ecf1;
+            margin-left: 40px;
+        }
+        
+        .message.assistant {
+            background: #d4edda;
+            margin-right: 40px;
+        }
+        
+        .message-card {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 8px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #007aff;
+        }
+        
+        .card-title {
+            font-weight: bold;
+            color: #007aff;
+            margin-bottom: 8px;
+        }
+        
+        .card-content {
+            color: #666;
+        }
+        
+        .message-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .action-btn:hover {
+            background: #0056cc;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🤖 Agent富媒体消息功能测试</h1>
+        
+        <div class="test-section">
+            <h2>📋 测试说明</h2>
+            <p>Agent支持三种富媒体消息类型：</p>
+            <ol>
+                <li><strong>卡片消息</strong> - 用于展示数据、图表、结构化信息</li>
+                <li><strong>图片消息</strong> - 直接显示图片</li>
+                <li><strong>快捷操作</strong> - 交互式按钮，用户可以直接点击</li>
+            </ol>
+            <p>这些功能通过流式API返回，格式为：<code>[TYPE:content]</code></p>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎯 测试快捷操作按钮</h2>
+            <p>在聊天中尝试以下问题，Agent可能会返回快捷操作按钮：</p>
+            <div>
+                <button class="test-button" onclick="sendTestMessage('我想记录今天的饮食')">🍽️ 记录饮食</button>
+                <button class="test-button" onclick="sendTestMessage('查看我的运动数据')">🏃 查看运动</button>
+                <button class="test-button" onclick="sendTestMessage('给我一些健康建议')">💡 健康建议</button>
+                <button class="test-button secondary" onclick="sendTestMessage('测试富媒体消息')">🎨 测试富媒体</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 测试卡片消息</h2>
+            <p>询问数据相关的问题，Agent可能会返回卡片格式的数据展示：</p>
+            <div>
+                <button class="test-button" onclick="sendTestMessage('显示我本周的热量消耗')">🔥 热量数据</button>
+                <button class="test-button" onclick="sendTestMessage('展示我的体重变化趋势')">📈 体重趋势</button>
+                <button class="test-button" onclick="sendTestMessage('给我一个饮食分析报告')">📋 饮食报告</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🖼️ 测试图片消息</h2>
+            <p>上传食物图片进行分析，Agent可能会返回识别结果和图片：</p>
+            <div>
+                <input type="file" id="image-upload" accept="image/*" style="display: none;" onchange="uploadImage()">
+                <button class="test-button" onclick="document.getElementById('image-upload').click()">📷 上传食物图片</button>
+                <button class="test-button secondary" onclick="sendTestMessage('分析这张图片里的食物')">🔍 分析图片</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📝 自定义测试</h2>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="custom-message" placeholder="输入你想测试的消息..." style="flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                <button class="test-button" onclick="sendCustomMessage()">发送</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📤 测试结果</h2>
+            <div class="result-area" id="result-area">
+                <p>消息将显示在这里...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // 检查登录状态
+        if (!Auth.isLoggedIn()) {
+            alert('请先登录！');
+            window.location.href = 'login.html';
+        }
+        
+        // 发送测试消息
+        async function sendTestMessage(content) {
+            await sendMessage(content);
+        }
+        
+        // 发送自定义消息
+        async function sendCustomMessage() {
+            const input = document.getElementById('custom-message');
+            if (input.value.trim()) {
+                await sendMessage(input.value.trim());
+                input.value = '';
+            }
+        }
+        
+        // 上传图片
+        async function uploadImage() {
+            const fileInput = document.getElementById('image-upload');
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            // 显示用户消息
+            addMessage('user', '上传了图片: ' + file.name);
+            
+            try {
+                // 这里应该调用图片上传API
+                // 暂时模拟
+                addMessage('assistant', '[IMAGE:https://example.com/food-image.jpg] 识别到食物：米饭、青菜、鸡肉');
+            } catch (error) {
+                console.error('上传失败:', error);
+                addMessage('assistant', '图片上传失败，请重试');
+            }
+        }
+        
+        // 发送消息到Agent
+        async function sendMessage(content) {
+            // 显示用户消息
+            addMessage('user', content);
+            
+            try {
+                // 使用流式API获取富媒体消息
+                const result = await API.chat.stream({
+                    content: content
+                }, {
+                    onText: (text) => {
+                        // 处理文本
+                        console.log('收到文本:', text);
+                        addMessage('assistant', text, false);
+                    },
+                    onImage: (imageUrl) => {
+                        // 处理图片
+                        console.log('收到图片:', imageUrl);
+                        addImageMessage(imageUrl);
+                    },
+                    onCard: (cardData) => {
+                        // 处理卡片
+                        console.log('收到卡片:', cardData);
+                        addCardMessage(cardData);
+                    },
+                    onActions: (actions) => {
+                        // 处理快捷操作
+                        console.log('收到快捷操作:', actions);
+                        addActionsMessage(actions);
+                    },
+                    onError: (error) => {
+                        console.error('错误:', error);
+                        addMessage('assistant', '错误: ' + error);
+                    },
+                    onComplete: () => {
+                        console.log('流式响应完成');
+                    }
+                });
+                
+                if (!result.success) {
+                    addMessage('assistant', '发送失败: ' + (result.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('发送失败:', error);
+                addMessage('assistant', '发送失败，请检查网络连接');
+            }
+        }
+        
+        // 添加消息到结果区域
+        function addMessage(role, content, isFinal = true) {
+            const area = document.getElementById('result-area');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            if (role === 'user') {
+                messageDiv.innerHTML = `<strong>👤 你:</strong> ${content}`;
+            } else {
+                messageDiv.innerHTML = `<strong>🤖 AI:</strong> ${content}`;
+            }
+            
+            area.appendChild(messageDiv);
+            area.scrollTop = area.scrollHeight;
+        }
+        
+        // 添加图片消息
+        function addImageMessage(imageUrl) {
+            const area = document.getElementById('result-area');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            messageDiv.innerHTML = `
+                <strong>🤖 AI:</strong> 
+                <div style="margin-top: 8px;">
+                    <img src="${imageUrl}" style="max-width: 200px; border-radius: 8px;">
+                </div>
+            `;
+            area.appendChild(messageDiv);
+            area.scrollTop = area.scrollHeight;
+        }
+        
+        // 添加卡片消息
+        function addCardMessage(cardData) {
+            const area = document.getElementById('result-area');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            
+            let cardHtml = `<strong>🤖 AI:</strong> <div class="message-card">`;
+            
+            if (cardData.title) {
+                cardHtml += `<div class="card-title">${cardData.title}</div>`;
+            }
+            
+            if (cardData.content) {
+                cardHtml += `<div class="card-content">${cardData.content}</div>`;
+            }
+            
+            if (cardData.data) {
+                cardHtml += `<div style="margin-top: 12px; color: #666; font-size: 14px;">`;
+                for (const [key, value] of Object.entries(cardData.data)) {
+                    cardHtml += `<div><strong>${key}:</strong> ${value}</div>`;
+                }
+                cardHtml += `</div>`;
+            }
+            
+            cardHtml += `</div>`;
+            messageDiv.innerHTML = cardHtml;
+            area.appendChild(messageDiv);
+            area.scrollTop = area.scrollHeight;
+        }
+        
+        // 添加快捷操作消息
+        function addActionsMessage(actions) {
+            const area = document.getElementById('result-area');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            
+            let actionsHtml = `<strong>🤖 AI:</strong> <div class="message-actions">`;
+            
+            actions.forEach(action => {
+                if (action.type === 'button') {
+                    actionsHtml += `
+                        <button class="action-btn" onclick="handleAction('${action.action}', '${action.target}')">
+                            ${action.text}
+                        </button>
+                    `;
+                }
+            });
+            
+            actionsHtml += `</div>`;
+            messageDiv.innerHTML = actionsHtml;
+            area.appendChild(messageDiv);
+            area.scrollTop = area.scrollHeight;
+        }
+        
+        // 处理快捷操作
+        function handleAction(action, target) {
+            alert(`执行操作: ${action}, 目标: ${target}`);
+            // 这里可以根据action类型执行不同的操作
+            switch(action) {
+                case 'record_meal':
+                    window.location.href = 'meal.html';
+                    break;
+                case 'record_exercise':
+                    window.location.href = 'exercise.html';
+                    break;
+                case 'view_report':
+                    // 查看报告
+                    break;
+                default:
+                    console.log('未知操作:', action);
+            }
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            addMessage('assistant', '欢迎测试富媒体消息功能！请点击上面的按钮开始测试。');
+        });
+    </script>
+</body>
+</html>

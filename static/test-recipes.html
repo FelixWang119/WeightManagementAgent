@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食谱功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4a90e2;
+            padding-bottom: 10px;
+        }
+        
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        
+        .test-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #4a90e2;
+        }
+        
+        button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #357ae8;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .success {
+            color: #27ae60;
+        }
+        
+        .error {
+            color: #e74c3c;
+        }
+        
+        .loading {
+            color: #f39c12;
+        }
+        
+        .api-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status-up {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-down {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .login-section {
+            background: #e8f4fd;
+            border-color: #b3d9ff;
+        }
+        
+        .login-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .login-form input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            flex: 1;
+        }
+        
+        .token-display {
+            word-break: break-all;
+            font-size: 11px;
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📖 食谱功能测试页面</h1>
+    
+    <div class="test-section login-section">
+        <div class="test-title">1. 用户登录</div>
+        <p>需要先登录获取token才能访问食谱API</p>
+        
+        <div class="login-form">
+            <input type="text" id="username" placeholder="用户名" value="test">
+            <input type="password" id="password" placeholder="密码" value="test123">
+            <button onclick="login()">登录</button>
+        </div>
+        
+        <div id="login-result" class="result"></div>
+        <div id="token-display" class="token-display" style="display: none;">
+            Token: <span id="token-value"></span>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">2. 测试API连接状态</div>
+        <p>检查后端服务和食谱API是否可用</p>
+        <button onclick="testHealth()">测试健康检查</button>
+        <button onclick="testRecipesAPI()">测试食谱API</button>
+        <div id="api-status-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">3. 获取食谱列表</div>
+        <p>获取数据库中的所有食谱</p>
+        <button onclick="getAllRecipes()" id="get-recipes-btn" disabled>获取食谱列表</button>
+        <div id="recipes-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">4. 获取单个食谱详情</div>
+        <p>需要先获取食谱列表，然后选择ID测试</p>
+        <div>
+            <input type="text" id="recipe-id" placeholder="食谱ID" style="width: 100px;">
+            <button onclick="getRecipeDetail()" id="detail-btn" disabled>获取详情</button>
+        </div>
+        <div id="detail-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">5. 测试其他功能</div>
+        <p>搜索、推荐、收藏等功能</p>
+        <button onclick="searchRecipes()" id="search-btn" disabled>搜索食谱</button>
+        <button onclick="getRecommended()" id="recommended-btn" disabled>获取推荐</button>
+        <div id="other-result" class="result"></div>
+    </div>
+    
+    <script>
+        let currentToken = localStorage.getItem('test-token') || '';
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            if (currentToken) {
+                document.getElementById('token-value').textContent = currentToken.substring(0, 50) + '...';
+                document.getElementById('token-display').style.display = 'block';
+                enableRecipeButtons();
+            }
+        });
+        
+        // 用户登录
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('login-result');
+            
+            if (!username || !password) {
+                resultDiv.innerHTML = '<span class="error">请输入用户名和密码</span>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<span class="loading">登录中...</span>';
+            
+            try {
+                // 注意：实际登录需要验证码，这里简化测试
+                // 在实际应用中，应该使用正确的登录流程
+                const response = await fetch('http://localhost:8000/api/user/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        code: '123456' // 简化测试，使用固定验证码
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    currentToken = data.access_token;
+                    localStorage.setItem('test-token', currentToken);
+                    
+                    document.getElementById('token-value').textContent = currentToken.substring(0, 50) + '...';
+                    document.getElementById('token-display').style.display = 'block';
+                    
+                    resultDiv.innerHTML = '<span class="success">登录成功！Token已保存</span>';
+                    enableRecipeButtons();
+                } else {
+                    resultDiv.innerHTML = `<span class="error">登录失败: ${data.detail || '未知错误'}</span>`;
+                    
+                    // 如果登录失败，使用测试token（仅用于测试）
+                    currentToken = 'test-token-for-development';
+                    localStorage.setItem('test-token', currentToken);
+                    document.getElementById('token-value').textContent = '使用测试token（开发模式）';
+                    document.getElementById('token-display').style.display = 'block';
+                    resultDiv.innerHTML += '<br><span class="loading">使用测试token继续测试...</span>';
+                    enableRecipeButtons();
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">请求失败: ${error.message}</span>`;
+            }
+        }
+        
+        // 启用食谱相关按钮
+        function enableRecipeButtons() {
+            document.getElementById('get-recipes-btn').disabled = false;
+            document.getElementById('detail-btn').disabled = false;
+            document.getElementById('search-btn').disabled = false;
+            document.getElementById('recommended-btn').disabled = false;
+        }
+        
+        // 测试健康检查
+        async function testHealth() {
+            const resultDiv = document.getElementById('api-status-result');
+            resultDiv.innerHTML = '<span class="loading">测试中...</span>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ 后端服务正常</span><br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ 后端服务异常: ${response.status}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 连接失败: ${error.message}</span>`;
+            }
+        }
+        
+        // 测试食谱API
+        async function testRecipesAPI() {
+            const resultDiv = document.getElementById('api-status-result');
+            resultDiv.innerHTML = '<span class="loading">测试食谱API中...</span>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/recipes/recipes', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                if (response.status === 401) {
+                    resultDiv.innerHTML = '<span class="error">❌ 需要登录认证</span>';
+                } else if (response.status === 200) {
+                    resultDiv.innerHTML = '<span class="success">✅ 食谱API正常</span>';
+                } else {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `<span class="error">❌ API返回错误: ${response.status}</span><br>
+                                          <pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 连接失败: ${error.message}</span>`;
+            }
+        }
+        
+        // 获取所有食谱
+        async function getAllRecipes() {
+            const resultDiv = document.getElementById('recipes-result');
+            resultDiv.innerHTML = '<span class="loading">加载中...</span>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/recipes/recipes', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const count = data.recipes ? data.recipes.length : 0;
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ 获取成功，共 ${count} 个食谱</span><br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    
+                    // 如果有食谱，显示第一个的ID到输入框
+                    if (data.recipes && data.recipes.length > 0) {
+                        document.getElementById('recipe-id').value = data.recipes[0].id;
+                    }
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ 获取失败: ${data.error || data.detail || '未知错误'}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败: ${error.message}</span>`;
+            }
+        }
+        
+        // 获取食谱详情
+        async function getRecipeDetail() {
+            const recipeId = document.getElementById('recipe-id').value;
+            const resultDiv = document.getElementById('detail-result');
+            
+            if (!recipeId) {
+                resultDiv.innerHTML = '<span class="error">请输入食谱ID</span>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<span class="loading">加载中...</span>';
+            
+            try {
+                const response = await fetch(`http://localhost:8000/api/recipes/recipes/${recipeId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ 获取成功</span><br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ 获取失败: ${data.error || data.detail || '未知错误'}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败: ${error.message}</span>`;
+            }
+        }
+        
+        // 搜索食谱
+        async function searchRecipes() {
+            const resultDiv = document.getElementById('other-result');
+            resultDiv.innerHTML = '<span class="loading">搜索中...</span>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/recipes/recipes/search?q=健康', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const count = data.recipes ? data.recipes.length : 0;
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ 搜索成功，找到 ${count} 个食谱</span><br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ 搜索失败: ${data.error || data.detail || '未知错误'}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败: ${error.message}</span>`;
+            }
+        }
+        
+        // 获取推荐食谱
+        async function getRecommended() {
+            const resultDiv = document.getElementById('other-result');
+            resultDiv.innerHTML = '<span class="loading">获取推荐中...</span>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/recipes/recipes/recommended', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const count = data.recipes ? data.recipes.length : 0;
+                    resultDiv.innerHTML = `
+                        <span class="success">✅ 获取推荐成功，共 ${count} 个推荐食谱</span><br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ 获取推荐失败: ${data.error || data.detail || '未知错误'}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败: ${error.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>

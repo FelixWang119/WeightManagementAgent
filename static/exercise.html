@@ -238,6 +238,25 @@
             color: var(--danger-color);
         }
         
+        /* 来源标签 */
+        .source-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            margin-left: 4px;
+        }
+        
+        .source-tag.checkin {
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--success-color);
+        }
+        
+        .source-tag.ai {
+            background: rgba(52, 152, 219, 0.15);
+            color: #3498db;
+        }
+        
         /* 加载状态 */
         .loading {
             display: flex;
@@ -283,7 +302,7 @@
     <div class="page">
         <header class="page-header">
             <div class="header-brand">
-                <button class="back-button" onclick="history.back()" style="margin-right: 12px;">
+                <button class="back-button" onclick="window.location.href='index.html'" style="margin-right: 12px;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 </button>
                 <span class="header-brand-icon">🏃</span>
@@ -317,6 +336,8 @@
                             <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
                             <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
                             <li><a href="calculator.html" class="nav-item"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+
+                                                    <li><a href="recipes.html" class="nav-item"><span class="nav-item-icon">📖</span><span class="nav-item-text">健康食谱</span></a></li>
                             <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
                         </ul>
                     </div>
@@ -455,20 +476,27 @@
         
         // 页面加载
         document.addEventListener('DOMContentLoaded', () => {
-        // 检查登录状态
-        if (!Auth.check()) {
-            window.location.href = 'login.html';
-            return;
-        }
-        
-        // 加载用户信息
-        const user = Auth.getUser();
-        if (user) {
-            const userNameEl = document.querySelector('.user-name');
-            const userAvatarEl = document.querySelector('.user-avatar');
-            if (userNameEl) userNameEl.textContent = user.nickname || user.name || '用户';
-            if (userAvatarEl) userAvatarEl.textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
-        }
+            console.log('Exercise page loaded');
+            
+            // 检查登录状态
+            if (!Auth.check()) {
+                console.error('Not logged in, redirecting to login');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // 检查token
+            const token = Auth.getToken();
+            console.log('Token found:', token ? token.substring(0, 20) + '...' : 'No token');
+            
+            // 加载用户信息
+            const user = Auth.getUser();
+            if (user) {
+                const userNameEl = document.querySelector('.user-name');
+                const userAvatarEl = document.querySelector('.user-avatar');
+                if (userNameEl) userNameEl.textContent = user.nickname || user.name || '用户';
+                if (userAvatarEl) userAvatarEl.textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+            }
 
             loadExerciseTypes();
             loadCheckinStats();
@@ -732,10 +760,11 @@
             `;
         }
         
-        // 加载打卡历史
+        // 加载打卡历史（包含AI对话记录的运动）
         async function loadCheckinHistory() {
             try {
-                const response = await fetch(`${API.base}/api/exercise/checkins?limit=10`, {
+                // include_all=true 表示包含通过AI对话记录的运动
+                const response = await fetch(`${API.base}/api/exercise/checkins?include_all=true&limit=20`, {
                     headers: {
                         'Authorization': `Bearer ${Auth.getToken()}`
                     }
@@ -768,7 +797,8 @@
             }
             
             tbody.innerHTML = checkinHistory.map(record => {
-                const date = new Date(record.checkin_date || record.created_at);
+                const recordDate = record.record_date || record.checkin_date || record.created_at;
+                const date = new Date(recordDate);
                 const dateStr = date.toLocaleDateString('zh-CN');
                 
                 const intensityClass = {
@@ -783,10 +813,15 @@
                     'high': '高强度'
                 }[record.intensity] || '中等强度';
                 
+                // 显示来源标签
+                const sourceTag = record.is_checkin 
+                    ? '<span class="source-tag checkin">打卡</span>' 
+                    : '<span class="source-tag ai">AI对话</span>';
+                
                 return `
                     <tr>
                         <td>${dateStr}</td>
-                        <td>${record.exercise_type}</td>
+                        <td>${record.exercise_type} ${sourceTag}</td>
                         <td>${record.duration_minutes}分钟</td>
                         <td><span class="intensity-badge ${intensityClass}">${intensityText}</span></td>
                         <td>${record.calories_burned}千卡</td>

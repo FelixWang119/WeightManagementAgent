@@ -5,6 +5,7 @@ AI 服务模块
 
 import httpx
 import json
+import os
 from typing import AsyncGenerator, Optional, List, Dict, Any
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -183,7 +184,11 @@ class QwenClient(BaseAIClient):
         try:
             # 使用OpenAI兼容接口，注意base_url不要带/api/v1后缀
             base_url = self.api_base.replace("/api/v1", "")
-            url = f"{base_url}/compatible-mode/v1/chat/completions"
+            # 避免路径重复
+            if base_url.endswith("/compatible-mode/v1"):
+                url = f"{base_url}/chat/completions"
+            else:
+                url = f"{base_url}/compatible-mode/v1/chat/completions"
 
             payload = {
                 "model": model or self.default_model,
@@ -192,27 +197,45 @@ class QwenClient(BaseAIClient):
                 "temperature": temperature or self.default_temperature,
             }
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    url, headers=self.headers, json=payload, timeout=60.0
-                )
-                response.raise_for_status()
+            # Temporarily unset proxy environment variables
+            original_env = {}
+            for key in ["http_proxy", "https_proxy", "all_proxy"]:
+                if key in os.environ:
+                    original_env[key] = os.environ[key]
+                    del os.environ[key]
 
-                data = response.json()
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        url, headers=self.headers, json=payload, timeout=60.0
+                    )
+                    response.raise_for_status()
 
-                if "choices" in data and len(data["choices"]) > 0:
-                    choice = data["choices"][0]
-                    return AIResponse(
-                        content=choice["message"]["content"],
-                        model=data.get("model", model or self.default_model),
-                        usage=data.get("usage"),
-                    )
-                else:
-                    return AIResponse(
-                        content="",
-                        model=model or self.default_model,
-                        error=f"Qwen API 响应格式错误: {data}",
-                    )
+                    data = response.json()
+
+                    if "choices" in data and len(data["choices"]) > 0:
+                        choice = data["choices"][0]
+                        # Restore environment variables
+                        for key, value in original_env.items():
+                            os.environ[key] = value
+                        return AIResponse(
+                            content=choice["message"]["content"],
+                            model=data.get("model", model or self.default_model),
+                            usage=data.get("usage"),
+                        )
+                    else:
+                        # Restore environment variables
+                        for key, value in original_env.items():
+                            os.environ[key] = value
+                        return AIResponse(
+                            content="",
+                            model=model or self.default_model,
+                            error=f"Qwen API 响应格式错误: {data}",
+                        )
+            finally:
+                # Restore environment variables in case of exception
+                for key, value in original_env.items():
+                    os.environ[key] = value
 
         except httpx.HTTPError as e:
             # 记录Qwen HTTP错误告警
@@ -264,42 +287,64 @@ class QwenClient(BaseAIClient):
         try:
             # 使用OpenAI兼容接口，注意base_url不要带/api/v1后缀
             base_url = self.api_base.replace("/api/v1", "")
-            url = f"{base_url}/compatible-mode/v1/chat/completions"
+            # 避免路径重复
+            if base_url.endswith("/compatible-mode/v1"):
+                url = f"{base_url}/chat/completions"
+            else:
+                url = f"{base_url}/compatible-mode/v1/chat/completions"
 
             payload = {
-                "model": model or "qwen-vl-plus",
+                "model": "qwen-vl-plus",
                 "messages": [
                     {
                         "role": "user",
                         "content": [
-                            {"type": "image_url", "image_url": {"url": image_url}},
                             {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": image_url}},
                         ],
                     }
                 ],
                 "max_tokens": 1000,
             }
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    url, headers=self.headers, json=payload, timeout=60.0
-                )
-                response.raise_for_status()
+            # Temporarily unset proxy environment variables
+            original_env = {}
+            for key in ["http_proxy", "https_proxy", "all_proxy"]:
+                if key in os.environ:
+                    original_env[key] = os.environ[key]
+                    del os.environ[key]
 
-                data = response.json()
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        url, headers=self.headers, json=payload, timeout=60.0
+                    )
+                    response.raise_for_status()
 
-                if "choices" in data and len(data["choices"]) > 0:
-                    choice = data["choices"][0]
-                    return AIResponse(
-                        content=choice["message"]["content"],
-                        model=data.get("model", model or "qwen-vl-plus"),
-                    )
-                else:
-                    return AIResponse(
-                        content="",
-                        model=model or "qwen-vl-plus",
-                        error=f"Qwen Vision 响应格式错误: {data}",
-                    )
+                    data = response.json()
+
+                    if "choices" in data and len(data["choices"]) > 0:
+                        choice = data["choices"][0]
+                        # Restore environment variables
+                        for key, value in original_env.items():
+                            os.environ[key] = value
+                        return AIResponse(
+                            content=choice["message"]["content"],
+                            model=data.get("model", model or "qwen-vl-plus"),
+                        )
+                    else:
+                        # Restore environment variables
+                        for key, value in original_env.items():
+                            os.environ[key] = value
+                        return AIResponse(
+                            content="",
+                            model=model or "qwen-vl-plus",
+                            error=f"Qwen Vision 响应格式错误: {data}",
+                        )
+            finally:
+                # Restore environment variables in case of exception
+                for key, value in original_env.items():
+                    os.environ[key] = value
 
         except Exception as e:
             import traceback

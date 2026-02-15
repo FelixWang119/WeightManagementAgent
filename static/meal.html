@@ -68,6 +68,7 @@
             border-color: var(--success-color);
             padding: 0;
             overflow: hidden;
+            background: var(--background-secondary); /* 统一背景色 */
         }
         
         .upload-icon {
@@ -88,6 +89,15 @@
             color: var(--text-muted);
         }
         
+        .upload-placeholder {
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        
         .upload-input {
             display: none;
         }
@@ -96,14 +106,25 @@
         .image-preview {
             position: relative;
             width: 100%;
-            max-height: 400px;
+            height: 400px; /* 固定高度 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
+            background: var(--background-secondary);
+            padding: 16px; /* 添加内边距，让图片不贴边 */
         }
         
         .image-preview img {
-            width: 100%;
+            max-width: calc(100% - 32px); /* 减去内边距 */
+            max-height: calc(100% - 32px); /* 减去内边距 */
+            width: auto;
             height: auto;
+            object-fit: contain; /* 保持比例，完整显示图片 */
             display: block;
+            border-radius: 8px; /* 添加圆角 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 添加阴影 */
+            background: white; /* 白色背景，特别是对于透明图片 */
         }
         
         .image-actions {
@@ -370,6 +391,90 @@
             box-shadow: var(--shadow-sm);
         }
         
+        /* 历史记录列表 */
+        .history-records {
+            background: var(--surface);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .history-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        
+        .history-item:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+        
+        .history-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-item-date {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .history-item-calories {
+            color: var(--warning-color);
+            font-weight: 600;
+        }
+        
+        .history-item-types {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .meal-type-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+        }
+        
+        .meal-type-tag.breakfast { background: rgba(241, 196, 15, 0.15); color: #f39c12; }
+        .meal-type-tag.lunch { background: rgba(46, 204, 113, 0.15); color: #27ae60; }
+        .meal-type-tag.dinner { background: rgba(155, 89, 182, 0.15); color: #9b59b6; }
+        .meal-type-tag.snack { background: rgba(230, 126, 34, 0.15); color: #e67e22; }
+        
+        .history-item-details {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 8px;
+        }
+        
+        .history-item-details.show {
+            display: block;
+        }
+        
+        .food-detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 0.9rem;
+        }
+        
+        .food-detail-item:not(:last-child) {
+            border-bottom: 1px dashed var(--border-color);
+        }
+        
         .meal-group {
             margin-bottom: 20px;
         }
@@ -465,7 +570,7 @@
         <!-- 顶部导航 -->
         <header class="page-header">
             <div class="header-brand">
-                <button class="back-button" onclick="history.back()" style="margin-right: 12px;">
+                <button class="back-button" onclick="window.location.href='index.html'" style="margin-right: 12px;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
@@ -512,6 +617,8 @@
                             <li><a href="report.html" class="nav-item"><span class="nav-item-icon">📊</span><span class="nav-item-text">数据报告</span></a></li>
                             <li><a href="goals.html" class="nav-item"><span class="nav-item-icon">🎯</span><span class="nav-item-text">目标管理</span></a></li>
                             <li><a href="calculator.html" class="nav-item"><span class="nav-item-icon">🔥</span><span class="nav-item-text">热量计算</span></a></li>
+
+                                                    <li><a href="recipes.html" class="nav-item"><span class="nav-item-icon">📖</span><span class="nav-item-text">健康食谱</span></a></li>
                             <li><a href="reminders.html" class="nav-item"><span class="nav-item-icon">🔔</span><span class="nav-item-text">提醒设置</span></a></li>
                         </ul>
                     </div>
@@ -619,7 +726,8 @@
                             <div class="confirmation-actions" id="confirmation-actions">
                                 <button class="btn btn-secondary" onclick="showReanalysis()">📝 重新描述</button>
                                 <button class="btn btn-outline" onclick="cancelConfirmation()">❌ 不对</button>
-                                <button class="btn btn-primary" id="confirm-btn" onclick="confirmMeal()">✓ 确认</button>
+                                <!-- 确认按钮已合并到保存按钮中，此处隐藏 -->
+                                <button class="btn btn-primary" id="confirm-btn" onclick="confirmMeal()" style="display: none;">✓ 确认</button>
                             </div>
                         </div>
 
@@ -631,7 +739,7 @@
                             </div>
                         </div>
 
-                        <!-- 保存按钮 -->
+                        <!-- 保存/确认按钮 -->
                         <button class="btn btn-primary btn-lg save-btn" id="save-btn" onclick="saveMeal()">
                             💾 保存记录
                         </button>
@@ -641,6 +749,14 @@
                     <div class="today-records">
                         <h3 class="section-title">📋 今日记录</h3>
                         <div id="today-meals">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 历史记录 -->
+                    <div class="history-records">
+                        <h3 class="section-title">📜 历史记录</h3>
+                        <div id="history-meals">
                             <!-- 动态生成 -->
                         </div>
                     </div>
@@ -660,6 +776,8 @@
         let analyzedFoods = [];
         let selectedMealType = 'breakfast';
         
+        console.log('餐食页面脚本加载，初始 selectedMealType:', selectedMealType);
+        
         // 餐食类型名称映射
         const mealTypeNames = {
             breakfast: '早餐',
@@ -676,24 +794,31 @@
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-        // 检查登录状态
-        if (!Auth.check()) {
-            window.location.href = 'login.html';
-            return;
-        }
-        
-        // 加载用户信息
-        const user = Auth.getUser();
-        if (user) {
-            const userNameEl = document.querySelector('.user-name');
-            const userAvatarEl = document.querySelector('.user-avatar');
-            if (userNameEl) userNameEl.textContent = user.nickname || user.name || '用户';
-            if (userAvatarEl) userAvatarEl.textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
-        }
+            console.log('📄 DOMContentLoaded 事件触发');
+            // 检查登录状态
+            if (!Auth.check()) {
+                console.log('❌ 用户未登录，跳转到登录页面');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            console.log('✅ 用户已登录');
+            // 加载用户信息
+            const user = Auth.getUser();
+            if (user) {
+                console.log('👤 用户信息:', user.nickname || user.name);
+                const userNameEl = document.querySelector('.user-name');
+                const userAvatarEl = document.querySelector('.user-avatar');
+                if (userNameEl) userNameEl.textContent = user.nickname || user.name || '用户';
+                if (userAvatarEl) userAvatarEl.textContent = (user.nickname || user.name || 'U')[0].toUpperCase();
+            }
 
+            console.log('🔄 初始化页面组件...');
             initUploadZone();
             initMealTypeButtons();
             loadTodayMeals();
+            loadHistoryMeals();
+            console.log('✅ 页面初始化完成');
         });
         
         // 初始化上传区域
@@ -762,6 +887,10 @@
             overlay.style.display = 'flex';
             
             try {
+                // 从UI获取当前选择的餐食类型（确保同步）
+                selectedMealType = getCurrentMealType();
+                console.log('AI分析使用的餐食类型:', selectedMealType);
+                
                 // 构建FormData
                 const formData = new FormData();
                 formData.append('file', file);
@@ -819,6 +948,7 @@
             const adjustmentHint = document.getElementById('adjustment-hint');
             const confirmActions = document.getElementById('confirmation-actions');
             const confirmStatus = document.getElementById('confirm-status');
+            const saveBtn = document.getElementById('save-btn');
             
             const totalCalories = foods.reduce((sum, f) => sum + f.calories, 0);
             
@@ -882,11 +1012,19 @@
                 confirmActions.style.display = 'flex';
                 confirmStatus.textContent = '待确认';
                 confirmStatus.className = 'confirm-status';
+                // 更新保存按钮文本为"确认保存"
+                if (saveBtn) {
+                    saveBtn.innerHTML = '✓ 确认保存';
+                }
             } else {
                 adjustmentHint.style.display = 'none';
                 confirmActions.style.display = 'none';
                 confirmStatus.textContent = '已确认';
                 confirmStatus.className = 'confirm-status confirmed';
+                // 恢复保存按钮文本
+                if (saveBtn) {
+                    saveBtn.innerHTML = '💾 保存记录';
+                }
             }
         }
         
@@ -1006,10 +1144,13 @@
                 const response = await fetch(`${API.base}/api/meal/confirm`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Content-Type': 'application/json',
                         'Authorization': `Bearer ${Auth.getToken()}`
                     },
-                    body: `confirm_id=${encodeURIComponent(currentConfirmId)}&adjustments=${encodeURIComponent(JSON.stringify(adjustments))}`
+                    body: JSON.stringify({
+                        confirm_id: currentConfirmId,
+                        adjustments: JSON.stringify(adjustments)
+                    })
                 });
                 
                 const result = await response.json();
@@ -1073,41 +1214,105 @@
         function clearImage() {
             selectedImage = null;
             analyzedFoods = [];
+            currentConfirmId = null;
             
             document.getElementById('file-input').value = '';
             document.getElementById('upload-placeholder').style.display = 'block';
             document.getElementById('image-preview').style.display = 'none';
             document.getElementById('analysis-result').style.display = 'none';
             document.getElementById('upload-zone').classList.remove('has-image');
+            
+            // 恢复保存按钮文本
+            const saveBtn = document.getElementById('save-btn');
+            if (saveBtn) {
+                saveBtn.innerHTML = '💾 保存记录';
+            }
+            
+            // 隐藏确认操作区域
+            const confirmActions = document.getElementById('confirmation-actions');
+            if (confirmActions) {
+                confirmActions.style.display = 'none';
+            }
+        }
+        
+        // 获取当前选择的餐食类型（从UI读取，确保同步）
+        function getCurrentMealType() {
+            console.log('🔍 getCurrentMealType() 被调用');
+            const activeBtn = document.querySelector('.meal-type-btn.active');
+            
+            console.log('  找到的active按钮:', activeBtn);
+            if (activeBtn) {
+                console.log('  按钮的data-type:', activeBtn.dataset.type);
+                console.log('  按钮的class:', activeBtn.className);
+                
+                // 检查是否真的有active类
+                const hasActiveClass = activeBtn.classList.contains('active');
+                console.log('  按钮真的有active类吗?', hasActiveClass);
+                
+                if (activeBtn.dataset.type) {
+                    console.log('  ✅ 返回:', activeBtn.dataset.type);
+                    return activeBtn.dataset.type;
+                }
+            }
+            
+            // 如果没有找到active按钮，检查所有按钮的状态
+            console.log('  ⚠️ 没有找到active按钮，检查所有按钮:');
+            document.querySelectorAll('.meal-type-btn').forEach((btn, index) => {
+                console.log(`    按钮 ${index}: type="${btn.dataset.type}", class="${btn.className}", hasActive: ${btn.classList.contains('active')}`);
+            });
+            
+            console.log('  ⚠️ 返回默认值: breakfast');
+            return 'breakfast'; // 默认值
         }
         
         // 初始化餐食类型按钮
         function initMealTypeButtons() {
-            document.querySelectorAll('.meal-type-btn').forEach(btn => {
+            console.log('初始化餐食类型按钮，找到按钮数量:', document.querySelectorAll('.meal-type-btn').length);
+            
+            document.querySelectorAll('.meal-type-btn').forEach((btn, index) => {
+                console.log(`按钮 ${index}: data-type="${btn.dataset.type}", class="${btn.className}"`);
+                
                 btn.addEventListener('click', () => {
+                    console.log('按钮被点击:', btn.dataset.type);
+                    console.log('点击前的 selectedMealType:', selectedMealType);
+                    
                     document.querySelectorAll('.meal-type-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     selectedMealType = btn.dataset.type;
+                    
+                    console.log('点击后的 selectedMealType:', selectedMealType);
+                    console.log('按钮现在有 active 类吗?', btn.classList.contains('active'));
+                    
+                    // 立即测试保存函数是否能读取正确的值
+                    console.log('测试: saveMeal 函数会读取的 mealTypeNames[selectedMealType]:', mealTypeNames[selectedMealType]);
                 });
             });
+            
+            // 设置初始选择的餐食类型（基于 active 按钮）
+            const activeBtn = document.querySelector('.meal-type-btn.active');
+            if (activeBtn) {
+                selectedMealType = activeBtn.dataset.type;
+                console.log('初始化餐食类型为 active 按钮的值:', selectedMealType);
+            } else {
+                console.log('警告: 没有找到 active 按钮，使用默认值 breakfast');
+            }
         }
         
-        // 保存记录 - 调用真实API
+        // 保存记录 - 调用真实API（支持AI确认和手动保存）
         async function saveMeal() {
             if (!selectedImage && analyzedFoods.length === 0) {
                 Utils.toast('请先上传餐食照片', 'warning');
                 return;
             }
             
-            // 如果有待确认的识别结果，提示用户先确认
-            if (currentConfirmId) {
-                Utils.toast('请先确认AI识别结果', 'warning');
-                return;
-            }
+            // 从UI获取当前选择的餐食类型（确保同步）
+            console.log('🎯 saveMeal() 开始执行');
+            console.log('  调用 getCurrentMealType() 前 selectedMealType:', selectedMealType);
+            selectedMealType = getCurrentMealType();
             
             // 调试：显示当前选择的餐食类型
-            console.log('当前选择的餐食类型:', selectedMealType);
-            console.log('餐食类型名称:', mealTypeNames[selectedMealType]);
+            console.log('  调用 getCurrentMealType() 后 selectedMealType:', selectedMealType);
+            console.log('  餐食类型名称:', mealTypeNames[selectedMealType]);
             
             // 确认餐食类型
             const confirmMessage = `确认保存为【${mealTypeNames[selectedMealType]}】吗？\n\n如果类型不对，请先点击上方的餐食类型按钮切换。`;
@@ -1122,30 +1327,81 @@
             btn.innerHTML = '<span class="loading-spinner" style="width: 16px; height: 16px; border-color: rgba(255,255,255,0.3); border-top-color: white;"></span> 保存中...';
             
             try {
-                // 构造食物描述
-                const content = analyzedFoods.length > 0 
-                    ? analyzedFoods.map(f => `${f.name}(${f.amount})`).join('、')
-                    : note || '餐食记录';
+                let response;
                 
-                const calories = analyzedFoods.reduce((sum, f) => sum + f.calories, 0);
-                
-                console.log('发送请求:', { mealType: selectedMealType, content, calories });
-                
-                // 调用真实API保存
-                const response = await API.meal.record({
-                    mealType: selectedMealType,
-                    foodName: content,
-                    calories: calories,
-                    note: note
-                });
-                
-                console.log('保存响应:', response);
-                
-                if (!response.success) {
-                    throw new Error(response.message || '保存失败');
+                if (currentConfirmId) {
+                    // AI分析后的确认流程
+                    console.log('使用AI确认流程，confirmId:', currentConfirmId);
+                    
+                    // 构建调整数据
+                    const adjustments = {
+                        foods: analyzedFoods.map(f => ({
+                            name: f.name,
+                            amount: f.amount,
+                            calories: f.calories,
+                            icon: f.icon
+                        })),
+                        total_calories: analyzedFoods.reduce((sum, f) => sum + f.calories, 0)
+                    };
+                    
+                    console.log('发送确认请求:', { confirmId: currentConfirmId, mealType: selectedMealType });
+                    
+                    response = await fetch(`${API.base}/api/meal/confirm`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${Auth.getToken()}`
+                        },
+                        body: JSON.stringify({
+                            confirm_id: currentConfirmId,
+                            meal_type: selectedMealType,
+                            adjustments: JSON.stringify(adjustments)
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    console.log('确认响应:', result);
+                    
+                    if (!result.success) {
+                        throw new Error(result.message || '确认失败');
+                    }
+                    
+                    // 清空确认ID
+                    currentConfirmId = null;
+                    Utils.toast('餐食记录确认成功！', 'success');
+                    
+                    // 更新UI为已确认状态
+                    document.getElementById('confirmation-actions').style.display = 'none';
+                    document.getElementById('confirm-status').textContent = '已确认';
+                    document.getElementById('confirm-status').className = 'confirm-status confirmed';
+                    
+                } else {
+                    // 手动保存流程
+                    // 构造食物描述
+                    const content = analyzedFoods.length > 0 
+                        ? analyzedFoods.map(f => `${f.name}(${f.amount})`).join('、')
+                        : note || '餐食记录';
+                    
+                    const calories = analyzedFoods.reduce((sum, f) => sum + f.calories, 0);
+                    
+                    console.log('发送手动保存请求:', { mealType: selectedMealType, content, calories });
+                    
+                    // 调用真实API保存
+                    response = await API.meal.record({
+                        mealType: selectedMealType,
+                        foodName: content,
+                        calories: calories,
+                        note: note
+                    });
+                    
+                    console.log('保存响应:', response);
+                    
+                    if (!response.success) {
+                        throw new Error(response.message || '保存失败');
+                    }
+                    
+                    Utils.toast('餐食记录成功！', 'success');
                 }
-                
-                Utils.toast('餐食记录成功！', 'success');
                 
                 // 清空表单
                 clearImage();
@@ -1169,7 +1425,12 @@
                     window.opener.loadCalorieBalance();
                 }
                 
-                // 使用 localStorage 事件通知其他页面更新数据
+                // 使用 BroadcastChannel 通知其他页面更新数据
+                const dataChannel = new BroadcastChannel('weight_management_data');
+                dataChannel.postMessage({ type: 'dataUpdated', source: 'meal' });
+                dataChannel.close();
+                
+                // 保留 localStorage 事件通知（兼容其他标签页）
                 localStorage.setItem('mealUpdated', Date.now().toString());
                 
             } catch (error) {
@@ -1267,6 +1528,86 @@
             } catch (error) {
                 console.error('加载今日记录失败:', error);
             }
+        }
+        
+        // 加载历史记录
+        async function loadHistoryMeals() {
+            const container = document.getElementById('history-meals');
+            
+            try {
+                const response = await fetch(`${API.base}/api/meal/history?days=30&limit=50`, {
+                    headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success || !result.data || result.data.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📜</div>
+                            <div class="empty-state-title">暂无历史记录</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 按日期分组
+                const groupedByDate = {};
+                result.data.forEach(meal => {
+                    const date = meal.record_time ? meal.record_time.split('T')[0] : '未知';
+                    if (!groupedByDate[date]) {
+                        groupedByDate[date] = [];
+                    }
+                    groupedByDate[date].push(meal);
+                });
+                
+                // 渲染
+                container.innerHTML = Object.entries(groupedByDate).map(([date, meals]) => {
+                    const totalCal = meals.reduce((sum, m) => sum + (m.total_calories || 0), 0);
+                    const mealTypes = [...new Set(meals.map(m => m.meal_type))];
+                    
+                    return `
+                        <div class="history-item" onclick="toggleHistoryDetail(this)">
+                            <div class="history-item-header">
+                                <span class="history-item-date">${date}</span>
+                                <span class="history-item-calories">${totalCal} 千卡</span>
+                            </div>
+                            <div class="history-item-types">
+                                ${mealTypes.map(t => `<span class="meal-type-tag ${t}">${mealTypeNames[t] || t}</span>`).join('')}
+                            </div>
+                            <div class="history-item-details">
+                                ${meals.map(m => `
+                                    <div class="food-detail-item">
+                                        <span>${mealTypeNames[m.meal_type] || m.meal_type}</span>
+                                        <span>${m.total_calories || 0} 千卡</span>
+                                    </div>
+                                    ${(m.food_items || []).map(food => `
+                                        <div class="food-detail-item" style="color: var(--text-secondary); font-size: 0.85rem;">
+                                            <span>  • ${food.name || '未知食物'}</span>
+                                            <span>${food.calories || 0} 千卡</span>
+                                        </div>
+                                    `).join('')}
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <div class="empty-state-title">加载失败</div>
+                    </div>
+                `;
+            }
+        }
+        
+        // 切换历史记录详情显示
+        function toggleHistoryDetail(element) {
+            const details = element.querySelector('.history-item-details');
+            details.classList.toggle('show');
         }
     </script>
 </body>

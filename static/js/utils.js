@@ -273,6 +273,25 @@ const Utils = {
     /**
      * 更新侧边栏用户信息
      */
+    /**
+     * 格式化用户显示名称
+     * @param {Object} user - 用户对象
+     * @returns {string} 格式化后的显示名称
+     */
+    formatUserName: (user) => {
+        if (!user) return '用户';
+        
+        const nickname = user.nickname || user.name || '';
+        
+        // 如果是默认格式"用户XXXXXX"，显示为更友好的格式
+        if (nickname.startsWith('用户') && nickname.length === 8) {
+            const suffix = nickname.substring(2);
+            return `用户 (${suffix})`;
+        }
+        
+        return nickname || '用户';
+    },
+
     updateSidebarUser: async () => {
         try {
             const user = Auth.getUser();
@@ -280,10 +299,12 @@ const Utils = {
             const userAvatarEl = document.querySelector('.user-avatar');
 
             if (user && userNameEl) {
-                userNameEl.textContent = user.nickname || user.name || '用户';
+                // 使用格式化后的用户名
+                const displayName = Utils.formatUserName(user);
+                userNameEl.textContent = displayName;
 
                 if (userAvatarEl) {
-                    const initial = (user.nickname || user.name || 'U')[0].toUpperCase();
+                    const initial = displayName[0].toUpperCase();
                     userAvatarEl.textContent = initial;
                 }
             }

@@ -66,8 +66,9 @@ temp/
 # Python bytecode
 *.pyc
 
-# Test files
+# Test files (excluding tests/ directory)
 test_*.py
+!tests/
 
 # Server PID
 *.pid

@@ -7,6 +7,17 @@ let isSending = false;
 let messages = [];
 let selectedImage = null;
 
+// BroadcastChannel 用于跨页面通信
+const dataChannel = new BroadcastChannel('weight_management_data');
+
+// 监听数据更新
+dataChannel.onmessage = (event) => {
+    if (event.data.type === 'dataUpdated') {
+        console.log('检测到数据更新，自动刷新热量平衡卡片...');
+        loadCalorieBalance();
+    }
+};
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
     // 初始化用户画像收集（模拟企业微信主动推送）
@@ -14,18 +25,22 @@ document.addEventListener('DOMContentLoaded', () => {
         Profiling.init();
     }
 
+    // 滚动到页面底部
+    const container = document.getElementById('chat-messages');
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+
     // 新版热量平衡卡片 - 简化加载逻辑，确保数据能够加载
     const calorieCard = document.getElementById('calorie-balance-card');
     if (calorieCard) {
         // 检查localStorage中的折叠状态
-        const isExpanded = localStorage.getItem('calorieCardExpanded') !== 'false';
+        const isExpanded = localStorage.getItem('calorieCardExpanded') === 'true';
 
         if (isExpanded) {
-            calorieCard.classList.add('expanded');
             calorieCard.classList.remove('collapsed');
         } else {
             calorieCard.classList.add('collapsed');
-            calorieCard.classList.remove('expanded');
         }
 
         // 无论折叠状态如何，都尝试加载数据（但只加载一次）
@@ -52,18 +67,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 自动调整输入框高度
     const chatInput = document.getElementById('chat-input');
-    chatInput.addEventListener('input', () => {
-        chatInput.style.height = 'auto';
-        chatInput.style.height = chatInput.scrollHeight + 'px';
-    });
+    if (chatInput) {
+        chatInput.addEventListener('input', () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = chatInput.scrollHeight + 'px';
+        });
 
-    // 回车发送（Shift+Enter换行）
-    chatInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            window.sendMessage();
-        }
-    });
+        // 回车发送（Shift+Enter换行）
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                window.sendMessage();
+            }
+        });
+    }
 });
 
 // ============ 图片上传功能 ============
@@ -94,8 +111,10 @@ function handleImageSelect(event) {
         };
 
         // 显示预览
-        document.getElementById('preview-img').src = e.target.result;
-        document.getElementById('image-preview').style.display = 'block';
+        const preview = document.getElementById('image-preview');
+        const previewImg = document.getElementById('preview-img');
+        if (previewImg) previewImg.src = e.target.result;
+        if (preview) preview.style.display = 'block';
     };
     reader.readAsDataURL(file);
 
@@ -106,8 +125,10 @@ function handleImageSelect(event) {
 // 清除已选图片
 function clearImage() {
     selectedImage = null;
-    document.getElementById('image-preview').style.display = 'none';
-    document.getElementById('preview-img').src = '';
+    const preview = document.getElementById('image-preview');
+    const previewImg = document.getElementById('preview-img');
+    if (preview) preview.style.display = 'none';
+    if (previewImg) previewImg.src = '';
 }
 
 // 上传图片到服务器
@@ -135,9 +156,18 @@ async function uploadImage(file) {
 
 // 加载热量平衡数据
 async function loadCalorieBalance() {
+    if (!Auth.check()) {
+        return;
+    }
+    
     const loadingEl = document.getElementById('balance-loading');
     const guideEl = document.getElementById('balance-guide');
     const detailEl = document.getElementById('balance-detail');
+
+    if (!loadingEl || !guideEl || !detailEl) {
+        console.log('热量平衡卡片元素不存在');
+        return;
+    }
 
     // 重置显示状态
     loadingEl.style.display = 'none';
@@ -332,12 +362,16 @@ function setStatusIndicator(netCalorie) {
 // 切换折叠/展开（绑定到window全局）
 window.toggleCalorieCard = function() {
     const card = document.getElementById('calorie-balance-card');
+    if (!card) {
+        console.error('找不到热量平衡卡片');
+        return;
+    }
+    
     const isCollapsed = card.classList.contains('collapsed');
 
     if (isCollapsed) {
         // 展开
         card.classList.remove('collapsed');
-        card.classList.add('expanded');
         // 首次展开时加载数据
         if (!card.dataset.loaded) {
             loadCalorieBalance();
@@ -345,20 +379,30 @@ window.toggleCalorieCard = function() {
         }
     } else {
         // 折叠
-        card.classList.remove('expanded');
         card.classList.add('collapsed');
     }
 
     // 保存状态到localStorage
     localStorage.setItem('calorieCardExpanded', !isCollapsed);
-}
+};
 
 // ============ 每日建议功能 ============
 
 // 加载每日建议
 async function loadDailySuggestion(forceRefresh = false) {
+    // 检查是否已登录
+    if (!Auth.check()) {
+        console.log('用户未登录，跳过加载每日建议');
+        return;
+    }
+    
     const contentEl = document.getElementById('suggestion-content');
     const actionEl = document.getElementById('suggestion-action');
+
+    if (!contentEl || !actionEl) {
+        console.log('建议卡片元素不存在');
+        return;
+    }
 
     if (!forceRefresh) {
         contentEl.innerHTML = `
@@ -374,21 +418,32 @@ async function loadDailySuggestion(forceRefresh = false) {
             ? `${API.base}/api/chat/daily-suggestion?refresh=true`
             : `${API.base}/api/chat/daily-suggestion`;
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
         const response = await fetch(url, {
             headers: {
                 'Authorization': `Bearer ${Auth.getToken()}`
-            }
+            },
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
         const result = await response.json();
+
+        console.log('每日建议响应:', result);
 
         if (result.success && result.suggestion) {
             displaySuggestion(result.suggestion);
         } else {
+            console.log('建议加载失败或无数据，使用默认建议');
             displayDefaultSuggestion();
         }
     } catch (error) {
-        console.error('加载建议失败:', error);
+        console.error('加载建议失败:', error, error.message);
+        if (error.name === 'AbortError') {
+            console.log('请求超时');
+        }
         displayDefaultSuggestion();
     }
 }
@@ -398,12 +453,22 @@ function displaySuggestion(suggestion) {
     const contentEl = document.getElementById('suggestion-content');
     const actionEl = document.getElementById('suggestion-action');
 
+    if (!contentEl || !actionEl) {
+        console.error('建议卡片元素不存在');
+        return;
+    }
+
+    if (!suggestion || !suggestion.content) {
+        console.error('建议数据无效:', suggestion);
+        return;
+    }
+
     contentEl.textContent = suggestion.content;
 
     // 显示关联操作按钮
     if (suggestion.action_text && suggestion.action_text !== '知道了') {
         actionEl.innerHTML = `
-            <button class="suggestion-action-btn" onclick="handleSuggestionAction('${suggestion.action_type}', '${suggestion.action_target}')">
+            <button class="suggestion-action-btn" onclick="handleSuggestionAction('${suggestion.action_type || ''}', '${suggestion.action_target || ''}')">
                 ${suggestion.action_text}
             </button>
         `;
@@ -429,7 +494,9 @@ window.refreshSuggestion = async function() {
         console.log('✅ 建议刷新成功');
     } catch (error) {
         console.error('❌ 刷新建议失败:', error);
-        Utils.toast('刷新失败，请重试', 'error');
+        if (typeof Utils !== 'undefined' && Utils.toast) {
+            Utils.toast('刷新失败，请重试', 'error');
+        }
     } finally {
         refreshBtn.disabled = false;
         refreshBtn.classList.remove('spinning');
@@ -447,66 +514,210 @@ window.handleSuggestionAction = function(type, target) {
 
 // 默认建议（API失败时）
 async function displayDefaultSuggestion() {
-    let allDefaults = [];
-
-    // 优先从服务器获取默认建议
     try {
-        const response = await fetch(`${API.base}/api/config/default-suggestions`, {
-            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
-        });
+        let allDefaults = [];
 
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.suggestions) {
-                allDefaults = result.suggestions;
+        // 优先从服务器获取默认建议
+        try {
+            const response = await fetch(`${API.base}/api/config/default-suggestions`, {
+                headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.suggestions) {
+                    allDefaults = result.suggestions;
+                }
             }
+        } catch (e) {
+            console.log('获取默认建议失败');
         }
+
+        // 如果没有服务器建议，使用内置的
+        if (allDefaults.length === 0) {
+            allDefaults = [
+                { content: "今天别忘了记录体重哦，坚持就是胜利！💪", action_text: "记录体重", action_target: "weight.html" },
+                { content: "多喝水有助于新陈代谢，建议今天喝够2000ml~", action_text: "记录饮水", action_target: "water.html" },
+                { content: "运动是健康的好伙伴，今天动起来吧！", action_text: "记录运动", action_target: "exercise.html" },
+                { content: "💡 蛋白质是肌肉的基石，每餐摄入20-30g有助于维持代谢", action_text: "知道了", action_target: "" },
+                { content: "💡 低GI食物能让血糖更平稳，饱腹感更持久", action_text: "知道了", action_target: "" },
+                { content: "💡 快走30分钟约消耗150-200kcal", action_text: "知道了", action_target: "" },
+                { content: "💡 每增加1kg肌肉，每天多消耗约100kcal", action_text: "知道了", action_target: "" },
+                { content: "💡 基础代谢占每日消耗的60-70%", action_text: "知道了", action_target: "" },
+                { content: "每一小步都是进步，今天也在变好的路上！🌟", action_text: "记录体重", action_target: "weight.html" },
+                { content: "坚持记录是减重的第一步，你已经做得很好了！", action_text: "记录数据", action_target: "index.html" }
+            ];
+        }
+
+        // 随机选择一条
+        const random = allDefaults[Math.floor(Math.random() * allDefaults.length)];
+        displaySuggestion({
+            content: random.content,
+            action_text: random.action_text,
+            action_type: random.action_target ? "navigate" : "none",
+            action_target: random.action_target || ""
+        });
     } catch (e) {
-        console.log('获取默认建议失败');
+        console.error('displayDefaultSuggestion 错误:', e);
     }
-
-    // 如果没有服务器建议，使用内置的
-    if (allDefaults.length === 0) {
-        allDefaults = [
-            { content: "今天别忘了记录体重哦，坚持就是胜利！💪", action_text: "记录体重", action_target: "weight.html" },
-            { content: "多喝水有助于新陈代谢，建议今天喝够2000ml~", action_text: "记录饮水", action_target: "water.html" },
-            { content: "运动是健康的好伙伴，今天动起来吧！", action_text: "记录运动", action_target: "exercise.html" },
-            { content: "💡 蛋白质是肌肉的基石，每餐摄入20-30g有助于维持代谢", action_text: "知道了", action_target: "" },
-            { content: "💡 低GI食物能让血糖更平稳，饱腹感更持久", action_text: "知道了", action_target: "" },
-            { content: "💡 快走30分钟约消耗150-200kcal", action_text: "知道了", action_target: "" },
-            { content: "💡 每增加1kg肌肉，每天多消耗约100kcal", action_text: "知道了", action_target: "" },
-            { content: "💡 基础代谢占每日消耗的60-70%", action_text: "知道了", action_target: "" },
-            { content: "每一小步都是进步，今天也在变好的路上！🌟", action_text: "记录体重", action_target: "weight.html" },
-            { content: "坚持记录是减重的第一步，你已经做得很好了！", action_text: "记录数据", action_target: "index.html" }
-        ];
-    }
-
-    // 随机选择一条
-    const random = allDefaults[Math.floor(Math.random() * allDefaults.length)];
-    displaySuggestion({
-        content: random.content,
-        action_text: random.action_text,
-        action_type: random.action_target ? "navigate" : "none",
-        action_target: random.action_target || ""
-    });
 }
 
-// 加载聊天历史
-async function loadChatHistory() {
+// 加载聊天历史（只显示最近10条）
+let chatHistoryOffset = 0;
+const CHAT_HISTORY_LIMIT = 10;
+
+async function loadChatHistory(loadMore = false) {
+    if (!Auth.check()) {
+        return;
+    }
+    
     try {
-        const response = await API.chat.getHistory(20);
+        const container = document.getElementById('chat-messages');
+        
+        if (!loadMore) {
+            chatHistoryOffset = 0;
+            // 只删除聊天消息元素，保留静态卡片
+            const balanceCard = document.getElementById('calorie-balance-card');
+            const suggestionCard = document.getElementById('daily-suggestion-card');
+            
+            // 删除所有 message 类元素
+            const messages = container.querySelectorAll('.message');
+            messages.forEach(msg => msg.remove());
+            
+            // 如果没有静态卡片，重新添加
+            if (!balanceCard) {
+                console.log('热量平衡卡片丢失，重新加载页面');
+            }
+        }
+        
+        // 加载历史记录，每次10条
+        const response = await API.chat.getHistory(CHAT_HISTORY_LIMIT, chatHistoryOffset);
+        
         if (response.success && response.data) {
-            messages = response.data;
-            if (messages.length > 0) {
+            const newMessages = response.data;
+            
+            if (newMessages.length > 0) {
                 const suggestionCard = document.getElementById('daily-suggestion-card');
-                if (suggestionCard) suggestionCard.style.display = 'none';
-                messages.forEach(msg => {
-                    appendMessage(msg.role, msg.content, false, { message_type: 'text', actions: [] });
-                });
+                if (suggestionCard && chatHistoryOffset === 0) suggestionCard.style.display = 'none';
+                
+                // 将新消息插入到列表开头（最旧的在前）
+                const container = document.getElementById('chat-messages');
+                
+                if (!loadMore) {
+                    // 首次加载：将消息插入到静态卡片之后
+                    newMessages.forEach(msg => {
+                        insertMessageAt(container, null, msg.role, msg.content, false, { message_type: 'text', actions: [] }, false);
+                    });
+                } else {
+                    // 加载更多：将消息插入到最前面
+                    const firstMessage = container.querySelector('.message');
+                    newMessages.forEach(msg => {
+                        const tempDiv = document.createElement('div');
+                        container.insertBefore(tempDiv, firstMessage);
+                        insertMessageAt(container, tempDiv, msg.role, msg.content, false, { message_type: 'text', actions: [] }, false);
+                    });
+                }
+                
+                chatHistoryOffset += newMessages.length;
+                
+                // 如果有更多记录，显示"加载更多"按钮
+                updateLoadMoreButton(newMessages.length >= CHAT_HISTORY_LIMIT);
             }
         }
     } catch (error) {
         console.error('加载聊天历史失败:', error);
+    }
+}
+
+// 在指定位置插入消息
+function insertMessageAt(container, insertBeforeEl, role, content, animate, messageData, enableTypewriter) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message message-${role}`;
+    if (animate) {
+        messageDiv.style.animation = 'slideInUp 0.3s ease';
+    }
+
+    const avatar = role === 'user' ? '👤' : '💡';
+    const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+
+    let contentHtml = '';
+    let textContent = '';
+    let hasTypewriter = false;
+
+    if (role === 'assistant' && enableTypewriter) {
+        hasTypewriter = true;
+    }
+
+    if (role === 'assistant' && messageData) {
+        const messageType = messageData.message_type || 'text';
+        const actions = messageData.actions || [];
+
+        let displayContent = content;
+        const jsonMatch = displayContent.match(/\{"tools":\s*\[.*?\]\}/);
+        if (jsonMatch) {
+            displayContent = displayContent.replace(jsonMatch[0], '').trim();
+        }
+
+        textContent = displayContent;
+
+        if (messageType === 'card' && messageData.data) {
+            contentHtml = buildCardMessage(messageData.data);
+        } else if (messageType === 'quick_reply' && actions.length > 0) {
+            contentHtml = `<div class="message-text">${displayContent}</div>`;
+            contentHtml += `<div class="message-actions">`;
+            actions.forEach(action => {
+                contentHtml += `<button class="action-btn" onclick="handleMessageAction('${action.action_type}', '${action.target}')">${action.label}</button>`;
+            });
+            contentHtml += `</div>`;
+        } else if (messageType === 'image' && messageData.image_url) {
+            contentHtml = `<div class="message-image"><img src="${messageData.image_url}" alt="图片"></div>`;
+            if (displayContent) {
+                contentHtml += `<div class="message-text">${displayContent}</div>`;
+            }
+        } else {
+            contentHtml = `<div class="message-text">${displayContent.replace(/\n/g, '<br>')}</div>`;
+        }
+    } else {
+        contentHtml = `<div class="message-text">${content.replace(/\n/g, '<br>')}</div>`;
+    }
+
+    messageDiv.innerHTML = `
+        <div class="message-avatar">${avatar}</div>
+        <div>
+            <div class="message-time">${time}</div>
+            <div class="message-content">
+                ${contentHtml}
+            </div>
+        </div>
+    `;
+
+    container.insertBefore(messageDiv, insertBeforeEl);
+
+    if (hasTypewriter && textContent) {
+        const textElement = messageDiv.querySelector('.message-text');
+        if (textElement) {
+            typeWriterHTML(textElement, textContent.replace(/\n/g, '<br>'));
+        }
+    }
+}
+
+// 更新加载更多按钮
+function updateLoadMoreButton(hasMore) {
+    let btn = document.getElementById('load-more-btn');
+    if (!btn && hasMore) {
+        const container = document.getElementById('chat-messages');
+        btn = document.createElement('div');
+        btn.id = 'load-more-btn';
+        btn.className = 'load-more-btn';
+        btn.innerHTML = '⬇️ 加载更多';
+        btn.onclick = () => loadChatHistory(true);
+        container.parentNode.insertBefore(btn, container);
+    }
+    if (btn) {
+        btn.style.display = hasMore ? 'block' : 'none';
+        if (hasMore) {
+            btn.innerHTML = '⬇️ 加载更多历史';
+        }
     }
 }
 
@@ -568,16 +779,17 @@ window.sendMessage = async function() {
         removeThinking(thinkingId);
 
         if (response.success) {
-            appendMessage('assistant', response.data.content, true, response.data);
+            // 启用打字机效果（这是最新的AI回复）
+            appendMessage('assistant', response.data.content, true, response.data, true);
         } else {
-            appendMessage('assistant', '抱歉，我暂时无法回复。请稍后再试。', true, { message_type: 'text', actions: [] });
+            appendMessage('assistant', '抱歉，我暂时无法回复。请稍后再试。', true, { message_type: 'text', actions: [] }, true);
         }
     } catch (error) {
         // 移除思考中提示
         removeThinking(thinkingId);
 
         console.error('发送消息失败:', error);
-        appendMessage('assistant', '抱歉，发送消息失败。请检查网络连接后重试。');
+        appendMessage('抱歉，发送消息失败。请检查网络连接后重试。', false, { message_type: 'text', actions: [] }, false);
 
         // 显示错误提示
         Utils.toast('发送失败，请重试', 'error');
@@ -608,6 +820,10 @@ function typeWriterHTML(element, html, speed = 20) {
     element.innerHTML = '';
     element.appendChild(cursor);
     element.classList.add('typewriter-content');
+
+    // 开始打字前先滚动到底部
+    const container = document.getElementById('chat-messages');
+    container.scrollTop = container.scrollHeight;
 
     let i = 0;
     const chars = plainText.split('');
@@ -642,7 +858,10 @@ function typeWriterHTML(element, html, speed = 20) {
 }
 
 // 添加消息到聊天区域（支持富媒体）
-function appendMessage(role, content, animate = true, messageData = null) {
+// role: 'user' 或 'assistant'
+// animate: 是否播放入场动画
+// enableTypewriter: 是否启用打字机效果（仅对AI的最新回复启用）
+function appendMessage(role, content, animate = true, messageData = null, enableTypewriter = false) {
     const container = document.getElementById('chat-messages');
 
     const messageDiv = document.createElement('div');
@@ -658,6 +877,11 @@ function appendMessage(role, content, animate = true, messageData = null) {
     let contentHtml = '';
     let textContent = ''; // 用于打字机效果的纯文本内容
     let hasTypewriter = false; // 是否需要打字机效果
+
+    // 只有明确启用打字机且是AI消息时才启用
+    if (role === 'assistant' && enableTypewriter) {
+        hasTypewriter = true;
+    }
 
     if (role === 'assistant' && messageData) {
         // AI消息，检查是否有富媒体内容
@@ -737,10 +961,12 @@ function appendMessage(role, content, animate = true, messageData = null) {
             // 使用打字机效果显示文本（支持HTML标签）
             typeWriterHTML(textElement, textContent.replace(/\n/g, '<br>'));
         }
+    } else {
+        // 非打字机效果的消息，滚动到底部
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 10);
     }
-
-    // 滚动到底部
-    container.scrollTop = container.scrollHeight;
 }
 
 // 处理消息中的快捷操作
@@ -772,7 +998,9 @@ function showThinking() {
     `;
 
     container.appendChild(thinkingDiv);
-    container.scrollTop = container.scrollHeight;
+    setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+    }, 10);
 
     return id;
 }

@@ -250,6 +250,7 @@ from api.routes import (
     suggestions,
     achievements,
     recipes,
+    export,
 )
 from api.routes.admin import auth as admin_auth
 from api.routes.admin import prompts as admin_prompts
@@ -278,6 +279,7 @@ app.include_router(monitoring.router, prefix="/api/monitoring", tags=["监控"])
 app.include_router(suggestions.router, prefix="/api/suggestions", tags=["智能建议"])
 app.include_router(achievements.router, prefix="/api/achievements", tags=["成就积分"])
 app.include_router(recipes.router, prefix="/api/recipes", tags=["食谱管理"])
+app.include_router(export.router, prefix="/api/export", tags=["数据导出"])
 
 # 管理员路由
 app.include_router(admin_auth.router, prefix="/admin/auth", tags=["管理员认证"])

@@ -60,7 +60,9 @@ const Components = {
         }
         
         if (user) {
-            userNameEl.textContent = user.nickname || user.name || '用户';
+            // 使用统一的格式化函数
+            const displayName = Utils.formatUserName(user);
+            userNameEl.textContent = displayName;
             if (userAvatarEl) {
                 userAvatarEl.textContent = (user.nickname || '用').charAt(0);
             }
