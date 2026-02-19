@@ -228,13 +228,30 @@ async def send_message(
 
         # 2. 调用 LangChain Agent（带 fallback）
         try:
-            from services.langchain.agents import AgentFactory
+            # 优先使用新的 GraphFactory（LangGraph架构）
+            try:
+                from services.langchain.graph import GraphFactory
 
-            logger.info(f"Calling AgentFactory.get_agent for user {user_id}")
+                factory_class = GraphFactory
+                logger.info(f"Using GraphFactory (LangGraph) for user {user_id}")
+            except ImportError:
+                # 回退到旧的 AgentFactory
+                from services.langchain.agents import AgentFactory
 
-            # 使用 AgentFactory 获取 Agent 实例
-            agent = await AgentFactory.get_agent(user_id, db)
-            result = await agent.chat(full_content)
+                factory_class = AgentFactory
+                logger.info(f"Using legacy AgentFactory for user {user_id}")
+
+            logger.info(
+                f"Calling {factory_class.__name__}.get_agent for user {user_id}"
+            )
+
+            # 使用工厂获取 Agent 实例
+            agent_dict = await factory_class.get_agent(user_id, db)
+            # 获取包装器对象（AgentWrapper）
+            agent_wrapper = (
+                agent_dict.get("agent") if isinstance(agent_dict, dict) else agent_dict
+            )
+            result = await agent_wrapper.chat(full_content)
 
             logger.info(f"Agent completed for user {user_id}")
 
@@ -737,6 +754,7 @@ async def get_chat_history(
                 "role": r.role.value,
                 "content": r.content,
                 "msg_type": r.msg_type.value,
+                "meta_data": r.meta_data or {},
                 "created_at": r.created_at.isoformat(),
             }
             for r in reversed(records)
@@ -959,37 +977,78 @@ async def get_daily_suggestion(
             else "晚上"
         )
 
-        prompt = f"""你是用户的专属健康顾问。请根据以下数据，为{time_of_day}的他/她生成1条轻松有趣的建议（30-50字）。
+        # 构建个性化建议方向
+        suggestion_focus = []
+
+        if not today_weight:
+            suggestion_focus.append(
+                "体重未记录：提醒记录体重的重要性，解释体重数据对减重计划的价值"
+            )
+        else:
+            suggestion_focus.append("体重已记录：分析当前体重趋势，给出调整建议")
+
+        if meal_summary["total_calories"] == 0:
+            suggestion_focus.append(
+                "饮食未记录：解释记录饮食对热量控制的关键作用，提供简单记录技巧"
+            )
+        else:
+            suggestion_focus.append(
+                f"饮食已记录：基于{meal_summary['total_calories']}kcal摄入量，给出营养平衡建议"
+            )
+
+        if total_exercise_minutes == 0:
+            suggestion_focus.append(
+                "运动未记录：说明运动对代谢的益处，推荐适合当前时间的轻度活动"
+            )
+        else:
+            suggestion_focus.append(
+                f"运动已记录：肯定{total_exercise_minutes}分钟的努力，建议如何优化运动效果"
+            )
+
+        if total_water_ml < 1500:
+            suggestion_focus.append(
+                "饮水不足：解释充足饮水对新陈代谢的帮助，提供饮水小技巧"
+            )
+        else:
+            suggestion_focus.append(
+                "饮水充足：肯定良好的饮水习惯，维持水分平衡的重要性"
+            )
+
+        # 计算建议的晚餐时间
+        dinner_time = current_hour + 3
+        if dinner_time > 23:
+            dinner_time_str = "晚上8点"
+        else:
+            dinner_time_str = f"晚上{dinner_time}点"
+
+        prompt = f"""你是用户的专属健康顾问。请根据以下数据，为{time_of_day}的他/她生成1条个性化、实用的健康建议。
 
 【用户今日数据】
-- 体重: {f"{today_weight.weight}kg" if today_weight else "未记录📝"}
-- 饮食: {"✅ 已记录" if meal_summary["total_calories"] > 0 else "待记录🍽️"}
-- 运动: {f"{total_exercise_minutes}分钟🏃" if total_exercise_minutes > 0 else "待记录💪"}
-- 饮水: {f"{total_water_ml}ml💧" if total_water_ml > 0 else "待记录🥛"}
+- 体重: {"未记录📝" if not today_weight else f"{today_weight.weight}kg"}
+- 饮食: {"待记录🍽️" if meal_summary["total_calories"] == 0 else "✅ 已记录"}
+- 运动: {"待记录💪" if total_exercise_minutes == 0 else f"{total_exercise_minutes}分钟🏃"}
+- 饮水: {"待记录🥛" if total_water_ml == 0 else f"{total_water_ml}ml💧"}
 - 当前时间: {time_of_day}
 
-【请选择以下风格之一，每次随机选，不要重复】（必须选1种）：
-1️⃣ 轻松科普 - 分享1个有趣的小知识（不要说教）
-2️⃣ 温暖鼓励 - 一句打气的话（不要鸡汤）
-3️⃣ 生活技巧 - 1个实用小妙招
-4️⃣ 冷知识 - 意想不到的健康冷知识
-5️⃣ 今日小事 - 建议做1件简单小事（不超过5个字的动作）
-6️⃣ 趣味问答 - 问1个有趣的选择题
+【建议要求】：
+1. **个性化**：基于用户今日数据状态给出针对性建议
+2. **实用性**：提供可立即行动的具体建议
+3. **科学性**：基于营养学、运动科学原理
+4. **鼓励性**：用积极正向的语言
+5. **适当长度**：50-100字，既简洁又有深度
 
-【不同风格示例】：
-- 轻松科普: "你知道吗？咀嚼20次以上能让大脑及时收到饱腹信号~"
-- 温暖鼓励: "今天也在努力的你，真的很棒！🌟"
-- 生活技巧: "饭前喝一小杯水，可以少吃约50kcal哦~"
-- 冷知识: "睡不够会让人更想吃高热量食物，这就是'睡眠债务'😴"
-- 今日小事: "站起来伸个懒腰"
-- 趣味问答: "今天吃咸还是吃淡？🥗"
+【重点建议方向】：
+{chr(10).join(f"- {item}" for item in suggestion_focus)}
 
-【重要规则】：
-⚠️ 不要每次都选"打卡提醒"
-⚠️ 不要连续2次选同一种风格
-⚠️ 不要说"记得记录""要加油哦"这类话
-⚠️ 30-50字，简洁有力
-⚠️ 用emoji增加趣味性（1-2个）
+【输出格式】：
+💡 [核心建议主题]
+[具体建议内容，50-100字]
+[可选：1个简单可执行的小行动]
+
+【示例】：
+💡 优化晚餐时间
+研究发现，晚餐提前到睡前3-4小时，有助于改善睡眠质量和胰岛素敏感性。如果还没吃晚餐，尽量在{dinner_time_str}前完成。
+小行动：设置手机提醒，固定晚餐时间。
 
 直接输出建议内容，不需要解释。"""
 
@@ -998,12 +1057,12 @@ async def get_daily_suggestion(
             [
                 {
                     "role": "system",
-                    "content": "你是专业的体重管理顾问，善于给出简洁实用的建议。",
+                    "content": "你是专业的体重管理顾问，具有营养学、运动科学背景。你善于根据用户数据给出个性化、科学、实用的健康建议，帮助用户建立可持续的健康习惯。",
                 },
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=150,
-            temperature=0.8,
+            max_tokens=300,
+            temperature=0.7,
         )
 
         if ai_response.error:
@@ -1152,20 +1211,22 @@ async def send_message_langchain(
 
         # 2. 调用 LangChain Agent（带 fallback）
         try:
-            from services.langchain.agents import chat_with_agent
-            from services.langchain.memory import save_to_memory
+            from services.langchain.agents import AgentFactory
 
-            # 调用 Agent
-            result = await chat_with_agent(
-                user_id=current_user.id, db=db, message=full_content
-            )
+            # 使用 AgentFactory 获取 Agent 实例
+            agent = await AgentFactory.get_agent(current_user.id, db)
+            result = await agent.chat(full_content)
 
             assistant_reply = result.get("response", "抱歉，我现在有点忙。")
+            structured_response = result.get(
+                "structured_response",
+                {"type": "text", "content": assistant_reply, "actions": []},
+            )
             intermediate_steps = result.get("intermediate_steps", [])
 
             # 记录日志
             logger.info(
-                f"LangChain Agent - User: {current_user.id}, Steps: {len(intermediate_steps)}"
+                f"LangChain Agent - User: {current_user.id}, Steps: {len(intermediate_steps)}, Type: {structured_response.get('type')}"
             )
 
         except Exception as agent_error:

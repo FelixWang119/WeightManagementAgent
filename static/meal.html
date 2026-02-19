@@ -96,13 +96,20 @@
         .image-preview {
             position: relative;
             width: 100%;
-            max-height: 400px;
+            height: 400px;
+            max-height: 500px;
             overflow: hidden;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .image-preview img {
             width: 100%;
-            height: auto;
+            height: 100%;
+            object-fit: contain;
             display: block;
         }
         
@@ -694,6 +701,9 @@
             initUploadZone();
             initMealTypeButtons();
             loadTodayMeals();
+            
+            // 确保保存记录按钮初始状态可见
+            document.getElementById('save-btn').style.display = 'block';
         });
         
         // 初始化上传区域
@@ -799,6 +809,9 @@
                     
                     displayAnalysisResult(analyzedFoods, aiAnalysis.suggestions, true);
                     Utils.toast(`AI识别成功：共${analyzedFoods.length}种食物，请确认或调整`, 'success');
+                    
+                    // 隐藏保存记录按钮，因为现在使用确认流程
+                    document.getElementById('save-btn').style.display = 'none';
                 } else {
                     throw new Error('AI未能识别出食物');
                 }
@@ -1037,6 +1050,9 @@
                 // 清空状态
                 currentConfirmId = null;
                 
+                // 重新显示保存记录按钮，用于下一次记录
+                document.getElementById('save-btn').style.display = 'block';
+                
             } catch (error) {
                 console.error('确认失败:', error);
                 Utils.toast(error.message || '确认失败', 'error');
@@ -1079,6 +1095,9 @@
             document.getElementById('image-preview').style.display = 'none';
             document.getElementById('analysis-result').style.display = 'none';
             document.getElementById('upload-zone').classList.remove('has-image');
+            
+            // 确保保存记录按钮可见
+            document.getElementById('save-btn').style.display = 'block';
         }
         
         // 初始化餐食类型按钮

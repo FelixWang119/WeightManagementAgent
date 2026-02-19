@@ -5,57 +5,89 @@
 // 全局变量
 let isSending = false;
 let messages = [];
-let selectedImage = null;
 
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', () => {
-    // 初始化用户画像收集（模拟企业微信主动推送）
-    if (typeof Profiling !== 'undefined') {
-        Profiling.init();
-    }
+// 更新热量摘要（兼容函数，避免未定义错误）
+function updateSummary(intake, burned, status) {
+    // 此函数暂时为空，仅用于兼容旧代码
+    // 如有需要可以在此处添加更新UI的逻辑
+    console.log('[updateSummary]', { intake, burned, status });
+}
 
-    // 新版热量平衡卡片 - 简化加载逻辑，确保数据能够加载
-    const calorieCard = document.getElementById('calorie-balance-card');
-    if (calorieCard) {
-        // 检查localStorage中的折叠状态
-        const isExpanded = localStorage.getItem('calorieCardExpanded') !== 'false';
-
-        if (isExpanded) {
-            calorieCard.classList.add('expanded');
-            calorieCard.classList.remove('collapsed');
-        } else {
-            calorieCard.classList.add('collapsed');
-            calorieCard.classList.remove('expanded');
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        // 初始化用户画像收集（模拟企业微信主动推送）
+        if (typeof Profiling !== 'undefined') {
+            Profiling.init();
         }
+
+        // 新版热量平衡卡片 - 简化加载逻辑，确保数据能够加载
+        const calorieCard = document.getElementById('calorie-balance-card');
+        if (calorieCard) {
+            // 检查localStorage中的折叠状态
+            const isExpanded = localStorage.getItem('calorieCardExpanded') !== 'false';
+
+            if (isExpanded) {
+                calorieCard.classList.add('expanded');
+                calorieCard.classList.remove('collapsed');
+            } else {
+                calorieCard.classList.add('collapsed');
+                calorieCard.classList.remove('expanded');
+            }
 
         // 无论折叠状态如何，都尝试加载数据（但只加载一次）
         if (!calorieCard.dataset.loaded || calorieCard.dataset.loaded === 'false') {
             console.log('首次加载热量平衡数据...');
             loadCalorieBalance();
             calorieCard.dataset.loaded = 'true';
+        } else {
+            console.log('热量平衡数据已加载过，跳过');
         }
-    }
-
-    // 监听饮食记录更新事件
-    window.addEventListener('storage', (event) => {
-        if (event.key === 'mealUpdated') {
-            console.log('检测到饮食记录更新，刷新热量平衡数据');
-            loadCalorieBalance();
         }
-    });
 
-    // 加载每日建议
-    loadDailySuggestion();
+        // 监听饮食记录更新事件
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'mealUpdated') {
+                console.log('检测到饮食记录更新，刷新热量平衡数据');
+                loadCalorieBalance();
+            }
+        });
+
+        // 检查建议卡片可见性
+        checkSuggestionCardVisibility();
+        
+        console.log('开始加载每日建议...');
+        // 加载每日建议
+        loadDailySuggestion();
+        
+        // 检查刷新按钮
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            console.log('刷新按钮已找到，准备就绪');
+        }
 
     // 加载聊天历史
     loadChatHistory();
 
     // 自动调整输入框高度
     const chatInput = document.getElementById('chat-input');
-    chatInput.addEventListener('input', () => {
+    const chatInputWrapper = document.querySelector('.chat-input-wrapper');
+    
+    function updateInputHeight() {
         chatInput.style.height = 'auto';
-        chatInput.style.height = chatInput.scrollHeight + 'px';
-    });
+        const newHeight = Math.max(24, Math.min(chatInput.scrollHeight, 120));
+        chatInput.style.height = newHeight + 'px';
+        
+        // 同时更新wrapper的高度
+        if (chatInputWrapper) {
+            const wrapperHeight = Math.max(44, newHeight + 16); // 最小44px，加上padding
+            chatInputWrapper.style.minHeight = wrapperHeight + 'px';
+        }
+    }
+    
+    chatInput.addEventListener('input', updateInputHeight);
+    
+    // 初始调整
+    setTimeout(updateInputHeight, 100);
 
     // 回车发送（Shift+Enter换行）
     chatInput.addEventListener('keydown', (e) => {
@@ -66,70 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ============ 图片上传功能 ============
 
-// 处理图片选择
-function handleImageSelect(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // 检查文件类型
-    if (!file.type.startsWith('image/')) {
-        Utils.toast('请选择图片文件', 'error');
-        return;
-    }
-
-    // 检查文件大小（限制5MB）
-    if (file.size > 5 * 1024 * 1024) {
-        Utils.toast('图片大小不能超过5MB', 'error');
-        return;
-    }
-
-    // 预览图片
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        selectedImage = {
-            file: file,
-            dataUrl: e.target.result
-        };
-
-        // 显示预览
-        document.getElementById('preview-img').src = e.target.result;
-        document.getElementById('image-preview').style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-
-    // 清空input，允许重复选择同一文件
-    event.target.value = '';
-}
-
-// 清除已选图片
-function clearImage() {
-    selectedImage = null;
-    document.getElementById('image-preview').style.display = 'none';
-    document.getElementById('preview-img').src = '';
-}
-
-// 上传图片到服务器
-async function uploadImage(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', 'food_query');
-
-    const response = await fetch(`${API.base}/api/chat/upload-image`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${Auth.getToken()}`
-        },
-        body: formData
-    });
-
-    if (!response.ok) {
-        throw new Error('图片上传失败');
-    }
-
-    return await response.json();
-}
 
 // ============ 热量平衡卡片功能 ============
 
@@ -139,18 +108,21 @@ async function loadCalorieBalance() {
     const guideEl = document.getElementById('balance-guide');
     const detailEl = document.getElementById('balance-detail');
 
-    // 重置显示状态
-    loadingEl.style.display = 'none';
+    // 重置显示状态 - 先显示加载中
+    loadingEl.style.display = 'block';
     guideEl.style.display = 'none';
     detailEl.style.display = 'none';
 
     try {
+        console.log('开始获取热量数据...');
         const response = await fetch(`${API.base}/api/calories/balance/daily?days=1`, {
             headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
         });
 
+        console.log('热量API响应状态:', response.status, response.statusText);
+        
         if (!response.ok) {
-            throw new Error('获取热量数据失败');
+            throw new Error(`获取热量数据失败: ${response.status} ${response.statusText}`);
         }
 
         const result = await response.json();
@@ -174,9 +146,10 @@ async function loadCalorieBalance() {
                 bmrIsUndefined: result.user_stats.bmr === undefined
             });
 
-            // 只有当没有BMR数据时才显示引导
-            if (!result.user_stats.has_bmr_data || !result.user_stats.bmr || result.user_stats.bmr === 0) {
+            // 只有当BMR为0或null时才显示引导
+            if (!result.user_stats.bmr || result.user_stats.bmr === 0) {
                 console.log('显示引导：用户需要测算BMR');
+                loadingEl.style.display = 'none';
                 guideEl.style.display = 'block';
                 updateSummary('--', '--', '需完善信息');
                 return;
@@ -195,6 +168,7 @@ async function loadCalorieBalance() {
                 });
             } else {
                 // 没有今日数据，但显示基本信息
+                loadingEl.style.display = 'none';
                 guideEl.style.display = 'none';
                 detailEl.style.display = 'block';
                 displayCalorieBalance({
@@ -206,11 +180,13 @@ async function loadCalorieBalance() {
             }
         } else {
             // API 响应异常
+            loadingEl.style.display = 'none';
             guideEl.style.display = 'block';
             updateSummary('--', '--', '加载失败');
         }
     } catch (error) {
         console.error('加载热量平衡失败:', error);
+        loadingEl.style.display = 'none';
         guideEl.style.display = 'block';
         updateSummary('--', '--', '加载失败');
     }
@@ -218,10 +194,13 @@ async function loadCalorieBalance() {
 
 // 显示新版热量平衡 - 天平对比布局
 function displayCalorieBalance(data) {
+    const loadingEl = document.getElementById('balance-loading');
     const guideEl = document.getElementById('balance-guide');
     const detailEl = document.getElementById('balance-detail');
     const statusEl = document.getElementById('status-indicator');
 
+    // 隐藏加载动画，显示详情
+    loadingEl.style.display = 'none';
     guideEl.style.display = 'none';
     detailEl.style.display = 'block';
 
@@ -374,17 +353,34 @@ async function loadDailySuggestion(forceRefresh = false) {
             ? `${API.base}/api/chat/daily-suggestion?refresh=true`
             : `${API.base}/api/chat/daily-suggestion`;
 
+        console.log('获取AI建议，URL:', url);
+        const token = Auth.getToken();
+        console.log('使用的Token:', token ? token.substring(0, 10) + '...' : '空');
+        
         const response = await fetch(url, {
             headers: {
-                'Authorization': `Bearer ${Auth.getToken()}`
+                'Authorization': `Bearer ${token}`
             }
         });
 
+        console.log('AI建议API响应状态:', response.status, response.statusText);
+        
+        // 检查响应状态
+        if (!response.ok) {
+            console.error('API请求失败:', response.status, response.statusText);
+            const errorText = await response.text();
+            console.error('错误响应:', errorText);
+            throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+        }
+        
         const result = await response.json();
+        console.log('AI建议API响应:', result);
 
         if (result.success && result.suggestion) {
+            console.log('显示AI建议:', result.suggestion.content);
             displaySuggestion(result.suggestion);
         } else {
+            console.log('使用默认建议');
             displayDefaultSuggestion();
         }
     } catch (error) {
@@ -421,6 +417,15 @@ window.refreshSuggestion = async function() {
         return;
     }
 
+    // 检查token
+    const token = Auth.getToken();
+    if (!token) {
+        console.error('❌ 用户未登录，token为空');
+        Utils.toast('请先登录', 'error');
+        return;
+    }
+    console.log('✅ Token存在:', token.substring(0, 10) + '...');
+
     refreshBtn.disabled = true;
     refreshBtn.classList.add('spinning');
 
@@ -433,6 +438,38 @@ window.refreshSuggestion = async function() {
     } finally {
         refreshBtn.disabled = false;
         refreshBtn.classList.remove('spinning');
+    }
+}
+
+// 关闭建议卡片（全局函数）
+window.closeSuggestion = function() {
+    const suggestionCard = document.getElementById('daily-suggestion-card');
+    if (suggestionCard) {
+        suggestionCard.style.display = 'none';
+        // 保存关闭状态到localStorage
+        localStorage.setItem('suggestionCardClosed', 'true');
+        console.log('✅ 建议卡片已关闭');
+    }
+}
+
+// 重置建议卡片显示（调试用）
+window.resetSuggestionCard = function() {
+    const suggestionCard = document.getElementById('daily-suggestion-card');
+    if (suggestionCard) {
+        suggestionCard.style.display = '';
+        localStorage.removeItem('suggestionCardClosed');
+        console.log('✅ 建议卡片已重置显示');
+        Utils.toast('建议卡片已重新显示', 'success');
+    }
+}
+
+// 检查是否应该显示建议卡片
+function checkSuggestionCardVisibility() {
+    const suggestionCard = document.getElementById('daily-suggestion-card');
+    const isClosed = localStorage.getItem('suggestionCardClosed') === 'true';
+    
+    if (suggestionCard && isClosed) {
+        suggestionCard.style.display = 'none';
     }
 }
 
@@ -449,6 +486,40 @@ window.handleSuggestionAction = function(type, target) {
 async function displayDefaultSuggestion() {
     let allDefaults = [];
 
+    // 本地默认建议
+    const localDefaults = [
+        {
+            content: "记得每天记录体重，这是追踪减重进度的关键数据。",
+            action_text: "记录体重",
+            action_type: "quick_action",
+            action_target: "记录体重"
+        },
+        {
+            content: "早餐要吃好，午餐要吃饱，晚餐要吃少。今天记得记录三餐哦！",
+            action_text: "记录饮食",
+            action_type: "quick_action",
+            action_target: "记录早餐"
+        },
+        {
+            content: "每天至少30分钟中等强度运动，比如快走、慢跑或游泳。",
+            action_text: "记录运动",
+            action_type: "quick_action",
+            action_target: "记录运动"
+        },
+        {
+            content: "每天喝够8杯水（约2升），保持身体水分平衡。",
+            action_text: "记录饮水",
+            action_type: "quick_action",
+            action_target: "记录饮水"
+        },
+        {
+            content: "保证7-8小时优质睡眠，有助于新陈代谢和减重。",
+            action_text: "记录睡眠",
+            action_type: "navigate",
+            action_target: "sleep.html"
+        }
+    ];
+
     // 优先从服务器获取默认建议
     try {
         const response = await fetch(`${API.base}/api/config/default-suggestions`, {
@@ -459,7 +530,11 @@ async function displayDefaultSuggestion() {
             const result = await response.json();
             if (result.success && result.suggestions) {
                 allDefaults = result.suggestions;
+            } else {
+                allDefaults = localDefaults;
             }
+        } else {
+            allDefaults = localDefaults;
         }
     } catch (e) {
         console.log('获取默认建议失败');
@@ -506,7 +581,8 @@ async function loadChatHistory() {
             }
         }
     } catch (error) {
-        console.error('加载聊天历史失败:', error);
+        console.warn('获取默认建议失败，使用本地建议:', error);
+        allDefaults = localDefaults;
     }
 }
 
@@ -515,30 +591,19 @@ window.sendMessage = async function() {
     const input = document.getElementById('chat-input');
     const content = input.value.trim();
 
-    // 检查是否有内容或图片
-    if ((!content && !selectedImage) || isSending) return;
+    // 检查是否有内容
+    if (!content || isSending) return;
 
     // 隐藏建议卡片
     const suggestionCard = document.getElementById('daily-suggestion-card');
     if (suggestionCard) suggestionCard.style.display = 'none';
 
-    // 构建预览内容（只显示文本，图片单独显示）
-    let previewContent = content || '请帮我看看这张图片里的食物';
-    appendMessage('user', previewContent);
+    // 添加用户消息
+    appendMessage('user', content);
 
-    // 如果有图片，添加图片预览到消息区域
-    if (selectedImage) {
-        const container = document.getElementById('chat-messages');
-        const lastMessage = container.lastElementChild;
-        const imgHtml = `<img src="${selectedImage.dataUrl}" style="max-width: 200px; border-radius: 8px; margin-top: 8px; display: block;">`;
-        const contentDiv = lastMessage.querySelector('.message-content');
-        contentDiv.innerHTML += imgHtml;
-    }
-
-    // 清空输入框和图片
+    // 清空输入框
     input.value = '';
     input.style.height = 'auto';
-    clearImage();
 
     // 显示AI思考中
     const thinkingId = showThinking();
@@ -551,16 +616,6 @@ window.sendMessage = async function() {
     try {
         // 构建请求数据
         const requestData = { content: content };
-
-        // 如果有图片，先上传再发送
-        if (selectedImage) {
-            const uploadResult = await uploadImage(selectedImage.file);
-            if (uploadResult.success) {
-                requestData.image_url = uploadResult.url;
-            } else {
-                throw new Error('图片上传失败');
-            }
-        }
 
         const response = await API.chat.sendMessageWithImage(requestData);
 
@@ -650,6 +705,14 @@ function appendMessage(role, content, animate = true, messageData = null) {
     if (animate) {
         messageDiv.style.animation = 'slideInUp 0.3s ease';
     }
+    
+    // 用户消息强制右对齐
+    if (role === 'user') {
+        messageDiv.style.alignSelf = 'flex-end';
+        messageDiv.style.flexDirection = 'row-reverse';
+        messageDiv.style.marginLeft = 'auto';
+        messageDiv.style.justifyContent = 'flex-end';
+    }
 
     const avatar = role === 'user' ? '👤' : '💡';
     const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -685,7 +748,8 @@ function appendMessage(role, content, animate = true, messageData = null) {
             const textId = `msg-text-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             contentHtml += `<div class="message-text" id="${textId}"></div>`;
             textContent = displayContent;
-            hasTypewriter = true;
+            // 只有新消息才使用打字机效果，历史消息直接显示
+            hasTypewriter = animate;
         }
 
         // 添加快捷操作按钮（富媒体）
@@ -730,12 +794,17 @@ function appendMessage(role, content, animate = true, messageData = null) {
 
     container.appendChild(messageDiv);
 
-    // 如果是助手消息且有文本内容，启动打字机效果
-    if (hasTypewriter && textContent) {
+    // 处理助手消息的文本显示
+    if (textContent) {
         const textElement = messageDiv.querySelector('.message-text');
         if (textElement) {
-            // 使用打字机效果显示文本（支持HTML标签）
-            typeWriterHTML(textElement, textContent.replace(/\n/g, '<br>'));
+            if (hasTypewriter) {
+                // 新消息：使用打字机效果显示文本（支持HTML标签）
+                typeWriterHTML(textElement, textContent.replace(/\n/g, '<br>'));
+            } else {
+                // 历史消息：直接显示完整内容
+                textElement.innerHTML = textContent.replace(/\n/g, '<br>');
+            }
         }
     }
 

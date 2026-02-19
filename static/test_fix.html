@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试修复</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>今日建议刷新按钮问题测试</h1>
+    
+    <div class="test-section">
+        <h2>1. 检查登录状态</h2>
+        <button onclick="checkLogin()">检查登录状态</button>
+        <div id="login-status" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 测试API调用</h2>
+        <button onclick="testAPI(false)">测试普通建议API</button>
+        <button onclick="testAPI(true)">测试刷新建议API</button>
+        <div id="api-result" class="log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 模拟刷新按钮点击</h2>
+        <button onclick="simulateRefresh()">模拟刷新按钮点击</button>
+        <div id="refresh-result" class="log"></div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        
+        function logTo(elementId, message, className = '') {
+            const element = document.getElementById(elementId);
+            const line = document.createElement('div');
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            if (className) line.className = className;
+            element.appendChild(line);
+            element.scrollTop = element.scrollHeight;
+        }
+        
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+        
+        async function checkLogin() {
+            clearLog('login-status');
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            logTo('login-status', `Token: ${token ? token.substring(0, 20) + '...' : '空'}`);
+            logTo('login-status', `User: ${user || '空'}`);
+            
+            if (token) {
+                // 测试token是否有效
+                try {
+                    const response = await fetch(`${API_BASE}/user/profile`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        logTo('login-status', '✅ Token有效', 'success');
+                    } else {
+                        logTo('login-status', `❌ Token无效: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    logTo('login-status', `❌ 检查Token失败: ${error.message}`, 'error');
+                }
+            } else {
+                logTo('login-status', '❌ 用户未登录', 'error');
+            }
+        }
+        
+        async function testAPI(forceRefresh) {
+            const elementId = 'api-result';
+            clearLog(elementId);
+            
+            const token = localStorage.getItem('token');
+            if (!token) {
+                logTo(elementId, '❌ 请先登录', 'error');
+                return;
+            }
+            
+            const url = forceRefresh 
+                ? `${API_BASE}/chat/daily-suggestion?refresh=true`
+                : `${API_BASE}/chat/daily-suggestion`;
+            
+            logTo(elementId, `请求URL: ${url}`);
+            logTo(elementId, `使用Token: ${token.substring(0, 20)}...`);
+            
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                logTo(elementId, `响应状态: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    logTo(elementId, `❌ API错误: ${errorText}`, 'error');
+                    return;
+                }
+                
+                const result = await response.json();
+                logTo(elementId, `响应数据: ${JSON.stringify(result, null, 2)}`);
+                
+                if (result.success) {
+                    logTo(elementId, `✅ 成功获取建议: ${result.suggestion.content}`, 'success');
+                    logTo(elementId, `是否缓存: ${result.cached || false}`);
+                } else {
+                    logTo(elementId, `❌ API返回失败: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                logTo(elementId, `❌ 请求失败: ${error.message}`, 'error');
+            }
+        }
+        
+        async function simulateRefresh() {
+            const elementId = 'refresh-result';
+            clearLog(elementId);
+            
+            // 模拟refreshSuggestion函数
+            logTo(elementId, '开始模拟刷新按钮点击...');
+            
+            const token = localStorage.getItem('token');
+            if (!token) {
+                logTo(elementId, '❌ 用户未登录，token为空', 'error');
+                return;
+            }
+            
+            logTo(elementId, `✅ Token存在: ${token.substring(0, 10)}...`);
+            
+            try {
+                // 调用刷新API
+                const url = `${API_BASE}/chat/daily-suggestion?refresh=true`;
+                logTo(elementId, `请求URL: ${url}`);
+                
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                logTo(elementId, `响应状态: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    logTo(elementId, `❌ API请求失败: ${response.status} ${response.statusText}`, 'error');
+                    logTo(elementId, `错误详情: ${errorText}`, 'error');
+                    return;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success && result.suggestion) {
+                    logTo(elementId, `✅ 刷新成功！新建议: ${result.suggestion.content}`, 'success');
+                    logTo(elementId, `是否缓存: ${result.cached || false}`);
+                } else {
+                    logTo(elementId, `❌ API返回失败`, 'error');
+                }
+            } catch (error) {
+                logTo(elementId, `❌ 刷新失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 页面加载时检查登录状态
+        window.onload = () => {
+            checkLogin();
+        };
+    </script>
+</body>
+</html>

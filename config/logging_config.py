@@ -166,6 +166,18 @@ def setup_logging(
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
+    # 设置SQLAlchemy日志级别（大幅减少数据库操作日志）
+    # 只显示WARNING及以上级别的日志
+    sqlalchemy_loggers = [
+        "sqlalchemy.engine",
+        "sqlalchemy.pool",
+        "sqlalchemy.dialects",
+        "sqlalchemy.orm",
+        "sqlalchemy.dialects.sqlite",
+    ]
+    for logger_name in sqlalchemy_loggers:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+
     # 记录日志系统初始化完成
     root_logger.info(
         "日志系统初始化完成 - 级别: %s, 目录: %s",

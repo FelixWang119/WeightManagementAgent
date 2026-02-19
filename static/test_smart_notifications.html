@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能通知测试页面</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { padding: 20px; background-color: #f8f9fa; }
+        .test-section { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-group { margin-bottom: 10px; }
+        .api-result { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; margin-top: 10px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+        .chart-container { height: 300px; margin: 20px 0; position: relative; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">智能通知测试页面</h1>
+        
+        <div class="test-section">
+            <h3>1. 用户参与度分析</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="analyzeUserEngagement()">分析用户参与度</button>
+                <button class="btn btn-info" onclick="analyzeAllUsersEngagement()">分析所有用户参与度</button>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label>用户ID:</label>
+                    <input type="number" id="userId" class="form-control" value="1" min="1">
+                </div>
+            </div>
+            <div id="engagement-result" class="api-result"></div>
+            <canvas id="engagement-chart" class="chart-container"></canvas>
+        </div>
+
+        <div class="test-section">
+            <h3>2. 通知效果分析</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="analyzeNotificationEffectiveness()">分析通知效果</button>
+                <button class="btn btn-success" onclick="compareNotificationTypes()">比较通知类型</button>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <label>通知类型:</label>
+                    <select id="notificationType" class="form-control">
+                        <option value="weight_reminder">体重提醒</option>
+                        <option value="water_reminder">喝水提醒</option>
+                        <option value="exercise_reminder">运动提醒</option>
+                        <option value="achievement">成就通知</option>
+                    </select>
+                </div>
+            </div>
+            <div id="effectiveness-result" class="api-result"></div>
+            <canvas id="effectiveness-chart" class="chart-container"></canvas>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 最佳通知时间分析</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="analyzeOptimalTime()">分析最佳时间</button>
+            </div>
+            <div id="optimal-time-result" class="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 个性化通知内容</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="personalizeNotification()">个性化通知</button>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label>基础通知内容:</label>
+                    <textarea id="baseContent" class="form-control" rows="3">记得记录今天的体重哦！</textarea>
+                </div>
+            </div>
+            <div id="personalization-result" class="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. 智能通知决策</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="shouldSendNotification()">判断是否发送</button>
+                <button class="btn btn-success" onclick="createSmartNotification()">创建智能通知</button>
+            </div>
+            <div id="decision-result" class="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. A/B测试管理</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="createABTest()">创建A/B测试</button>
+                <button class="btn btn-info" onclick="getActiveABTests()">获取活跃测试</button>
+            </div>
+            <div id="ab-test-result" class="api-result"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const BASE_URL = "http://localhost:5000";
+        const TEST_USER_ID = 1;
+
+        function logResult(containerId, message, success = true) {
+            const container = document.getElementById(containerId);
+            const timestamp = new Date().toLocaleTimeString();
+            const badge = success ? '<span class="badge bg-success">成功</span>' : '<span class="badge bg-danger">失败</span>';
+            container.innerHTML += `<div>${badge} [${timestamp}] ${message}</div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearResult(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        function getUserId() {
+            return parseInt(document.getElementById('userId').value) || TEST_USER_ID;
+        }
+
+        // 1. 用户参与度分析
+        async function analyzeUserEngagement() {
+            clearResult('engagement-result');
+            try {
+                const userId = getUserId();
+                const response = await fetch(`${BASE_URL}/api/smart-notifications/engagement/${userId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logResult('engagement-result', `用户 ${userId} 参与度: ${data.engagement_level} - ${data.description}`);
+                } else {
+                    logResult('engagement-result', `错误: ${data.detail}`, false);
+                }
+            } catch (error) {
+                logResult('engagement-result', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        async function analyzeAllUsersEngagement() {
+            clearResult('engagement-result');
+            logResult('engagement-result', '开始分析所有用户参与度...');
+            const userIds = [1, 2, 3, 4, 5];
+            
+            for (const userId of userIds) {
+                try {
+                    const response = await fetch(`${BASE_URL}/api/smart-notifications/engagement/${userId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        logResult('engagement-result', `用户 ${userId}: ${data.engagement_level}`);
+                    }
+                } catch (error) {
+                    logResult('engagement-result', `用户 ${userId} 分析失败`, false);
+                }
+            }
+        }
+
+        // 2. 通知效果分析
+        async function analyzeNotificationEffectiveness() {
+            clearResult('effectiveness-result');
+            try {
+                const userId = getUserId();
+                const notificationType = document.getElementById('notificationType').value;
+                
+                const response = await fetch(`${BASE_URL}/api/smart-notifications/effectiveness/${userId}/${notificationType}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logResult('effectiveness-result', `通知类型 "${notificationType}" 效果: ${data.effectiveness}`);
+                } else {
+                    logResult('effectiveness-result', `错误: ${data.detail}`, false);
+                }
+            } catch (error) {
+                logResult('effectiveness-result', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        async function compareNotificationTypes() {
+            clearResult('effectiveness-result');
+            logResult('effectiveness-result', '开始比较不同通知类型效果...');
+            const notificationTypes = ['weight_reminder', 'water_reminder', 'exercise_reminder', 'achievement'];
+            const userId = getUserId();
+            
+            for (const type of notificationTypes) {
+                try {
+                    const response = await fetch(`${BASE_URL}/api/smart-notifications/effectiveness/${userId}/${type}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        logResult('effectiveness-result', `${type}: ${data.effectiveness}`);
+                    }
+                } catch (error) {
+                    logResult('effectiveness-result', `${type} 分析失败`, false);
+                }
+            }
+        }
+
+        // 3. 最佳通知时间分析
+        async function analyzeOptimalTime() {
+            clearResult('optimal-time-result');
+            try {
+                const userId = getUserId();
+                const response = await fetch(`${BASE_URL}/api/smart-notifications/optimal-time/${userId}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logResult('optimal-time-result', `最佳通知时间: ${JSON.stringify(data.optimal_time)}`);
+                    logResult('optimal-time-result', `推荐: ${data.recommendation}`);
+                } else {
+                    logResult('optimal-time-result', `错误: ${data.detail}`, false);
+                }
+            } catch (error) {
+                logResult('optimal-time-result', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        // 4. 个性化通知内容
+        async function personalizeNotification() {
+            clearResult('personalization-result');
+            try {
+                const userId = getUserId();
+                const notificationType = document.getElementById('notificationType').value;
+                const baseContent = document.getElementById('baseContent').value;
+                
+                const response = await fetch(`${BASE_URL}/api/smart-notifications/personalize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        notification_type: notificationType,
+                        base_content: baseContent
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logResult('personalization-result', `原始: ${data.original_content}`);
+                    logResult('personalization-result', `个性化: ${data.personalized_content}`);
+                } else {
+                    logResult('personalization-result', `错误: ${data.detail}`, false);
+                }
+            } catch (error) {
+                logResult('personalization-result', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        // 5. 智能通知决策
+        async function shouldSendNotification() {
+            clearResult('decision-result');
+            try {
+                const userId = getUserId();
+                const notificationType = document.getElementById('notificationType').value;
+                
+                const response = await fetch(`${BASE_URL}/api/smart-notifications/should-send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        notification_type: notificationType
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const badge = data.should_send ? '<span class="badge bg-success">发送</span>' : '<span class="badge bg-warning">跳过</span>';
+                    logResult('decision-result', `决策结果: ${badge} ${data.recommendation}`);
+                    logResult('decision-result', `原因: ${data.reason}`);
+                } else {
+                    logResult('decision-result', `错误: ${data.detail}`, false);
+                }
+            } catch (error) {
+                logResult('decision-result', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        async function createSmartNotification() {
+            clearResult('decision-result');
+            try {
+                const userId = getUserId();
+                const notificationType = document.getElementById('notificationType').value;
+                const baseContent = document.getElementById('baseContent').value;
+                
+                const response = await fetch(`${BASE_URL}/api/smart-notifications/create-smart`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        notification_type: notificationType,
+                        title: '智能通知测试',
+                        message: baseContent,
+                        priority: 'medium',
+                        trigger_type: 'system',
+                        metadata: { test: true }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.success) {
+                        logResult('decision-result', `通知创建成功: ID=${data.notification_id}`);
+                    } else {
+                        logResult('decision-result', `通知创建跳过: ${data.message}`);
+                    }
+                } else {
+                    logResult('decision-result', `错误: ${data.detail}`, false);
+                }
+            } catch (error) {
+                logResult('decision-result', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        // 6. A/B测试管理
+        async function createABTest() {
+            clearResult('ab-test-result');
+            try {
+                const response = await fetch(`${BASE_URL}/api/smart-notifications/ab-test/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: '通知内容A/B测试',
+                        description: '测试不同通知内容对点击率的影响',
+                        test_type: 'notification_optimization',
+                        target_metric: 'click_through_rate',
+                        variants: [
+                            {
+                                name: '控制组',
+                                configuration: { content: '记得记录体重哦！', tone: '中性' },
+                                allocation_percentage: 50
+                            },
+                            {
+                                name: '实验组A',
+                                configuration: { content: '今天记录体重了吗？坚持就是胜利！', tone: '鼓励' },
+                                allocation_percentage: 25
+                            },
+                            {
+                                name: '实验组B',
+                                configuration: { content: '体重记录时间到！', tone: '提醒' },
+                                allocation_percentage: 25
+                            }
+                        ],
+                        duration_days: 7
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    logResult('ab-test-result', `A/B测试创建成功: ID=${data.test_id}`);
+                } else {
+                    logResult('ab-test-result', `错误: ${data.detail || '创建失败'}`, false);
+                }
+            } catch (error) {
+                logResult('ab-test-result', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        async function getActiveABTests() {
+            clearResult('ab-test-result');
+            try {
+                const response = await fetch(`${BASE_URL}/api/smart-notifications/ab-test/active`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    logResult('ab-test-result', `活跃测试数量: ${data.active_tests.length}`);
+                    data.active_tests.forEach(test => {
+                        logResult('ab-test-result', `- ${test.name} (ID=${test.id}, 变体=${test.variants})`);
+                    });
+                } else {
+                    logResult('ab-test-result', `错误: ${data.detail}`, false);
+                }
+            } catch (error) {
+                logResult('ab-test-result', `请求失败: ${error.message}`, false);
+            }
+        }
+    </script>
+</body>
+</html>

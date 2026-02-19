@@ -1,0 +1,539 @@
+/** 核心问题收集系统样式 */
+
+/* 遮罩层 */
+.core-profiling-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    padding: 16px;
+}
+
+.core-profiling-overlay.active {
+    opacity: 1;
+}
+
+/* 主容器 */
+.core-profiling-container {
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* 卡片 */
+.core-profiling-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: cardSlideIn 0.4s ease-out;
+}
+
+@keyframes cardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* 进度条区域 */
+.core-profiling-progress {
+    padding: 20px 24px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.progress-text {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    opacity: 0.9;
+}
+
+.progress-current {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.progress-divider {
+    margin: 0 4px;
+    opacity: 0.7;
+}
+
+.progress-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: white;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.progress-hint {
+    font-size: 0.8rem;
+    opacity: 0.85;
+}
+
+/* 问题内容区域 */
+.core-question-content {
+    padding: 24px;
+}
+
+.core-question-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+/* 选项按钮 */
+.core-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.core-option-btn {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    background: #f8f9fa;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    font-size: 1rem;
+    color: #333;
+}
+
+.core-option-btn:hover {
+    background: #e9ecef;
+    border-color: #667eea;
+    transform: translateX(4px);
+}
+
+.core-option-btn:active {
+    transform: scale(0.98);
+}
+
+.option-emoji {
+    font-size: 1.5rem;
+    margin-right: 12px;
+}
+
+.option-text {
+    flex: 1;
+}
+
+/* 表单样式 */
+.core-form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.core-form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.core-form-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.core-form-input-wrapper {
+    position: relative;
+}
+
+.core-form-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.core-form-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.core-form-input.error {
+    border-color: #ff3b30;
+    background: #fff5f5;
+}
+
+.input-unit {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 0.9rem;
+}
+
+/* 按钮 */
+.core-btn {
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.core-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.core-btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.core-btn-secondary {
+    background: #f8f9fa;
+    color: #666;
+    border: 2px solid #e9ecef;
+}
+
+.core-btn-secondary:hover {
+    background: #e9ecef;
+}
+
+.btn-hint {
+    font-size: 0.8rem;
+    font-weight: 400;
+    opacity: 0.7;
+}
+
+/* 庆祝界面 */
+.core-celebration {
+    padding: 32px 24px;
+    text-align: center;
+}
+
+.celebration-emoji {
+    font-size: 4rem;
+    margin-bottom: 12px;
+    animation: celebrationBounce 1s ease infinite;
+}
+
+@keyframes celebrationBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.celebration-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.celebration-subtitle {
+    font-size: 1.1rem;
+    color: #666;
+    margin-bottom: 24px;
+}
+
+.celebration-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #ddd, transparent);
+    margin: 24px 0;
+}
+
+/* 欢迎区域 */
+.welcome-section {
+    text-align: left;
+}
+
+.welcome-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.welcome-subtitle {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 16px;
+}
+
+.welcome-features {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+.feature-check {
+    width: 20px;
+    height: 20px;
+    background: #34c759;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.celebration-actions {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 功能区引导 */
+.function-guide {
+    padding: 24px;
+}
+
+.guide-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.function-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.function-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px;
+    background: #f8f9fa;
+    border-radius: 16px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.function-item:hover {
+    background: #e9ecef;
+    border-color: #667eea;
+    transform: translateY(-2px);
+}
+
+.function-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+}
+
+.function-name {
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+/* 动画类 */
+.slide-out {
+    animation: slideOut 0.2s ease-out forwards;
+}
+
+@keyframes slideOut {
+    to {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* 通知卡片样式 */
+.notification-message-card {
+    position: relative;
+}
+
+.notification-priority-high {
+    animation: notificationPulse 2s ease infinite;
+}
+
+@keyframes notificationPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(255, 59, 48, 0); }
+}
+
+@keyframes notificationSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes notificationSlideOut {
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+/* 登录提示样式 */
+.core-profiling-login-prompt {
+    background: white;
+    border-radius: 20px;
+    padding: 40px 32px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 360px;
+    width: 100%;
+    animation: cardSlideIn 0.4s ease-out;
+}
+
+.login-prompt-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+}
+
+.login-prompt-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.login-prompt-text {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.login-prompt-btn {
+    width: 100%;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 12px;
+}
+
+.login-prompt-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.login-prompt-skip {
+    width: 100%;
+    padding: 12px 24px;
+    background: transparent;
+    color: #999;
+    border: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.login-prompt-skip:hover {
+    color: #666;
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+    .core-profiling-container {
+        max-width: 100%;
+    }
+    
+    .core-profiling-card {
+        border-radius: 16px;
+    }
+    
+    .core-question-title {
+        font-size: 1.1rem;
+    }
+    
+    .core-option-btn {
+        padding: 12px 14px;
+    }
+    
+    .function-grid {
+        gap: 8px;
+    }
+    
+    .function-item {
+        padding: 16px 12px;
+    }
+    
+    .core-profiling-login-prompt {
+        padding: 32px 24px;
+        margin: 16px;
+    }
+}

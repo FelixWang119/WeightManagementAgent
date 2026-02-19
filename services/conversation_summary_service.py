@@ -26,6 +26,12 @@ class ConversationSummaryService:
         "mood": r"(开心|难过|焦虑|压力|疲惫|精力充沛|累)",
         "food": r"(米饭|面条|馒头|粥|鸡胸肉|牛肉|猪肉|蔬菜|水果|牛奶|豆浆)",
         "symptom": r"(头疼|胃疼|感冒|发烧|咳嗽|失眠|头晕)",
+        # 打卡记录模式
+        "weight_checkin": r"【体重打卡】记录了体重：(\d+(?:\.\d+)?)公斤",
+        "exercise_checkin": r"【运动打卡】(\S+)\s+(\d+)分钟",
+        "water_checkin": r"【饮水打卡】喝了(\d+)毫升水",
+        "sleep_checkin": r"【睡眠打卡】睡了(\d+(?:\.\d+)?)小时",
+        "meal_checkin": r"【(\S+)打卡】记录了：(.+?)，热量(\d+)卡路里",
     }
 
     @staticmethod
@@ -281,6 +287,84 @@ class ConversationSummaryService:
             for g in goals:
                 key_info["goals"].append({"value": float(g), "unit": "kg"})
 
+        # 提取打卡记录
+        checkin_records = []
+
+        # 体重打卡
+        weight_checkins = re.findall(
+            ConversationSummaryService.KEY_PATTERNS["weight_checkin"], combined_text
+        )
+        for weight in weight_checkins:
+            checkin_records.append(
+                {
+                    "type": "weight",
+                    "value": float(weight),
+                    "unit": "kg",
+                    "source": "checkin",
+                }
+            )
+
+        # 运动打卡
+        exercise_checkins = re.findall(
+            ConversationSummaryService.KEY_PATTERNS["exercise_checkin"], combined_text
+        )
+        for ex_type, duration in exercise_checkins:
+            checkin_records.append(
+                {
+                    "type": "exercise",
+                    "exercise_type": ex_type,
+                    "duration": int(duration),
+                    "unit": "分钟",
+                    "source": "checkin",
+                }
+            )
+
+        # 饮水打卡
+        water_checkins = re.findall(
+            ConversationSummaryService.KEY_PATTERNS["water_checkin"], combined_text
+        )
+        for amount in water_checkins:
+            checkin_records.append(
+                {
+                    "type": "water",
+                    "amount": int(amount),
+                    "unit": "毫升",
+                    "source": "checkin",
+                }
+            )
+
+        # 睡眠打卡
+        sleep_checkins = re.findall(
+            ConversationSummaryService.KEY_PATTERNS["sleep_checkin"], combined_text
+        )
+        for hours in sleep_checkins:
+            checkin_records.append(
+                {
+                    "type": "sleep",
+                    "duration": float(hours),
+                    "unit": "小时",
+                    "source": "checkin",
+                }
+            )
+
+        # 餐食打卡
+        meal_checkins = re.findall(
+            ConversationSummaryService.KEY_PATTERNS["meal_checkin"], combined_text
+        )
+        for meal_type, content, calories in meal_checkins:
+            checkin_records.append(
+                {
+                    "type": "meal",
+                    "meal_type": meal_type,
+                    "content": content,
+                    "calories": int(calories),
+                    "source": "checkin",
+                }
+            )
+
+        if checkin_records:
+            key_info["checkins"] = checkin_records
+
         # 清理空列表
         key_info = {k: v for k, v in key_info.items() if v}
 
@@ -296,18 +380,61 @@ class ConversationSummaryService:
         # 基本统计
         lines.append(f"本周共进行了{stats['user_messages']}次对话。")
 
-        # 体重变化
-        if "weights" in key_info and key_info["weights"]:
-            weights = key_info["weights"]
-            if len(weights) >= 2:
-                diff = weights[-1]["value"] - weights[0]["value"]
+        # 打卡记录统计
+        checkin_stats = {}
+        if "checkins" in key_info:
+            for checkin in key_info["checkins"]:
+                checkin_type = checkin["type"]
+                if checkin_type not in checkin_stats:
+                    checkin_stats[checkin_type] = 0
+                checkin_stats[checkin_type] += 1
+
+        if checkin_stats:
+            checkin_lines = []
+            for checkin_type, count in checkin_stats.items():
+                type_names = {
+                    "weight": "体重",
+                    "exercise": "运动",
+                    "water": "饮水",
+                    "sleep": "睡眠",
+                    "meal": "餐食",
+                }
+                name = type_names.get(checkin_type, checkin_type)
+                checkin_lines.append(f"{name}{count}次")
+
+            if checkin_lines:
+                lines.append(f"健康打卡：{', '.join(checkin_lines)}。")
+
+        # 体重变化（区分实际体重和目标体重）
+        actual_weights = []
+        goal_weights = []
+
+        if "weights" in key_info:
+            for weight in key_info["weights"]:
+                # 检查是否来自打卡记录
+                if "checkins" in key_info:
+                    checkin_weights = [
+                        c for c in key_info["checkins"] if c["type"] == "weight"
+                    ]
+                    if checkin_weights:
+                        actual_weights.extend([c["value"] for c in checkin_weights])
+
+        if "goals" in key_info:
+            goal_weights = [g["value"] for g in key_info["goals"]]
+
+        if actual_weights:
+            if len(actual_weights) >= 2:
+                diff = actual_weights[-1] - actual_weights[0]
                 direction = "下降" if diff < 0 else "增加"
                 lines.append(
-                    f"体重从{weights[0]['value']}kg{direction}到{weights[-1]['value']}kg，"
-                    f"共{abs(diff):.1f}kg。"
+                    f"体重从{actual_weights[0]}kg{direction}到{actual_weights[-1]}kg，"
+                    f"变化{abs(diff):.1f}kg。"
                 )
-            elif len(weights) == 1:
-                lines.append(f"记录体重为{weights[0]['value']}kg。")
+            elif len(actual_weights) == 1:
+                lines.append(f"当前体重{actual_weights[0]}kg。")
+
+        if goal_weights:
+            lines.append(f"减重目标：{goal_weights[0]}kg。")
 
         # 运动情况
         if "exercises" in key_info and key_info["exercises"]:
@@ -320,19 +447,14 @@ class ConversationSummaryService:
         # 饮食习惯
         if "foods" in key_info and key_info["foods"]:
             foods = key_info["foods"]
-            lines.append(f"提到的食物有：{', '.join(foods[:5])}。")
+            lines.append(f"饮食包含：{', '.join(foods[:5])}。")
 
         # 情绪状态
         if "moods" in key_info and key_info["moods"]:
             moods = key_info["moods"]
             lines.append(f"近期情绪：{', '.join(set(moods))}。")
 
-        # 目标
-        if "goals" in key_info and key_info["goals"]:
-            goal = key_info["goals"][0]
-            lines.append(f"减重目标：{goal['value']}kg。")
-
-        if not lines:
+        if not lines or (len(lines) == 1 and "本周共进行了" in lines[0]):
             lines.append("本周主要是日常健康咨询对话。")
 
         return " ".join(lines)

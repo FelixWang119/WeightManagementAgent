@@ -9,9 +9,21 @@ from sqlalchemy import select, func, and_, desc
 from typing import List, Optional
 from datetime import datetime, date, timedelta
 
-from models.database import get_db, User, SleepRecord
+from models.database import (
+    get_db,
+    User,
+    SleepRecord,
+    ChatHistory,
+    MessageRole,
+    MessageType,
+)
 from api.routes.user import get_current_user
 from services.sleep_analysis_service import SleepAnalysisService
+from services.integration_service import AchievementIntegrationService
+from services.langchain.memory import CheckinSyncService
+from config.logging_config import get_module_logger
+
+logger = get_module_logger(__name__)
 
 router = APIRouter()
 
@@ -21,8 +33,13 @@ def convert_12h_to_datetime(time_str: str, period: str, base_date: date) -> date
     hour = int(time_str.split(":")[0])
     minute = int(time_str.split(":")[1]) if ":" in time_str else 0
 
-    if period.upper() == "PM" and hour != 12:
-        hour += 12
+    # 验证小时数
+    if hour < 1 or hour > 12:
+        raise ValueError(f"12小时制时间的小时数必须在1-12之间: {time_str}")
+
+    if period.upper() == "PM":
+        if hour != 12:
+            hour += 12
     elif period.upper() == "AM" and hour == 12:
         hour = 0
 
@@ -61,8 +78,11 @@ async def record_sleep(
     else:
         base_date = date.today() - timedelta(days=1)
 
-    bed_datetime = convert_12h_to_datetime(bed_time, bed_period, base_date)
-    wake_datetime = convert_12h_to_datetime(wake_time, wake_period, base_date)
+    try:
+        bed_datetime = convert_12h_to_datetime(bed_time, bed_period, base_date)
+        wake_datetime = convert_12h_to_datetime(wake_time, wake_period, base_date)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"时间格式错误: {e}")
 
     if wake_datetime <= bed_datetime:
         wake_datetime += timedelta(days=1)
@@ -109,6 +129,29 @@ async def record_sleep(
             },
         }
 
+
+@router.post("/sync-memory")
+async def sync_sleep_memory(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    同步睡眠记录到LangChain记忆系统
+    """
+    try:
+        sync_service = CheckinSyncService()
+        sync_result = await sync_service.sync_user_checkins(
+            int(current_user.id), force=True
+        )
+
+        return {
+            "success": True,
+            "message": "睡眠记录同步完成",
+            "data": sync_result,
+        }
+    except Exception as e:
+        logger.error(f"同步睡眠记录到记忆系统失败: {e}")
+        raise HTTPException(status_code=500, detail=f"同步失败: {str(e)}")
+
     record = SleepRecord(
         user_id=current_user.id,
         bed_time=bed_datetime,
@@ -121,6 +164,62 @@ async def record_sleep(
     db.add(record)
     await db.commit()
     await db.refresh(record)
+
+    # 异步处理成就和积分检查
+    try:
+        await AchievementIntegrationService.process_sleep_record(
+            user_id=int(current_user.id), record_id=int(record.id), db=db
+        )
+    except Exception as e:
+        # 记录集成失败告警，但不影响主流程
+        logger.warning("睡眠记录成就积分集成失败: %s", e)
+
+    # 保存睡眠记录到对话历史，让AI助手记住
+    try:
+        # 构建睡眠记录描述
+        duration_hours = round(duration / 60, 1)
+        sleep_description = f"【睡眠打卡】睡了{duration_hours}小时"
+        if quality:
+            quality_stars = "★" * quality + "☆" * (5 - quality)
+            sleep_description += f"，质量{quality_stars}"
+
+        # 保存到对话历史
+        meta_data = {
+            "event_type": "sleep_record",
+            "duration_hours": duration_hours,
+            "duration_minutes": int(duration),
+            "quality": quality,
+            "bed_time": bed_datetime.isoformat(),
+            "wake_time": wake_datetime.isoformat(),
+            "record_id": record.id,
+        }
+
+        chat_message = ChatHistory(
+            user_id=current_user.id,
+            role=MessageRole.USER,
+            content=sleep_description,
+            msg_type=MessageType.TEXT,
+            meta_data=meta_data,
+            created_at=datetime.utcnow(),
+        )
+        db.add(chat_message)
+        await db.commit()
+
+        logger.info(f"睡眠记录已保存到对话历史: {sleep_description}")
+    except Exception as chat_error:
+        logger.warning(f"保存睡眠记录到对话历史失败: {chat_error}")
+        # 不中断主流程，继续执行
+
+    # 同步到LangChain记忆系统
+    try:
+        sync_service = CheckinSyncService()
+        sync_result = await sync_service.sync_recent_checkins(
+            int(current_user.id), hours=1
+        )
+        logger.info(f"睡眠记录同步到记忆系统: {sync_result}")
+    except Exception as sync_error:
+        logger.warning(f"同步睡眠记录到记忆系统失败: {sync_error}")
+        # 不中断主流程，继续执行
 
     quality_assessment = assess_sleep_quality(int(duration), quality)
 

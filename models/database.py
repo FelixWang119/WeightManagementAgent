@@ -104,6 +104,7 @@ class ReminderType(str, enum.Enum):
     WATER = "water"
     SLEEP = "sleep"
     WEEKLY = "weekly"
+    DAILY = "daily"  # 日报提醒
 
 
 class FoodCategory(str, enum.Enum):
@@ -567,6 +568,28 @@ class WeeklyReport(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class DailyReport(Base):
+    """每日报告表"""
+
+    __tablename__ = "daily_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    report_date = Column(Date, comment="报告日期")
+    summary_text = Column(Text, comment="AI生成的日报总结")
+    weight = Column(Float, comment="当日体重（kg）")
+    calories_in = Column(Integer, comment="摄入热量（千卡）")
+    calories_out = Column(Integer, comment="消耗热量（千卡）")
+    calorie_deficit = Column(Integer, comment="热量缺口（千卡）")
+    water_intake = Column(Integer, comment="饮水量（ml）")
+    sleep_hours = Column(Float, comment="睡眠时长（小时）")
+    exercise_minutes = Column(Integer, comment="运动时长（分钟）")
+    highlights = Column(JSON, comment="今日亮点（JSON）")
+    tips = Column(JSON, comment="温馨提示（JSON）")
+    suggestions = Column(JSON, comment="明日建议（JSON）")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class ReminderSetting(Base):
     """提醒设置表"""
 
@@ -599,6 +622,10 @@ class NotificationQueue(Base):
     max_retries = Column(Integer, default=3)
     error_message = Column(Text, nullable=True)
     channel = Column(String(20), default="chat")
+    content_type = Column(
+        String(50), nullable=True, comment="内容类型，如daily_report/weekly_report"
+    )
+    content_data = Column(JSON, nullable=True, comment="内容数据（JSON格式）")
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     updated_at = Column(
         DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
@@ -606,6 +633,109 @@ class NotificationQueue(Base):
 
     def __repr__(self):
         return f"<NotificationQueue {self.id} user={self.user_id} type={self.reminder_type} status={self.status}>"
+
+
+# ============ A/B测试相关模型 ============
+
+
+class ABTest(Base):
+    """A/B测试表"""
+
+    __tablename__ = "ab_tests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, comment="测试名称")
+    description = Column(Text, nullable=True, comment="测试描述")
+    test_type = Column(String(50), nullable=False, comment="测试类型")
+    target_metric = Column(String(50), nullable=False, comment="目标指标")
+    status = Column(String(20), default="draft", comment="测试状态")
+    target_users = Column(JSON, nullable=True, comment="目标用户列表")
+    sample_size = Column(Integer, nullable=True, comment="样本量")
+    start_date = Column(DateTime, nullable=True, comment="开始时间")
+    end_date = Column(DateTime, nullable=True, comment="结束时间")
+    duration_days = Column(Integer, default=7, comment="测试天数")
+    winning_variant_id = Column(Integer, nullable=True, comment="获胜变体ID")
+    results_summary = Column(JSON, nullable=True, comment="结果摘要")
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )
+
+    variants = relationship(
+        "ABTestVariant", back_populates="test", cascade="all, delete-orphan"
+    )
+    results = relationship(
+        "ABTestResult", back_populates="test", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<ABTest {self.id} name={self.name} status={self.status}>"
+
+
+class ABTestVariant(Base):
+    """A/B测试变体表"""
+
+    __tablename__ = "ab_test_variants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    test_id = Column(Integer, ForeignKey("ab_tests.id"), index=True, nullable=False)
+    name = Column(String(50), nullable=False, comment="变体名称")
+    variant_type = Column(String(20), default="treatment", comment="变体类型")
+    configuration = Column(JSON, nullable=False, comment="变体配置")
+    allocation_percentage = Column(Integer, default=50, comment="分配百分比")
+    is_default = Column(Boolean, default=False, comment="是否默认变体")
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )
+
+    test = relationship("ABTest", back_populates="variants")
+    results = relationship(
+        "ABTestResult", back_populates="variant", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<ABTestVariant {self.id} test={self.test_id} name={self.name}>"
+
+
+class ABTestResult(Base):
+    """A/B测试结果表"""
+
+    __tablename__ = "ab_test_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    test_id = Column(Integer, ForeignKey("ab_tests.id"), index=True, nullable=False)
+    user_id = Column(Integer, index=True, nullable=False, comment="用户ID")
+    variant_id = Column(
+        Integer, ForeignKey("ab_test_variants.id"), index=True, nullable=False
+    )
+    assigned_at = Column(
+        DateTime, nullable=False, default=datetime.now, comment="分配时间"
+    )
+    exposed_at = Column(DateTime, nullable=True, comment="曝光时间")
+    clicked_at = Column(DateTime, nullable=True, comment="点击时间")
+    converted_at = Column(DateTime, nullable=True, comment="转化时间")
+    negative_feedback_at = Column(DateTime, nullable=True, comment="负面反馈时间")
+    exposure_count = Column(Integer, default=0, comment="曝光次数")
+    click_count = Column(Integer, default=0, comment="点击次数")
+    conversion_count = Column(Integer, default=0, comment="转化次数")
+    negative_feedback_count = Column(Integer, default=0, comment="负面反馈次数")
+    conversion_value = Column(Float, nullable=True, comment="转化价值")
+    meta_data = Column(JSON, nullable=True, comment="元数据")
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )
+
+    test = relationship("ABTest", back_populates="results")
+    variant = relationship("ABTestVariant", back_populates="results")
+
+    __table_args__ = (
+        Index("idx_ab_test_result_user_test", "user_id", "test_id", unique=True),
+    )
+
+    def __repr__(self):
+        return f"<ABTestResult {self.id} test={self.test_id} user={self.user_id} variant={self.variant_id}>"
 
 
 class ProfilingAnswer(Base):
@@ -777,9 +907,10 @@ class SystemBackup(Base):
 from config.settings import fastapi_settings
 
 # 创建异步引擎（带连接池配置）
+# 强制关闭echo，使用日志系统控制SQL输出
 engine = create_async_engine(
     fastapi_settings.DATABASE_URL,
-    echo=fastapi_settings.DEBUG,  # 调试模式下打印SQL
+    echo=False,  # 强制关闭SQL输出，使用日志系统控制
     future=True,
     pool_size=10,  # 连接池大小
     max_overflow=20,  # 最大溢出连接数
@@ -834,3 +965,7 @@ async def init_db():
         )
         raise
     print("✅ 数据库初始化完成")
+
+
+# 积分历史模型在points_history.py中定义
+# 避免循环导入，不在这里导入

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通知设置测试页面</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .api-result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .btn-group {
+            margin-bottom: 10px;
+        }
+        .status-badge {
+            font-size: 0.8em;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">通知设置测试页面</h1>
+        
+        <div class="test-section">
+            <h3>1. 通知设置API测试</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="testGetSettings()">获取通知设置</button>
+                <button class="btn btn-success" onclick="testUpdateSettings()">更新通知设置</button>
+                <button class="btn btn-info" onclick="testGetReminders()">获取提醒列表</button>
+                <button class="btn btn-warning" onclick="testAddReminder()">添加新提醒</button>
+            </div>
+            <div id="api-result-1" class="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. 通知服务测试</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="testCreateNotification()">创建通知</button>
+                <button class="btn btn-success" onclick="testGetUserNotifications()">获取用户通知</button>
+                <button class="btn btn-info" onclick="testMarkAsRead()">标记为已读</button>
+                <button class="btn btn-warning" onclick="testDeleteNotification()">删除通知</button>
+            </div>
+            <div id="api-result-2" class="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 通知设置组件测试</h3>
+            <div id="notification-settings-container"></div>
+            <div class="btn-group mt-3">
+                <button class="btn btn-primary" onclick="loadNotificationSettings()">加载组件</button>
+                <button class="btn btn-success" onclick="getComponentData()">获取组件数据</button>
+                <button class="btn btn-info" onclick="saveComponentData()">保存组件数据</button>
+            </div>
+            <div id="api-result-3" class="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 通知触发测试</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="testTimeTrigger()">时间触发测试</button>
+                <button class="btn btn-success" onclick="testEventTrigger()">事件触发测试</button>
+                <button class="btn btn-info" onclick="testAchievementTrigger()">成就触发测试</button>
+                <button class="btn btn-warning" onclick="testGoalProgressTrigger()">目标进度触发</button>
+                <button class="btn btn-danger" onclick="testDataAnomalyTrigger()">数据异常触发</button>
+            </div>
+            <div id="api-result-4" class="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. 系统状态</h3>
+            <div id="system-status">
+                <p>等待测试...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/components/NotificationSettings.js"></script>
+    <script>
+        const userId = 1; // 测试用户ID
+        let notificationSettingsComponent = null;
+
+        function logResult(containerId, message, success = true) {
+            const container = document.getElementById(containerId);
+            const timestamp = new Date().toLocaleTimeString();
+            const badge = success ? 
+                '<span class="badge bg-success status-badge">成功</span>' : 
+                '<span class="badge bg-danger status-badge">失败</span>';
+            
+            container.innerHTML += `<div>${badge} [${timestamp}] ${message}</div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearResult(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        // 1. 通知设置API测试
+        async function testGetSettings() {
+            clearResult('api-result-1');
+            try {
+                const response = await fetch(`/api/notification-settings/${userId}`);
+                const data = await response.json();
+                logResult('api-result-1', `获取通知设置: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-1', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testUpdateSettings() {
+            clearResult('api-result-1');
+            try {
+                const settings = {
+                    global_enabled: true,
+                    notification_types: {
+                        weight_reminder: true,
+                        water_reminder: true,
+                        exercise_reminder: true,
+                        achievement_notification: true,
+                        system_notification: true
+                    },
+                    quiet_hours: {
+                        enabled: true,
+                        start_time: "22:00",
+                        end_time: "07:00"
+                    },
+                    notification_frequency: "immediate"
+                };
+                
+                const response = await fetch(`/api/notification-settings/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                const data = await response.json();
+                logResult('api-result-1', `更新通知设置: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-1', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testGetReminders() {
+            clearResult('api-result-1');
+            try {
+                const response = await fetch(`/api/notification-settings/${userId}/reminders`);
+                const data = await response.json();
+                logResult('api-result-1', `获取提醒列表: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-1', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testAddReminder() {
+            clearResult('api-result-1');
+            try {
+                const reminder = {
+                    reminder_type: "water",
+                    title: "喝水提醒",
+                    message: "记得喝水哦！",
+                    trigger_time: "10:00",
+                    repeat_days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+                    enabled: true
+                };
+                
+                const response = await fetch(`/api/notification-settings/${userId}/reminders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reminder)
+                });
+                const data = await response.json();
+                logResult('api-result-1', `添加提醒: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-1', `错误: ${error.message}`, false);
+            }
+        }
+
+        // 2. 通知服务测试
+        async function testCreateNotification() {
+            clearResult('api-result-2');
+            try {
+                const notification = {
+                    user_id: userId,
+                    title: "测试通知",
+                    message: "这是一个测试通知消息",
+                    notification_type: "system",
+                    priority: "medium",
+                    trigger_type: "manual",
+                    metadata: { test: true }
+                };
+                
+                const response = await fetch('/api/notifications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(notification)
+                });
+                const data = await response.json();
+                logResult('api-result-2', `创建通知: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-2', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testGetUserNotifications() {
+            clearResult('api-result-2');
+            try {
+                const response = await fetch(`/api/notifications/user/${userId}?limit=5`);
+                const data = await response.json();
+                logResult('api-result-2', `获取用户通知: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-2', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testMarkAsRead() {
+            clearResult('api-result-2');
+            try {
+                const response = await fetch(`/api/notifications/user/${userId}/mark-read`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                logResult('api-result-2', `标记为已读: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-2', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testDeleteNotification() {
+            clearResult('api-result-2');
+            try {
+                const response = await fetch(`/api/notifications/user/${userId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                logResult('api-result-2', `删除通知: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-2', `错误: ${error.message}`, false);
+            }
+        }
+
+        // 3. 通知设置组件测试
+        function loadNotificationSettings() {
+            clearResult('api-result-3');
+            try {
+                const container = document.getElementById('notification-settings-container');
+                container.innerHTML = '';
+                
+                notificationSettingsComponent = new NotificationSettings({
+                    userId: userId,
+                    container: container,
+                    onSave: (data) => {
+                        logResult('api-result-3', `组件保存回调: ${JSON.stringify(data)}`);
+                    },
+                    onError: (error) => {
+                        logResult('api-result-3', `组件错误: ${error}`, false);
+                    }
+                });
+                
+                notificationSettingsComponent.render();
+                logResult('api-result-3', '通知设置组件加载成功');
+            } catch (error) {
+                logResult('api-result-3', `组件加载错误: ${error.message}`, false);
+            }
+        }
+
+        function getComponentData() {
+            clearResult('api-result-3');
+            if (!notificationSettingsComponent) {
+                logResult('api-result-3', '请先加载组件', false);
+                return;
+            }
+            
+            try {
+                const data = notificationSettingsComponent.getData();
+                logResult('api-result-3', `组件数据: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-3', `获取数据错误: ${error.message}`, false);
+            }
+        }
+
+        function saveComponentData() {
+            clearResult('api-result-3');
+            if (!notificationSettingsComponent) {
+                logResult('api-result-3', '请先加载组件', false);
+                return;
+            }
+            
+            try {
+                notificationSettingsComponent.save();
+                logResult('api-result-3', '组件保存成功');
+            } catch (error) {
+                logResult('api-result-3', `保存错误: ${error.message}`, false);
+            }
+        }
+
+        // 4. 通知触发测试
+        async function testTimeTrigger() {
+            clearResult('api-result-4');
+            try {
+                const response = await fetch('/api/notifications/trigger/time', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, trigger_time: new Date().toISOString() })
+                });
+                const data = await response.json();
+                logResult('api-result-4', `时间触发: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-4', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testEventTrigger() {
+            clearResult('api-result-4');
+            try {
+                const response = await fetch('/api/notifications/trigger/event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: userId, 
+                        event_type: "weight_recorded",
+                        event_data: { weight: 65.5, unit: "kg" }
+                    })
+                });
+                const data = await response.json();
+                logResult('api-result-4', `事件触发: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-4', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testAchievementTrigger() {
+            clearResult('api-result-4');
+            try {
+                const response = await fetch('/api/notifications/trigger/achievement', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: userId, 
+                        achievement_id: "weight_loss_5kg",
+                        achievement_name: "减重5公斤"
+                    })
+                });
+                const data = await response.json();
+                logResult('api-result-4', `成就触发: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-4', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testGoalProgressTrigger() {
+            clearResult('api-result-4');
+            try {
+                const response = await fetch('/api/notifications/trigger/goal-progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: userId, 
+                        goal_type: "weight_loss",
+                        current_progress: 75,
+                        target_progress: 100
+                    })
+                });
+                const data = await response.json();
+                logResult('api-result-4', `目标进度触发: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-4', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testDataAnomalyTrigger() {
+            clearResult('api-result-4');
+            try {
+                const response = await fetch('/api/notifications/trigger/data-anomaly', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: userId, 
+                        metric_type: "weight",
+                        current_value: 80.5,
+                        expected_range: { min: 60, max: 75 },
+                        anomaly_type: "high"
+                    })
+                });
+                const data = await response.json();
+                logResult('api-result-4', `数据异常触发: ${JSON.stringify(data)}`);
+            } catch (error) {
+                logResult('api-result-4', `错误: ${error.message}`, false);
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('system-status').innerHTML = `
+                <p><span class="badge bg-success">系统就绪</span> 可以开始测试</p>
+                <p>测试用户ID: ${userId}</p>
+                <p>当前时间: ${new Date().toLocaleString()}</p>
+            `;
+        });
+    </script>
+</body>
+</html>

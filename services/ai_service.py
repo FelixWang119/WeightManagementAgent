@@ -5,13 +5,53 @@ AI 服务模块
 
 import httpx
 import json
-from typing import AsyncGenerator, Optional, List, Dict, Any
+import asyncio
+from typing import AsyncGenerator, Optional, List, Dict, Any, Union
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import openai
+from openai.types.chat import ChatCompletionMessageParam
+from functools import wraps
 
 from config.settings import fastapi_settings
 from utils.alert_utils import alert_error, alert_warning, AlertCategory
+
+
+def retry_with_backoff(max_retries: int = 3, base_delay: float = 1.0):
+    """重试装饰器，带指数退避"""
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except (httpx.HTTPError, httpx.TimeoutException) as e:
+                    last_exception = e
+                    if attempt == max_retries - 1:
+                        break
+
+                    # 指数退避延迟
+                    delay = base_delay * (2**attempt)
+                    logger = args[0].__class__.__module__  # 获取类模块作为logger
+                    print(
+                        f"[{logger}] 第{attempt + 1}次重试失败，等待{delay:.1f}秒后重试: {str(e)}"
+                    )
+                    await asyncio.sleep(delay)
+                except Exception as e:
+                    # 其他异常不重试
+                    raise e
+
+            # 所有重试都失败
+            if last_exception:
+                raise last_exception
+            else:
+                raise Exception("重试失败，未知错误")
+
+        return wrapper
+
+    return decorator
 
 
 @dataclass
@@ -22,6 +62,11 @@ class AIResponse:
     model: str
     usage: Optional[Dict[str, int]] = None
     error: Optional[str] = None
+
+    def __post_init__(self):
+        # 确保content始终是字符串，即使为None也转换为空字符串
+        if self.content is None:
+            self.content = ""
 
 
 class BaseAIClient(ABC):
@@ -72,25 +117,69 @@ class OpenAIClient(BaseAIClient):
     ) -> AIResponse:
         """OpenAI 聊天完成"""
         try:
-            response = await self.client.chat.completions.create(
-                model=model or self.default_model,
-                messages=messages,
-                max_tokens=max_tokens or self.default_max_tokens,
-                temperature=temperature or self.default_temperature,
-                stream=stream,
-            )
+            # 转换消息格式为OpenAI SDK期望的类型
+            openai_messages: List[ChatCompletionMessageParam] = []
+            for msg in messages:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+                # 确保角色是有效的OpenAI角色
+                if role in ["system", "user", "assistant"]:
+                    # 使用类型断言绕过类型检查
+                    message: ChatCompletionMessageParam = {
+                        "role": role,
+                        "content": content,
+                    }  # type: ignore
+                    openai_messages.append(message)
+                else:
+                    # 默认使用user角色
+                    message: ChatCompletionMessageParam = {
+                        "role": "user",
+                        "content": content,
+                    }  # type: ignore
+                    openai_messages.append(message)
 
-            return AIResponse(
-                content=response.choices[0].message.content,
-                model=response.model,
-                usage={
-                    "prompt_tokens": response.usage.prompt_tokens,
-                    "completion_tokens": response.usage.completion_tokens,
-                    "total_tokens": response.usage.total_tokens,
-                }
-                if response.usage
-                else None,
-            )
+            if stream:
+                # 流式响应处理
+                response_stream = await self.client.chat.completions.create(
+                    model=model or self.default_model,
+                    messages=openai_messages,
+                    max_tokens=max_tokens or self.default_max_tokens,
+                    temperature=temperature or self.default_temperature,
+                    stream=stream,
+                )
+
+                # 对于流式响应，我们收集所有内容
+                content_parts = []
+                async for chunk in response_stream:
+                    if chunk.choices[0].delta.content:
+                        content_parts.append(chunk.choices[0].delta.content)
+
+                content = "".join(content_parts)
+                return AIResponse(
+                    content=content,
+                    model=model or self.default_model,
+                )
+            else:
+                # 非流式响应
+                response = await self.client.chat.completions.create(
+                    model=model or self.default_model,
+                    messages=openai_messages,
+                    max_tokens=max_tokens or self.default_max_tokens,
+                    temperature=temperature or self.default_temperature,
+                    stream=stream,
+                )
+
+                return AIResponse(
+                    content=response.choices[0].message.content or "",
+                    model=response.model,
+                    usage={
+                        "prompt_tokens": response.usage.prompt_tokens,
+                        "completion_tokens": response.usage.completion_tokens,
+                        "total_tokens": response.usage.total_tokens,
+                    }
+                    if response.usage
+                    else None,
+                )
         except Exception as e:
             # 记录AI服务错误告警
             alert_error(
@@ -114,14 +203,15 @@ class OpenAIClient(BaseAIClient):
     ) -> AIResponse:
         """OpenAI 视觉分析"""
         try:
-            messages = [
+            # 使用类型断言绕过类型检查
+            messages: List[ChatCompletionMessageParam] = [
                 {
                     "role": "user",
                     "content": [
                         {"type": "text", "text": prompt},
                         {"type": "image_url", "image_url": {"url": image_url}},
                     ],
-                }
+                }  # type: ignore
             ]
 
             response = await self.client.chat.completions.create(
@@ -131,7 +221,8 @@ class OpenAIClient(BaseAIClient):
             )
 
             return AIResponse(
-                content=response.choices[0].message.content, model=response.model
+                content=response.choices[0].message.content or "",
+                model=response.model,
             )
         except Exception as e:
             # 记录AI视觉服务错误告警
@@ -171,6 +262,12 @@ class QwenClient(BaseAIClient):
             "Content-Type": "application/json",
         }
 
+        # 超时设置（秒）
+        self.timeout = 30.0  # 总超时
+        self.connect_timeout = 10.0  # 连接超时
+        self.read_timeout = 20.0  # 读取超时
+
+    @retry_with_backoff(max_retries=2, base_delay=1.0)
     async def chat_completion(
         self,
         messages: List[Dict[str, str]],
@@ -181,9 +278,13 @@ class QwenClient(BaseAIClient):
     ) -> AIResponse:
         """Qwen 聊天完成 - 使用OpenAI兼容接口"""
         try:
-            # 使用OpenAI兼容接口，注意base_url不要带/api/v1后缀
-            base_url = self.api_base.replace("/api/v1", "")
-            url = f"{base_url}/compatible-mode/v1/chat/completions"
+            # 使用OpenAI兼容接口
+            # 如果base_url已经包含compatible-mode/v1，直接使用
+            if "compatible-mode/v1" in self.api_base:
+                url = f"{self.api_base}/chat/completions"
+            else:
+                # 否则添加compatible-mode/v1路径
+                url = f"{self.api_base}/compatible-mode/v1/chat/completions"
 
             payload = {
                 "model": model or self.default_model,
@@ -192,9 +293,16 @@ class QwenClient(BaseAIClient):
                 "temperature": temperature or self.default_temperature,
             }
 
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    connect=self.connect_timeout,
+                    read=self.read_timeout,
+                    write=10.0,
+                    pool=5.0,
+                )
+            ) as client:
                 response = await client.post(
-                    url, headers=self.headers, json=payload, timeout=60.0
+                    url, headers=self.headers, json=payload, timeout=self.timeout
                 )
                 response.raise_for_status()
 
@@ -250,29 +358,40 @@ class QwenClient(BaseAIClient):
                 model=model or self.default_model,
                 error=f"Qwen API 错误: {str(e)}",
             )
-        except Exception as e:
-            return AIResponse(
-                content="",
-                model=model or self.default_model,
-                error=f"Qwen API 错误: {str(e)}",
-            )
 
+    @retry_with_backoff(max_retries=1, base_delay=2.0)
     async def vision_analysis(
         self, image_url: str, prompt: str, model: Optional[str] = None
     ) -> AIResponse:
-        """Qwen 视觉分析（多模态）- 使用OpenAI兼容接口"""
+        """Qwen 图像分析 - 使用OpenAI兼容接口"""
         try:
-            # 使用OpenAI兼容接口，注意base_url不要带/api/v1后缀
-            base_url = self.api_base.replace("/api/v1", "")
-            url = f"{base_url}/compatible-mode/v1/chat/completions"
+            # 使用OpenAI兼容接口
+            # 如果base_url已经包含compatible-mode/v1，直接使用
+            if "compatible-mode/v1" in self.api_base:
+                url = f"{self.api_base}/chat/completions"
+            else:
+                # 否则添加compatible-mode/v1路径
+                url = f"{self.api_base}/compatible-mode/v1/chat/completions"
+
+            # 尝试使用支持视觉的模型，如果未指定则使用默认
+            vision_model = model or "qwen-vl-plus"
+
+            # 检查是否是base64 data URL，如果不是则转换为base64
+            if image_url.startswith("data:image"):
+                # 已经是data URL格式
+                image_content = image_url
+            else:
+                # 假设是文件URL，需要下载并转换为base64
+                # 这里简化处理，实际应该下载图片
+                image_content = image_url
 
             payload = {
-                "model": model or "qwen-vl-plus",
+                "model": vision_model,
                 "messages": [
                     {
                         "role": "user",
                         "content": [
-                            {"type": "image_url", "image_url": {"url": image_url}},
+                            {"type": "image_url", "image_url": {"url": image_content}},
                             {"type": "text", "text": prompt},
                         ],
                     }
@@ -280,9 +399,21 @@ class QwenClient(BaseAIClient):
                 "max_tokens": 1000,
             }
 
-            async with httpx.AsyncClient() as client:
+            print(f"Vision分析请求 - 模型: {vision_model}, URL: {url}")
+            print(
+                f"图片URL类型: {'data URL' if image_url.startswith('data:image') else '普通URL'}"
+            )
+
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    connect=self.connect_timeout,
+                    read=self.read_timeout,
+                    write=10.0,
+                    pool=5.0,
+                )
+            ) as client:
                 response = await client.post(
-                    url, headers=self.headers, json=payload, timeout=60.0
+                    url, headers=self.headers, json=payload, timeout=self.timeout
                 )
                 response.raise_for_status()
 
@@ -292,26 +423,53 @@ class QwenClient(BaseAIClient):
                     choice = data["choices"][0]
                     return AIResponse(
                         content=choice["message"]["content"],
-                        model=data.get("model", model or "qwen-vl-plus"),
+                        model=data.get("model", vision_model),
                     )
                 else:
                     return AIResponse(
                         content="",
-                        model=model or "qwen-vl-plus",
+                        model=vision_model,
                         error=f"Qwen Vision 响应格式错误: {data}",
                     )
-
-        except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            # 记录Qwen Vision错误告警
+        except httpx.HTTPError as e:
+            # 记录Qwen Vision HTTP错误告警
+            error_msg = str(e)
             alert_error(
                 category=AlertCategory.AI_SERVICE,
                 message="Qwen Vision API调用失败",
                 details={
                     "model": model or "qwen-vl-plus",
-                    "error": str(e),
+                    "error": error_msg,
+                    "endpoint": "compatible-mode/v1/chat/completions",
+                    "provider": "qwen",
+                    "feature": "vision_analysis",
+                },
+                module="ai_service.QwenClient",
+            )
+
+            # 检查是否是模型不支持的错误
+            if "400" in error_msg and "model" in error_msg.lower():
+                print(f"Vision模型可能不支持，错误: {error_msg}")
+                return AIResponse(
+                    content="",
+                    model=model or "qwen-vl-plus",
+                    error=f"Qwen Vision 模型不支持或配置错误: {error_msg}",
+                )
+
+            return AIResponse(
+                content="",
+                model=model or "qwen-vl-plus",
+                error=f"Qwen Vision 错误: {error_msg}",
+            )
+        except Exception as e:
+            # 记录Qwen Vision API错误告警
+            error_msg = str(e)
+            alert_error(
+                category=AlertCategory.AI_SERVICE,
+                message="Qwen Vision API调用失败",
+                details={
+                    "model": model or "qwen-vl-plus",
+                    "error": error_msg,
                     "endpoint": "compatible-mode/v1/chat/completions",
                     "provider": "qwen",
                     "feature": "vision_analysis",
@@ -321,7 +479,7 @@ class QwenClient(BaseAIClient):
             return AIResponse(
                 content="",
                 model=model or "qwen-vl-plus",
-                error=f"Qwen Vision 错误: {str(e)}",
+                error=f"Qwen Vision 错误: {error_msg}",
             )
 
 
@@ -445,6 +603,37 @@ class AIService:
                     result["parsed"][key] = value
 
         return result
+
+    async def generate_text(self, prompt: str, **kwargs) -> str:
+        """
+        生成文本（用于摘要生成等简单文本任务）
+
+        Args:
+            prompt: 提示词
+            **kwargs: 其他参数（max_tokens, temperature 等）
+
+        Returns:
+            生成的文本内容
+        """
+        messages = [{"role": "user", "content": prompt}]
+        response = await self.chat(messages, **kwargs)
+
+        if response.error:
+            # 记录文本生成失败告警
+            alert_error(
+                category=AlertCategory.AI_SERVICE,
+                message="文本生成失败",
+                details={
+                    "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
+                    "error": response.error,
+                    "model": response.model,
+                },
+                module="ai_service.AIService",
+            )
+            # 返回空字符串而不是抛出异常，让调用方可以优雅降级
+            return ""
+
+        return response.content
 
 
 # 全局 AI 服务实例

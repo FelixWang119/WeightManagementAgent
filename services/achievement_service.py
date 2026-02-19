@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import json
 
 from models.database import User, UserProfile
+from models.points_history import PointsHistory, PointsType
 from config.logging_config import get_module_logger
 
 logger = get_module_logger(__name__)
@@ -48,6 +49,20 @@ class AchievementType(Enum):
     TOTAL_100 = "total_100"  # 累计100次
     TOTAL_500 = "total_500"  # 累计500次
     TOTAL_1000 = "total_1000"  # 累计1000次
+    CALORIE_CONTROL = "calorie_control"  # 热量控制师
+    SLEEP_MASTER = "sleep_master"  # 睡眠大师
+
+
+class UnlockReason:
+    """成就解锁原因/触发点"""
+
+    WEIGHT_RECORD = "weight_record"
+    MEAL_RECORD = "meal_record"
+    EXERCISE_RECORD = "exercise_record"
+    WATER_RECORD = "water_record"
+    SLEEP_RECORD = "sleep_record"
+    GOAL_ACHIEVED = "goal_achieved"
+    DAILY_CHECKIN = "daily_checkin"
 
 
 @dataclass
@@ -195,6 +210,36 @@ ACHIEVEMENTS = {
         rarity="legendary",
         condition={"type": "total_records", "count": 1000},
     ),
+    AchievementType.CALORIE_CONTROL.value: Achievement(
+        id=AchievementType.CALORIE_CONTROL.value,
+        name="热量控制师",
+        description="连续7天热量达标",
+        category=AchievementCategory.DIET,
+        icon="🔥",
+        points=150,
+        rarity="rare",
+        condition={"type": "calorie_streak", "days": 7},
+    ),
+    AchievementType.SLEEP_MASTER.value: Achievement(
+        id=AchievementType.SLEEP_MASTER.value,
+        name="睡眠大师",
+        description="连续14天睡眠达标",
+        category=AchievementCategory.SPECIAL,
+        icon="🌙",
+        points=250,
+        rarity="epic",
+        condition={"type": "sleep_streak", "days": 14},
+    ),
+    AchievementType.SOCIAL_SHARE.value: Achievement(
+        id=AchievementType.SOCIAL_SHARE.value,
+        name="分享达人",
+        description="分享成就10次",
+        category=AchievementCategory.SPECIAL,
+        icon="📢",
+        points=100,
+        rarity="common",
+        condition={"type": "social_shares", "count": 10},
+    ),
 }
 
 
@@ -313,6 +358,34 @@ class AchievementService:
                 if value >= ach.condition.get("days", 30):
                     should_unlock = True
 
+            elif (
+                ach.condition.get("type") == "calorie_streak"
+                and trigger_type == "calorie_streak"
+            ):
+                if value >= ach.condition.get("days", 7):
+                    should_unlock = True
+
+            elif (
+                ach.condition.get("type") == "sleep_streak"
+                and trigger_type == "sleep_streak"
+            ):
+                if value >= ach.condition.get("days", 14):
+                    should_unlock = True
+
+            elif (
+                ach.condition.get("type") == "social_shares"
+                and trigger_type == "social_shares"
+            ):
+                if value >= ach.condition.get("count", 10):
+                    should_unlock = True
+
+            elif (
+                ach.condition.get("type") == "early_morning_streak"
+                and trigger_type == "early_morning_streak"
+            ):
+                if value >= ach.condition.get("days", 7):
+                    should_unlock = True
+
             if should_unlock:
                 unlocked.append(ach_id)
                 newly_unlocked.append(
@@ -322,6 +395,7 @@ class AchievementService:
                         "icon": ach.icon,
                         "points": ach.points,
                         "rarity": ach.rarity,
+                        "unlocked_at": datetime.utcnow().isoformat(),
                     }
                 )
 
@@ -379,9 +453,15 @@ class PointsService:
 
     @staticmethod
     async def earn_points(
-        user_id: int, reason: str, amount: int, db: AsyncSession
+        user_id: int,
+        reason: str,
+        amount: int,
+        db: AsyncSession,
+        description: str = None,
+        related_record_id: int = None,
+        related_record_type: str = None,
     ) -> Dict[str, Any]:
-        """获取积分"""
+        """获得积分"""
         result = await db.execute(
             select(UserProfile).where(UserProfile.user_id == user_id)
         )
@@ -392,9 +472,23 @@ class PointsService:
                 user_id=user_id, points=0, total_points_earned=0, total_points_spent=0
             )
             db.add(profile)
+            await db.flush()  # 确保profile有ID
 
         profile.points = (profile.points or 0) + amount
         profile.total_points_earned = (profile.total_points_earned or 0) + amount
+
+        # 创建积分历史记录
+        history = PointsHistory(
+            user_id=user_id,
+            points_type=PointsType.EARN,
+            amount=amount,
+            reason=reason,
+            description=description,
+            related_record_id=related_record_id,
+            related_record_type=related_record_type,
+            balance_after=profile.points,
+        )
+        db.add(history)
 
         await db.commit()
 
@@ -410,7 +504,13 @@ class PointsService:
 
     @staticmethod
     async def spend_points(
-        user_id: int, reason: str, amount: int, db: AsyncSession
+        user_id: int,
+        reason: str,
+        amount: int,
+        db: AsyncSession,
+        description: str = None,
+        related_record_id: int = None,
+        related_record_type: str = None,
     ) -> Dict[str, Any]:
         """消费积分"""
         result = await db.execute(
@@ -423,6 +523,19 @@ class PointsService:
 
         profile.points = profile.points - amount
         profile.total_points_spent = (profile.total_points_spent or 0) + amount
+
+        # 创建积分历史记录
+        history = PointsHistory(
+            user_id=user_id,
+            points_type=PointsType.SPEND,
+            amount=amount,
+            reason=reason,
+            description=description,
+            related_record_id=related_record_id,
+            related_record_type=related_record_type,
+            balance_after=profile.points,
+        )
+        db.add(history)
 
         await db.commit()
 
@@ -438,12 +551,51 @@ class PointsService:
 
     @staticmethod
     async def get_points_history(
-        user_id: int, db: AsyncSession, limit: int = 20
+        user_id: int, db: AsyncSession, limit: int = 20, offset: int = 0
     ) -> Dict[str, Any]:
         """获取积分历史"""
+        from sqlalchemy import desc
+
+        result = await db.execute(
+            select(PointsHistory)
+            .where(PointsHistory.user_id == user_id)
+            .order_by(desc(PointsHistory.created_at))
+            .limit(limit)
+            .offset(offset)
+        )
+
+        history_records = result.scalars().all()
+
+        history = []
+        for record in history_records:
+            history.append(
+                {
+                    "id": record.id,
+                    "type": record.points_type.value,
+                    "amount": record.amount,
+                    "reason": record.reason,
+                    "description": record.description,
+                    "balance_after": record.balance_after,
+                    "created_at": record.created_at.isoformat()
+                    if record.created_at
+                    else None,
+                }
+            )
+
+        # 获取总数
+        count_result = await db.execute(
+            select(func.count()).where(PointsHistory.user_id == user_id)
+        )
+        total = count_result.scalar()
+
         return {
             "success": True,
-            "data": {"history": [], "message": "积分历史功能开发中"},
+            "data": {
+                "history": history,
+                "total": total,
+                "limit": limit,
+                "offset": offset,
+            },
         }
 
 

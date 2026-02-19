@@ -240,16 +240,16 @@ from api.routes import (
     report,
     reminder,
     profiling,
-    config,
     calories,
     goals,
     habit,
     summary,
     insights,
-    monitoring,
     suggestions,
     achievements,
     recipes,
+    tasks,
+    notifications,
 )
 from api.routes.admin import auth as admin_auth
 from api.routes.admin import prompts as admin_prompts
@@ -268,16 +268,16 @@ app.include_router(sleep.router, prefix="/api/sleep", tags=["睡眠"])
 app.include_router(report.router, prefix="/api/report", tags=["周报"])
 app.include_router(reminder.router, prefix="/api/reminder", tags=["提醒"])
 app.include_router(profiling.router, prefix="/api/profiling", tags=["用户画像"])
-app.include_router(config.router, prefix="/api/config", tags=["配置"])
 app.include_router(calories.router, prefix="/api/calories", tags=["热量计算"])
 app.include_router(goals.router, prefix="/api/goals", tags=["目标管理"])
 app.include_router(habit.router, prefix="/api/habit", tags=["习惯打卡"])
 app.include_router(summary.router, prefix="/api/summary", tags=["对话总结"])
 app.include_router(insights.router, prefix="/api/insights", tags=["AI洞察"])
-app.include_router(monitoring.router, prefix="/api/monitoring", tags=["监控"])
 app.include_router(suggestions.router, prefix="/api/suggestions", tags=["智能建议"])
 app.include_router(achievements.router, prefix="/api/achievements", tags=["成就积分"])
 app.include_router(recipes.router, prefix="/api/recipes", tags=["食谱管理"])
+app.include_router(tasks.router, prefix="/api/tasks", tags=["任务管理"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["通知轮询"])
 
 # 管理员路由
 app.include_router(admin_auth.router, prefix="/admin/auth", tags=["管理员认证"])

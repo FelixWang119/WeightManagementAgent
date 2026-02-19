@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报告分享测试页面</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn-group {
+            margin-bottom: 10px;
+        }
+        .api-result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .report-preview {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            background: white;
+        }
+        .share-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .share-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .share-card:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        .share-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .download-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">报告分享测试页面</h1>
+        
+        <div class="test-section">
+            <h3>1. 报告系统API测试</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="testWeeklyReport()">获取周报</button>
+                <button class="btn btn-success" onclick="testMonthlyReport()">获取月报</button>
+                <button class="btn btn-info" onclick="testGenerateReport()">生成新报告</button>
+                <button class="btn btn-warning" onclick="testReportHistory()">获取报告历史</button>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label>用户ID:</label>
+                    <input type="number" id="userId" class="form-control" value="1" min="1">
+                </div>
+                <div class="col-md-6">
+                    <label>报告类型:</label>
+                    <select id="reportType" class="form-control">
+                        <option value="weekly">周报</option>
+                        <option value="monthly">月报</option>
+                    </select>
+                </div>
+            </div>
+            <div id="api-result-1" class="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. 报告分享功能测试</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="testShareAsImage()">分享为图片</button>
+                <button class="btn btn-success" onclick="testShareAsPDF()">分享为PDF</button>
+                <button class="btn btn-info" onclick="testShareAsText()">分享为文本</button>
+                <button class="btn btn-warning" onclick="testGenerateShareLink()">生成分享链接</button>
+            </div>
+            <div id="api-result-2" class="api-result"></div>
+            
+            <div class="share-options">
+                <div class="share-card" onclick="shareToWeChat()">
+                    <div class="share-icon">📱</div>
+                    <h5>微信分享</h5>
+                    <p>分享到微信好友或群聊</p>
+                </div>
+                <div class="share-card" onclick="shareToQQ()">
+                    <div class="share-icon">💬</div>
+                    <h5>QQ分享</h5>
+                    <p>分享到QQ好友或空间</p>
+                </div>
+                <div class="share-card" onclick="shareToWeibo()">
+                    <div class="share-icon">🐦</div>
+                    <h5>微博分享</h5>
+                    <p>分享到新浪微博</p>
+                </div>
+                <div class="share-card" onclick="copyShareLink()">
+                    <div class="share-icon">🔗</div>
+                    <h5>复制链接</h5>
+                    <p>复制分享链接到剪贴板</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 数据导出功能测试</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="exportAsJSON()">导出为JSON</button>
+                <button class="btn btn-success" onclick="exportAsCSV()">导出为CSV</button>
+                <button class="btn btn-info" onclick="exportAsExcel()">导出为Excel</button>
+                <button class="btn btn-warning" onclick="testBatchExport()">批量导出</button>
+            </div>
+            <div id="api-result-3" class="api-result"></div>
+            
+            <div class="download-section">
+                <h5>导出选项</h5>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="includeCharts" checked>
+                    <label class="form-check-label" for="includeCharts">包含图表数据</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="includeStats" checked>
+                    <label class="form-check-label" for="includeStats">包含统计数据</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="includeAI" checked>
+                    <label class="form-check-label" for="includeAI">包含AI分析</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="includeRecommendations" checked>
+                    <label class="form-check-label" for="includeRecommendations">包含建议</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 报告预览</h3>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="loadReportPreview()">加载报告预览</button>
+                <button class="btn btn-success" onclick="refreshPreview()">刷新预览</button>
+                <button class="btn btn-info" onclick="printPreview()">打印预览</button>
+            </div>
+            <div id="report-preview" class="report-preview">
+                <p>点击"加载报告预览"按钮查看报告内容...</p>
+            </div>
+            <div id="api-result-4" class="api-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. 系统状态</h3>
+            <div id="system-status">
+                <p>等待测试...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const defaultUserId = 1;
+        let currentReportData = null;
+
+        function logResult(containerId, message, success = true) {
+            const container = document.getElementById(containerId);
+            const timestamp = new Date().toLocaleTimeString();
+            const badge = success ? 
+                '<span class="badge bg-success">成功</span>' : 
+                '<span class="badge bg-danger">失败</span>';
+            
+            container.innerHTML += `<div>${badge} [${timestamp}] ${message}</div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearResult(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        function getUserId() {
+            return parseInt(document.getElementById('userId').value) || defaultUserId;
+        }
+
+        function getReportType() {
+            return document.getElementById('reportType').value;
+        }
+
+        function getExportOptions() {
+            return {
+                includeCharts: document.getElementById('includeCharts').checked,
+                includeStats: document.getElementById('includeStats').checked,
+                includeAI: document.getElementById('includeAI').checked,
+                includeRecommendations: document.getElementById('includeRecommendations').checked
+            };
+        }
+
+        // 1. 报告系统API测试
+        async function testWeeklyReport() {
+            clearResult('api-result-1');
+            try {
+                const userId = getUserId();
+                const response = await fetch(`/api/reports/weekly/${userId}`);
+                const data = await response.json();
+                currentReportData = data;
+                logResult('api-result-1', `获取周报成功: ${JSON.stringify(data).substring(0, 200)}...`);
+            } catch (error) {
+                logResult('api-result-1', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testMonthlyReport() {
+            clearResult('api-result-1');
+            try {
+                const userId = getUserId();
+                const year = new Date().getFullYear();
+                const month = new Date().getMonth() + 1;
+                const response = await fetch(`/api/reports/monthly/${userId}/${year}/${month}`);
+                const data = await response.json();
+                currentReportData = data;
+                logResult('api-result-1', `获取月报成功: ${JSON.stringify(data).substring(0, 200)}...`);
+            } catch (error) {
+                logResult('api-result-1', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testGenerateReport() {
+            clearResult('api-result-1');
+            try {
+                const userId = getUserId();
+                const reportType = getReportType();
+                const response = await fetch(`/api/reports/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        report_type: reportType,
+                        start_date: new Date().toISOString().split('T')[0]
+                    })
+                });
+                const data = await response.json();
+                currentReportData = data;
+                logResult('api-result-1', `生成报告成功: ${JSON.stringify(data).substring(0, 200)}...`);
+            } catch (error) {
+                logResult('api-result-1', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testReportHistory() {
+            clearResult('api-result-1');
+            try {
+                const userId = getUserId();
+                const response = await fetch(`/api/reports/history/${userId}?limit=5`);
+                const data = await response.json();
+                logResult('api-result-1', `获取报告历史: ${JSON.stringify(data).substring(0, 200)}...`);
+            } catch (error) {
+                logResult('api-result-1', `错误: ${error.message}`, false);
+            }
+        }
+
+        // 2. 报告分享功能测试
+        async function testShareAsImage() {
+            clearResult('api-result-2');
+            if (!currentReportData) {
+                logResult('api-result-2', '请先获取报告数据', false);
+                return;
+            }
+
+            try {
+                const userId = getUserId();
+                const response = await fetch(`/api/reports/share/image`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        report_data: currentReportData,
+                        format: 'png',
+                        quality: 'high'
+                    })
+                });
+                const data = await response.json();
+                logResult('api-result-2', `生成图片分享: ${JSON.stringify(data)}`);
+                
+                if (data.image_url) {
+                    window.open(data.image_url, '_blank');
+                }
+            } catch (error) {
+                logResult('api-result-2', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testShareAsPDF() {
+            clearResult('api-result-2');
+            if (!currentReportData) {
+                logResult('api-result-2', '请先获取报告数据', false);
+                return;
+            }
+
+            try {
+                const userId = getUserId();
+                const response = await fetch(`/api/reports/share/pdf`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        report_data: currentReportData,
+                        include_charts: true,
+                        include_stats: true
+                    })
+                });
+                const data = await response.json();
+                logResult('api-result-2', `生成PDF分享: ${JSON.stringify(data)}`);
+                
+                if (data.pdf_url) {
+                    window.open(data.pdf_url, '_blank');
+                }
+            } catch (error) {
+                logResult('api-result-2', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testShareAsText() {
+            clearResult('api-result-2');
+            if (!currentReportData) {
+                logResult('api-result-2', '请先获取报告数据', false);
+                return;
+            }
+
+            try {
+                const userId = getUserId();
+                const response = await fetch(`/api/reports/share/text`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        report_data: currentReportData,
+                        format: 'markdown'
+                    })
+                });
+                const data = await response.json();
+                logResult('api-result-2', `生成文本分享: ${JSON.stringify(data)}`);
+                
+                if (data.text_content) {
+                    navigator.clipboard.writeText(data.text_content).then(() => {
+                        alert('文本内容已复制到剪贴板');
+                    });
+                }
+            } catch (error) {
+                logResult('api-result-2', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function testGenerateShareLink() {
+            clearResult('api-result-2');
+            if (!currentReportData) {
+                logResult('api-result-2', '请先获取报告数据', false);
+                return;
+            }
+
+            try {
+                const userId = getUserId();
+                const response = await fetch(`/api/reports/share/link`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        report_data: currentReportData,
+                        expires_in: 86400 // 24小时
+                    })
+                });
+                const data = await response.json();
+                logResult('api-result-2', `生成分享链接: ${JSON.stringify(data)}`);
+                
+                if (data.share_url) {
+                    document.getElementById('share-link').innerHTML = `
+                        <p>分享链接: <a href="${data.share_url}" target="_blank">${data.share_url}</a></p>
+                        <p>有效期: ${data.expires_at}</p>
+                    `;
+                }
+            } catch (error) {
+                logResult('api-result-2', `错误: ${error.message}`, false);
+            }
+        }
+
+        // 分享到社交平台
+        function shareToWeChat() {
+            logResult('api-result-2', '微信分享功能（模拟）');
+            alert('微信分享功能需要接入微信JS-SDK');
+        }
+
+        function shareToQQ() {
+            logResult('api-result-2', 'QQ分享功能（模拟）');
+            alert('QQ分享功能需要接入QQ互联SDK');
+        }
+
+        function shareToWeibo() {
+            logResult('api-result-2', '微博分享功能（模拟）');
+            alert('微博分享功能需要接入微博开放平台');
+        }
+
+        function copyShareLink() {
+            if (currentReportData) {
+                const shareText = `我的体重管理报告：\n体重变化: ${currentReportData.weight_change || 'N/A'}\n运动完成率: ${currentReportData.exercise_completion_rate || 'N/A'}%\n`;
+                navigator.clipboard.writeText(shareText).then(() => {
+                    logResult('api-result-2', '分享文本已复制到剪贴板');
+                });
+            } else {
+                logResult('api-result-2', '请先获取报告数据', false);
+            }
+        }
+
+        // 3. 数据导出功能测试
+        async function exportAsJSON() {
+            clearResult('api-result-3');
+            if (!currentReportData) {
+                logResult('api-result-3', '请先获取报告数据', false);
+                return;
+            }
+
+            try {
+                const exportOptions = getExportOptions();
+                const exportData = {
+                    report: currentReportData,
+                    export_options: exportOptions,
+                    exported_at: new Date().toISOString()
+                };
+
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `report_${getUserId()}_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                logResult('api-result-3', 'JSON文件已开始下载');
+            } catch (error) {
+                logResult('api-result-3', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function exportAsCSV() {
+            clearResult('api-result-3');
+            if (!currentReportData) {
+                logResult('api-result-3', '请先获取报告数据', false);
+                return;
+            }
+
+            try {
+                // 模拟CSV数据
+                const csvData = [
+                    ['指标', '数值', '单位'],
+                    ['起始体重', currentReportData.start_weight || 'N/A', 'kg'],
+                    ['当前体重', currentReportData.current_weight || 'N/A', 'kg'],
+                    ['体重变化', currentReportData.weight_change || 'N/A', 'kg'],
+                    ['运动完成率', currentReportData.exercise_completion_rate || 'N/A', '%'],
+                    ['饮水完成率', currentReportData.water_completion_rate || 'N/A', '%'],
+                    ['报告日期', new Date().toLocaleDateString(), '']
+                ];
+
+                const csvContent = csvData.map(row => row.join(',')).join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `report_${getUserId()}_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                logResult('api-result-3', 'CSV文件已开始下载');
+            } catch (error) {
+                logResult('api-result-3', `错误: ${error.message}`, false);
+            }
+        }
+
+        async function exportAsExcel() {
+            clearResult('api-result-3');
+            logResult('api-result-3', 'Excel导出功能需要安装xlsx库');
+            alert('Excel导出功能需要后端支持xlsx库');
+        }
+
+        async function testBatchExport() {
+            clearResult('api-result-3');
+            try {
+                const userId = getUserId();
+                const response = await fetch(`/api/reports/export/batch/${userId}?format=json&limit=3`);
+                const data = await response.json();
+                logResult('api-result-3', `批量导出: ${JSON.stringify(data).substring(0, 200)}...`);
+            } catch (error) {
+                logResult('api-result-3', `错误: ${error.message}`, false);
+            }
+        }
+
+        // 4. 报告预览
+        async function loadReportPreview() {
+            clearResult('api-result-4');
+            if (!currentReportData) {
+                await testWeeklyReport();
+            }
+
+            try {
+                const preview = document.getElementById('report-preview');
+                const report = currentReportData || {};
+                
+                preview.innerHTML = `
+                    <h4>体重管理报告预览</h4>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>基本信息</h5>
+                            <p><strong>报告类型:</strong> ${report.report_type || '周报'}</p>
+                            <p><strong>报告周期:</strong> ${report.period || '本周'}</p>
+                            <p><strong>生成时间:</strong> ${new Date().toLocaleString()}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>关键指标</h5>
+                            <p><strong>体重变化:</strong> ${report.weight_change || '0'} kg</p>
+                            <p><strong>运动完成率:</strong> ${report.exercise_completion_rate || '0'}%</p>
+                            <p><strong>饮水完成率:</strong> ${report.water_completion_rate || '0'}%</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h5>详细统计</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><strong>平均每日步数:</strong> ${report.avg_steps || '0'}</p>
+                            <p><strong>平均每日热量:</strong> ${report.avg_calories || '0'} kcal</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>运动天数:</strong> ${report.exercise_days || '0'} 天</p>
+                            <p><strong>休息天数:</strong> ${report.rest_days || '0'} 天</p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><strong>最佳体重:</strong> ${report.best_weight || 'N/A'} kg</p>
+                            <p><strong>最差体重:</strong> ${report.worst_weight || 'N/A'} kg</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h5>AI分析建议</h5>
+                    <p>${report.ai_analysis || '暂无AI分析数据'}</p>
+                    <hr>
+                    <h5>下周建议</h5>
+                    <p>${report.recommendations || '暂无建议'}</p>
+                `;
+                
+                logResult('api-result-4', '报告预览加载成功');
+            } catch (error) {
+                logResult('api-result-4', `错误: ${error.message}`, false);
+            }
+        }
+
+        function refreshPreview() {
+            loadReportPreview();
+        }
+
+        function printPreview() {
+            window.print();
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('system-status').innerHTML = `
+                <p><span class="badge bg-success">系统就绪</span> 可以开始测试</p>
+                <p>默认用户ID: ${defaultUserId}</p>
+                <p>当前时间: ${new Date().toLocaleString()}</p>
+                <p>支持的报告类型: 周报、月报</p>
+                <p>支持的分享格式: 图片、PDF、文本、链接</p>
+                <p>支持的导出格式: JSON、CSV</p>
+            `;
+        });
+
+        // 自动加载示例数据
+        setTimeout(() => {
+            testWeeklyReport();
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,97 +1,69 @@
 """
 通知调度器服务
-使用后台线程定时检查并触发提醒
+使用 APScheduler 进行定时任务调度
 """
 
-import asyncio
-import threading
 import logging
 from datetime import datetime, time as dt_time
 from typing import Optional
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.database import (
     ReminderSetting,
-    ReminderType,
-    User,
-    AsyncSessionLocal,
     NotificationQueue,
+    AsyncSessionLocal,
 )
-from services.notification_worker import worker
 
 logger = logging.getLogger(__name__)
 
 
 class NotificationScheduler:
-    """通知调度器 - 每5分钟检查并触发提醒"""
+    """通知调度器 - 使用 APScheduler 进行定时任务调度"""
 
     def __init__(self):
-        self._timer: Optional[threading.Timer] = None
+        self._scheduler: Optional[AsyncIOScheduler] = None
         self._interval_seconds = 300  # 5分钟
         self._running = False
-        self._lock = threading.Lock()
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     def start(self):
         """启动调度器"""
-        with self._lock:
-            if self._running:
-                logger.warning("通知调度器已在运行中")
-                return
+        if self._running:
+            logger.warning("通知调度器已在运行中")
+            return
 
-            self._loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._loop)
-            self._running = True
-            self._schedule_next()
-            logger.info("通知调度器已启动 (间隔: %d秒)", self._interval_seconds)
+        self._scheduler = AsyncIOScheduler()
+        self._scheduler.add_job(
+            self._check_and_trigger_reminders,
+            IntervalTrigger(seconds=self._interval_seconds),
+            id="reminder_check",
+            replace_existing=True,
+        )
+        self._scheduler.start()
+        self._running = True
+        logger.info("通知调度器已启动 (间隔: %d秒)", self._interval_seconds)
 
     def stop(self):
         """停止调度器"""
-        with self._lock:
-            if not self._running:
-                return
-
-            self._running = False
-            if self._timer:
-                self._timer.cancel()
-                self._timer = None
-
-            if self._loop and not self._loop.is_closed():
-                self._loop.call_soon_threadsafe(self._loop.stop)
-                self._loop = None
-
-            logger.info("通知调度器已停止")
-
-    def _schedule_next(self):
-        """安排下次执行"""
         if not self._running:
             return
 
-        self._timer = threading.Timer(self._interval_seconds, self._run_check)
-        self._timer.daemon = True
-        self._timer.start()
+        if self._scheduler:
+            self._scheduler.shutdown(wait=False)
+            self._scheduler = None
 
-    def _run_check(self):
-        """执行检查"""
-        try:
-            if self._loop and not self._loop.is_closed():
-                asyncio.run_coroutine_threadsafe(
-                    self._check_and_trigger_reminders(), self._loop
-                ).result(timeout=60)
-        except Exception as e:
-            logger.exception("执行提醒检查时发生错误: %s", e)
-        finally:
-            with self._lock:
-                if self._running:
-                    self._schedule_next()
+        self._running = False
+        logger.info("通知调度器已停止")
 
     async def _check_and_trigger_reminders(self):
         """检查并触发提醒"""
-        async with AsyncSessionLocal() as db:
-            try:
+        try:
+            async with AsyncSessionLocal() as db:
                 result = await db.execute(
-                    select(ReminderSetting).where(ReminderSetting.enabled == True)
+                    select(ReminderSetting).where(ReminderSetting.enabled.is_(True))
                 )
                 reminder_settings = result.scalars().all()
 
@@ -104,14 +76,8 @@ class NotificationScheduler:
 
                 await db.commit()
 
-                processed = await worker.process_queue(db)
-                if processed > 0:
-                    await db.commit()
-                    logger.info("通知Worker处理了 %d 条通知", processed)
-
-            except Exception as e:
-                await db.rollback()
-                logger.exception("检查提醒时发生错误: %s", e)
+        except Exception as e:
+            logger.exception("检查提醒时发生错误: %s", e)
 
     def _should_trigger(
         self, setting: ReminderSetting, current_time: dt_time, current_weekday: int

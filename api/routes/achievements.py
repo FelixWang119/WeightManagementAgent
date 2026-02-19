@@ -119,3 +119,50 @@ async def get_achievement_dashboard(
             "points": points.get("data", {}),
         },
     }
+
+
+@router.get("/leaderboard/points")
+async def get_points_leaderboard(
+    period: str = "total",  # total, week, month
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+):
+    """获取积分排行榜"""
+    from services.leaderboard_service import LeaderboardService
+
+    return await LeaderboardService.get_points_leaderboard(db, period, limit)
+
+
+@router.get("/leaderboard/achievements")
+async def get_achievement_leaderboard(
+    category: str = "count",  # count, rare
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+):
+    """获取成就排行榜"""
+    from services.leaderboard_service import LeaderboardService
+
+    return await LeaderboardService.get_achievement_leaderboard(db, category, limit)
+
+
+@router.get("/leaderboard/streak")
+async def get_streak_leaderboard(
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db),
+):
+    """获取连续打卡排行榜"""
+    from services.leaderboard_service import LeaderboardService
+
+    return await LeaderboardService.get_streak_leaderboard(db, limit)
+
+
+@router.get("/leaderboard/my-rank")
+async def get_my_rank(
+    type: str = "points",  # points, achievements
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取我的排名"""
+    from services.leaderboard_service import LeaderboardService
+
+    return await LeaderboardService.get_user_rank(current_user.id, db, type)

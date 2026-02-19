@@ -13,6 +13,7 @@ import json
 from models.database import (
     get_db,
     User,
+    DailyReport,
     WeeklyReport,
     WeightRecord,
     MealRecord,
@@ -30,6 +31,101 @@ from services.habit_tracking_service import HabitTrackingService
 from config.settings import fastapi_settings
 
 router = APIRouter()
+
+
+@router.get("/daily/history")
+async def get_daily_report_history(
+    limit: int = 30,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取日报历史"""
+    result = await db.execute(
+        select(DailyReport)
+        .where(DailyReport.user_id == current_user.id)
+        .order_by(desc(DailyReport.report_date))
+        .limit(limit)
+        .offset(offset)
+    )
+    reports = result.scalars().all()
+
+    # 获取总数
+    count_result = await db.execute(
+        select(func.count(DailyReport.id)).where(DailyReport.user_id == current_user.id)
+    )
+    total = count_result.scalar() or 0
+
+    return {
+        "success": True,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "data": [
+            {
+                "id": r.id,
+                "report_date": r.report_date.isoformat(),
+                "weight": r.weight,
+                "calories_in": r.calories_in,
+                "calories_out": r.calories_out,
+                "calorie_deficit": r.calorie_deficit,
+                "water_intake": r.water_intake,
+                "sleep_hours": r.sleep_hours,
+                "exercise_minutes": r.exercise_minutes,
+                "highlights": r.highlights,
+                "tips": r.tips,
+                "suggestions": r.suggestions,
+                "summary": r.summary_text,
+            }
+            for r in reports
+        ],
+    }
+
+
+@router.get("/daily/{report_date}")
+async def get_daily_report(
+    report_date: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取指定日期的日报"""
+    try:
+        date_obj = date.fromisoformat(report_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="无效的日期格式")
+
+    result = await db.execute(
+        select(DailyReport).where(
+            and_(
+                DailyReport.user_id == current_user.id,
+                DailyReport.report_date == date_obj,
+            )
+        )
+    )
+    report = result.scalar_one_or_none()
+
+    if not report:
+        raise HTTPException(status_code=404, detail="日报不存在")
+
+    return {
+        "success": True,
+        "data": {
+            "id": report.id,
+            "report_date": report.report_date.isoformat(),
+            "weight": report.weight,
+            "calories_in": report.calories_in,
+            "calories_out": report.calories_out,
+            "calorie_deficit": report.calorie_deficit,
+            "water_intake": report.water_intake,
+            "sleep_hours": report.sleep_hours,
+            "exercise_minutes": report.exercise_minutes,
+            "highlights": report.highlights,
+            "tips": report.tips,
+            "suggestions": report.suggestions,
+            "summary": report.summary_text,
+            "created_at": report.created_at.isoformat() if report.created_at else None,
+        },
+    }
 
 
 def get_week_start(d: date) -> date:

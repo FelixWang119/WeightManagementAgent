@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI助手 - 体重管理助手</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/user-switch.css">
+    <link rel="stylesheet" href="css/chat.css">
+    <link rel="stylesheet" href="css/core-profiling.css">
+
+    <!-- 全局函数定义 - 确保在HTML元素加载前可用 -->
+    <script>
+        // 新版热量平衡卡片 - 自动加载数据
+        window.loadCalorieBalance = function() {
+            // 直接调用加载函数
+            if (typeof loadCalorieBalance === 'function') {
+                loadCalorieBalance();
+            }
+        };
+
+        // 其他全局函数占位符（在主脚本中定义）
+        window.sendMessage = null;
+        window.handleSuggestionAction = null;
+        window.sendQuickMessage = null;
+        
+        // 核心问题收集初始化
+        window.initCoreProfiling = function() {
+            // 延迟执行，确保DOM加载完成
+            setTimeout(() => {
+                if (typeof CoreProfiling !== 'undefined') {
+                    window.coreProfiling = new CoreProfiling({
+                        onComplete: function() {
+                            console.log('核心问题收集完成，开始正常使用');
+                            // 可以在这里触发其他初始化逻辑
+                        }
+                    });
+                }
+            }, 1000);
+        };
+    </script>
+</head>
+<body>
+    <!-- 页面容器 -->
+    <div class="page">
+        <!-- 顶部导航 -->
+        <header class="page-header">
+            <div class="header-brand">
+                <span class="header-brand-icon">🤖</span>
+                <span>AI助手</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="if(typeof Profiling !== 'undefined') Profiling.forceShowQuestion()" title="测试画像问答" style="margin-right: 8px; font-size: 1.25rem;">❓</button>
+                <button class="menu-toggle" id="menu-toggle" title="打开菜单">
+                    <span></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 页面内容 -->
+        <div class="page-content">
+            <!-- 侧边栏遮罩 -->
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+            <!-- 侧边栏 -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-avatar">用</div>
+                    <div class="user-info">
+                        <div class="user-name">加载中...</div>
+                        <div class="user-status">在线</div>
+                    </div>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <div class="nav-section">
+                        <div class="nav-section-title">主要功能</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="index.html" class="nav-item active">
+                                    <span class="nav-item-icon">🤖</span>
+                                    <span class="nav-item-text">AI助手</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="weight.html" class="nav-item">
+                                    <span class="nav-item-icon">⚖️</span>
+                                    <span class="nav-item-text">体重记录</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="meal.html" class="nav-item">
+                                    <span class="nav-item-icon">🍽️</span>
+                                    <span class="nav-item-text">饮食记录</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="exercise.html" class="nav-item">
+                                    <span class="nav-item-icon">🏃</span>
+                                    <span class="nav-item-text">运动记录</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">健康管理</div>
+                        <ul class="nav-list">
+                            <li>
+                                <a href="water.html" class="nav-item">
+                                    <span class="nav-item-icon">💧</span>
+                                    <span class="nav-item-text">饮水记录</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="sleep.html" class="nav-item">
+                                    <span class="nav-item-icon">😴</span>
+                                    <span class="nav-item-text">睡眠记录</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="report.html" class="nav-item">
+                                    <span class="nav-item-icon">📊</span>
+                                    <span class="nav-item-text">数据报告</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="goals.html" class="nav-item">
+                                    <span class="nav-item-icon">🎯</span>
+                                    <span class="nav-item-text">目标管理</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="calculator.html" class="nav-item">
+                                    <span class="nav-item-icon">🔥</span>
+                                    <span class="nav-item-text">热量计算</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="reminders.html" class="nav-item">
+                                    <span class="nav-item-icon">🔔</span>
+                                    <span class="nav-item-text">提醒设置</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <button class="sidebar-switch-btn" onclick="UserSwitch.show()">
+                        <span>🔄</span>
+                        <span>切换用户（调试）</span>
+                    </button>
+                    <a href="profile.html" class="nav-item">
+                        <span class="nav-item-icon">⚙️</span>
+                        <span class="nav-item-text">个人设置</span>
+                    </a>
+                    <button class="logout-btn" onclick="Auth.logout()">
+                        <span>🚪</span>
+                        <span>退出登录</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- 主内容区 -->
+            <main class="page-main" style="padding: 0;">
+                <div class="chat-page">
+                    <!-- 聊天消息区域 -->
+                    <div class="chat-container" id="chat-messages">
+                        <!-- 新版热量平衡卡片 - 天平对比式 -->
+                        <div class="calorie-balance-card" id="calorie-balance-card">
+                            <div class="balance-card-header" onclick="toggleCalorieCard()">
+                                <div class="balance-header-left">
+                                    <span class="balance-icon">🔥</span>
+                                    <span class="balance-title">今日热量平衡</span>
+                                    <span class="date-indicator" id="balance-date">今日</span>
+                                </div>
+                                <div class="balance-header-right">
+                                    <span class="collapse-indicator">▼</span>
+                                </div>
+                            </div>
+
+                            <div class="balance-card-content" id="balance-content">
+                                <!-- 无BMR引导 -->
+                                <div class="balance-guide" id="balance-guide" style="display: none;">
+                                    <div class="guide-icon">📊</div>
+                                    <div class="guide-text">
+                                        完善基础信息，开启热量追踪<br>
+                                        基础代谢是计算热量平衡的重要数据<br>
+                                        只需1分钟即可完成测算
+                                    </div>
+                                    <button class="guide-btn" onclick="window.location.href='calculator.html'">立即测算</button>
+                                </div>
+
+                                <!-- 加载中 -->
+                                <div class="balance-loading" id="balance-loading">
+                                    <div class="loading-spinner balance-loading-spinner"></div>
+                                    <p>加载热量数据中...</p>
+                                </div>
+
+                                <!-- 天平对比布局 -->
+                                <div class="balance-detail" id="balance-detail" style="display: none;">
+                                    <!-- 天平对比区 -->
+                                    <div class="scale-comparison">
+                                        <div class="scale-side intake-side">
+                                            <div class="scale-card">
+                                                <div class="scale-icon">🍽️</div>
+                                                <div class="scale-label">饮食摄入</div>
+                                                <div class="scale-value" id="scale-intake">0</div>
+                                                <div class="scale-unit">kcal</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="scale-connector">
+                                            <div class="scale-line"></div>
+                                            <div class="scale-gap" id="scale-gap">
+                                                <div class="gap-icon">⚖️</div>
+                                                <div class="gap-value" id="gap-value">0</div>
+                                                <div class="gap-unit">kcal</div>
+                                                <div class="gap-status" id="gap-status">平衡</div>
+                                            </div>
+                                            <div class="scale-line"></div>
+                                        </div>
+
+                                        <div class="scale-side burn-side">
+                                            <div class="scale-card">
+                                                <div class="scale-icon">🔥</div>
+                                                <div class="scale-label">热量消耗</div>
+                                                <div class="scale-value" id="scale-burn">0</div>
+                                                <div class="scale-unit">kcal</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 计算公式区 -->
+                                    <div class="formula-area">
+                                        <div class="formula-label">计算公式（减肥公式：饮食摄入 &lt; 基础代谢 + 运动消耗）</div>
+                                        <div class="formula-content">
+                                            <span class="formula-intake" id="formula-intake">0</span>
+                                            <span class="formula-operator">&lt;</span>
+                                            <span class="formula-bmr" id="formula-bmr">0</span>
+                                            <span class="formula-operator">+</span>
+                                            <span class="formula-exercise" id="formula-exercise">0</span>
+                                        </div>
+                                        <div class="formula-result" id="formula-result">
+                                            <span class="result-icon">💡</span>
+                                            <span class="result-text">还可以吃 <span id="remaining-calories">0</span> kcal</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- 状态指示器 -->
+                                    <div class="status-indicator" id="status-indicator" style="display: none;">
+                                        <span>💡</span>
+                                        <span>状态提示信息</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 每日建议卡片 -->
+                        <div class="daily-suggestion-card" id="daily-suggestion-card">
+                            <div class="suggestion-header">
+                                <span class="suggestion-icon">💡</span>
+                                <span class="suggestion-title">今日建议</span>
+                                <button class="refresh-btn" id="refresh-btn" onclick="refreshSuggestion()" title="换一条">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div class="suggestion-content" id="suggestion-content">
+                                <div class="suggestion-loading">
+                                    <div class="loading-spinner" style="width: 24px; height: 24px; border-width: 2px;"></div>
+                                    <p>AI正在生成建议...</p>
+                                </div>
+                            </div>
+
+                            <div class="suggestion-action" id="suggestion-action">
+                                <!-- 动态显示建议关联的操作按钮 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 快捷工具栏 -->
+                    <div class="chat-toolbar">
+                        <button class="toolbar-btn" onclick="sendQuickMessage('记录体重')">⚖️ 记体重</button>
+                        <button class="toolbar-btn" onclick="sendQuickMessage('记录早餐')">🍽️ 记饮食</button>
+                        <button class="toolbar-btn" onclick="sendQuickMessage('记录运动')">🏃 记运动</button>
+                        <button class="toolbar-btn" onclick="sendQuickMessage('记录饮水')">💧 记饮水</button>
+                    </div>
+
+                    <!-- 输入区域 -->
+                    <div class="chat-input-area">
+                        <div class="chat-input-wrapper">
+                            <button class="chat-image-btn" onclick="document.getElementById('image-input').click()" title="上传图片">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                            </button>
+                            <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+                            <textarea
+                                id="chat-input"
+                                class="chat-input"
+                                placeholder="输入消息...（支持上传图片询问食物）"
+                                rows="1"
+                            ></textarea>
+                            <button class="chat-send-btn" id="send-btn" onclick="window.sendMessage()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- 图片预览区域 -->
+                        <div id="image-preview" class="image-preview" style="display: none;">
+                            <div class="preview-item">
+                                <img id="preview-img" src="" alt="预览">
+                                <button class="preview-remove" onclick="clearImage()">×</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 底部快捷栏（移动端） -->
+                    <div class="quick-actions-bar" style="display: none;">
+                        <a href="weight.html" class="quick-action-item">
+                            <span>⚖️</span>
+                            <span>体重</span>
+                        </a>
+                        <a href="meal.html" class="quick-action-item">
+                            <span>🍽️</span>
+                            <span>饮食</span>
+                        </a>
+                        <a href="exercise.html" class="quick-action-item">
+                            <span>🏃</span>
+                            <span>运动</span>
+                        </a>
+                        <a href="water.html" class="quick-action-item">
+                            <span>💧</span>
+                            <span>饮水</span>
+                        </a>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 用户切换弹窗 -->
+    <div class="user-switch-modal" id="user-switch-modal">
+        <div class="user-switch-content">
+            <div class="user-switch-header">
+                <h3 class="user-switch-title">🔧 调试：切换用户</h3>
+                <button class="user-switch-close" onclick="UserSwitch.hide()">×</button>
+            </div>
+            <div class="user-switch-list" id="user-switch-list">
+                <!-- 用户列表由JS动态生成 -->
+            </div>
+            <div class="user-switch-footer">
+                <button class="user-switch-btn secondary" onclick="UserSwitch.hide()">取消</button>
+                <button class="user-switch-btn primary" onclick="UserSwitch.switchToNew()">+ 新用户</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 脚本 -->
+    <script src="https://unpkg.com/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/profiling.js"></script>
+    <script src="js/user-switch.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/components/CoreProfiling.js"></script>
+    <script src="js/core-profiling.js"></script>
+    <script src="js/notification-poller.js"></script>
+    
+    <script>
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 延迟执行，确保所有组件加载完成
+            setTimeout(() => {
+                // 初始化核心问题收集
+                if (typeof CoreProfiling !== 'undefined') {
+                    window.coreProfiling = new CoreProfiling({
+                        onComplete: function() {
+                            console.log('核心问题收集完成');
+                        }
+                    });
+                }
+                
+                // 初始化通知轮询系统
+                if (typeof NotificationPoller !== 'undefined') {
+                    window.notificationPoller = new NotificationPoller({
+                        interval: 30000, // 30秒轮询
+                        onNotification: function(notifications) {
+                            console.log('收到新通知:', notifications);
+                        }
+                    });
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>

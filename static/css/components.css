@@ -249,19 +249,21 @@
 .message {
   display: flex;
   gap: var(--spacing-sm);
-  max-width: 80%;
   animation: slideInUp 0.3s ease;
 }
 
 .message-user {
-  align-self: flex-end;
-  flex-direction: row-reverse;
-  margin-left: auto;
+  align-self: flex-end !important;
+  flex-direction: row-reverse !important;
+  margin-left: auto !important;
+  justify-content: flex-end !important;
+  margin-right: 0 !important;
 }
 
 .message-assistant {
   align-self: flex-start;
   margin-right: auto;
+  max-width: 80%;
 }
 
 .message-avatar {
@@ -288,12 +290,15 @@
   border-radius: var(--border-radius);
   font-size: 0.9375rem;
   line-height: 1.6;
+  display: inline-block;
+  max-width: 100%;
 }
 
 .message-user .message-content {
   background: var(--primary-color);
   color: white;
   border-bottom-right-radius: 4px;
+  width: auto;
 }
 
 .message-assistant .message-content {

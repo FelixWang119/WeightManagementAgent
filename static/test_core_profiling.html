@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试核心问题收集</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f7;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+        }
+        
+        .test-section h2 {
+            color: #3498db;
+            margin-top: 0;
+            font-size: 18px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #34c759, #00c7ff);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(52, 199, 89, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #34c759;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .error {
+            border-left-color: #ff3b30;
+            background: #fff5f5;
+        }
+        
+        .success {
+            border-left-color: #34c759;
+            background: #f0fff4;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #34c759;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #34c759, #00c7ff);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .question-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .question-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .option {
+            padding: 16px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .option:hover {
+            border-color: #34c759;
+            background: #f0fff4;
+            transform: translateY(-2px);
+        }
+        
+        .option.selected {
+            background: linear-gradient(135deg, #34c759, #00c7ff);
+            color: white;
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>核心问题收集功能测试</h1>
+        
+        <div class="test-section">
+            <h2>1. 测试API端点</h2>
+            <button class="btn" onclick="testCoreProgress()">测试核心问题进度API</button>
+            <button class="btn" onclick="testNextQuestion()">测试下一个问题API</button>
+            <button class="btn btn-secondary" onclick="testSubmitForm()">测试表单提交API</button>
+            <div id="api-result" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. 模拟核心问题收集流程</h2>
+            <button class="btn" onclick="startCoreProfiling()">开始核心问题收集</button>
+            <button class="btn btn-secondary" onclick="resetTest()">重置测试</button>
+            
+            <div id="progress-container" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div id="progress-text" style="text-align: center; color: #6c757d; margin-bottom: 20px;"></div>
+                
+                <div id="question-container"></div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. 测试前端组件</h2>
+            <button class="btn" onclick="testFrontendComponent()">测试前端组件加载</button>
+            <button class="btn btn-secondary" onclick="openMainPage()">打开主页面测试</button>
+            <div id="frontend-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentQuestion = null;
+        let answeredCount = 0;
+        const totalCoreQuestions = 7;
+        
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = 'result ' + (isError ? 'error' : 'success');
+        }
+        
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="loading"></div> 加载中...';
+            element.className = 'result';
+        }
+        
+        async function testCoreProgress() {
+            showLoading('api-result');
+            try {
+                const response = await fetch('/api/profiling/core-progress');
+                const data = await response.json();
+                showResult('api-result', JSON.stringify(data, null, 2), !data.success);
+            } catch (error) {
+                showResult('api-result', '错误: ' + error.message, true);
+            }
+        }
+        
+        async function testNextQuestion() {
+            showLoading('api-result');
+            try {
+                const response = await fetch('/api/profiling/next-question?force_new=true');
+                const data = await response.json();
+                showResult('api-result', JSON.stringify(data, null, 2), !data.success);
+                
+                if (data.success && data.has_question) {
+                    currentQuestion = data.question;
+                    answeredCount = data.progress?.core?.answered || 0;
+                }
+            } catch (error) {
+                showResult('api-result', '错误: ' + error.message, true);
+            }
+        }
+        
+        async function testSubmitForm() {
+            if (!currentQuestion) {
+                showResult('api-result', '请先获取一个问题', true);
+                return;
+            }
+            
+            showLoading('api-result');
+            try {
+                const formData = {
+                    gender: "male",
+                    age: "30",
+                    height: "175",
+                    weight: "70"
+                };
+                
+                const response = await fetch('/api/profiling/submit-form', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question_id: currentQuestion.id,
+                        answer_value: JSON.stringify(formData)
+                    })
+                });
+                
+                const data = await response.json();
+                showResult('api-result', JSON.stringify(data, null, 2), !data.success);
+            } catch (error) {
+                showResult('api-result', '错误: ' + error.message, true);
+            }
+        }
+        
+        async function startCoreProfiling() {
+            showLoading('api-result');
+            try {
+                const response = await fetch('/api/profiling/core-progress');
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.is_completed) {
+                        showResult('api-result', '核心问题已完成: ' + JSON.stringify(data, null, 2));
+                        return;
+                    }
+                    
+                    // 显示进度容器
+                    document.getElementById('progress-container').style.display = 'block';
+                    updateProgress(data.progress);
+                    
+                    // 获取第一个问题
+                    await loadNextQuestion();
+                } else {
+                    showResult('api-result', 'API错误: ' + JSON.stringify(data, null, 2), true);
+                }
+            } catch (error) {
+                showResult('api-result', '错误: ' + error.message, true);
+            }
+        }
+        
+        function updateProgress(progress) {
+            const percentage = progress.percentage || 0;
+            document.getElementById('progress-fill').style.width = percentage + '%';
+            document.getElementById('progress-text').textContent = 
+                `已完成 ${progress.answered || 0}/${progress.total || totalCoreQuestions} 个核心问题 (${percentage}%)`;
+        }
+        
+        async function loadNextQuestion() {
+            try {
+                const response = await fetch('/api/profiling/next-question?force_new=true');
+                const data = await response.json();
+                
+                if (data.success && data.has_question) {
+                    currentQuestion = data.question;
+                    answeredCount = data.progress?.core?.answered || 0;
+                    updateProgress(data.progress.core || { answered: answeredCount, total: totalCoreQuestions });
+                    renderQuestion();
+                } else {
+                    showCompletionScreen();
+                }
+            } catch (error) {
+                showResult('api-result', '加载问题失败: ' + error.message, true);
+            }
+        }
+        
+        function renderQuestion() {
+            const container = document.getElementById('question-container');
+            if (!currentQuestion) return;
+            
+            let content = '';
+            
+            if (currentQuestion.type === 'form') {
+                content = renderFormQuestion();
+            } else {
+                content = renderChoiceQuestion();
+            }
+            
+            container.innerHTML = `
+                <div class="question-card">
+                    <h3>${currentQuestion.question_text}</h3>
+                    <div>问题ID: ${currentQuestion.id} (类型: ${currentQuestion.type})</div>
+                    ${content}
+                </div>
+            `;
+        }
+        
+        function renderFormQuestion() {
+            const fields = currentQuestion.fields || [];
+            let html = '<div style="display: flex; flex-direction: column; gap: 16px;">';
+            
+            fields.forEach(field => {
+                html += `
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500;">${field.label}</label>
+                        <input type="${field.input_type === 'number' ? 'number' : 'text'}" 
+                               data-field="${field.name}"
+                               style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 6px;"
+                               placeholder="${field.placeholder || ''}"
+                               ${field.min ? `min="${field.min}"` : ''}
+                               ${field.max ? `max="${field.max}"` : ''}>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <button class="btn" onclick="submitTestForm()" style="margin-top: 20px;">提交表单</button>
+            </div>`;
+            
+            return html;
+        }
+        
+        function renderChoiceQuestion() {
+            const options = currentQuestion.options || [];
+            let html = '<div>';
+            
+            options.forEach(option => {
+                html += `
+                    <div class="option" data-value="${option.value}" onclick="selectTestOption('${option.value}', '${option.text.replace(/'/g, "\\'")}')">
+                        ${option.emoji || '○'} ${option.text}
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+        
+        async function submitTestForm() {
+            const inputs = document.querySelectorAll('input[data-field]');
+            const formData = {};
+            
+            inputs.forEach(input => {
+                const fieldName = input.getAttribute('data-field');
+                const value = input.value.trim();
+                if (value) {
+                    formData[fieldName] = value;
+                }
+            });
+            
+            if (Object.keys(formData).length === 0) {
+                alert('请填写所有字段');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/profiling/submit-form', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question_id: currentQuestion.id,
+                        answer_value: JSON.stringify(formData)
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showResult('api-result', '提交成功: ' + data.ai_feedback);
+                    setTimeout(() => loadNextQuestion(), 1000);
+                } else {
+                    showResult('api-result', '提交失败: ' + JSON.stringify(data, null, 2), true);
+                }
+            } catch (error) {
+                showResult('api-result', '提交失败: ' + error.message, true);
+            }
+        }
+        
+        async function selectTestOption(value, text) {
+            // 移除其他选项的选中状态
+            document.querySelectorAll('.option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // 添加当前选项的选中状态
+            event.target.classList.add('selected');
+            
+            try {
+                const response = await fetch('/api/profiling/answer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        question_id: currentQuestion.id,
+                        answer_value: value,
+                        answer_text: text
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showResult('api-result', '提交成功: ' + data.ai_feedback);
+                    setTimeout(() => loadNextQuestion(), 1000);
+                } else {
+                    showResult('api-result', '提交失败: ' + JSON.stringify(data, null, 2), true);
+                }
+            } catch (error) {
+                showResult('api-result', '提交失败: ' + error.message, true);
+            }
+        }
+        
+        function showCompletionScreen() {
+            const container = document.getElementById('question-container');
+            container.innerHTML = `
+                <div class="question-card" style="text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🎉</div>
+                    <h3>太棒了！</h3>
+                    <p>核心问题收集已完成！</p>
+                    <p>你已经完成了 ${totalCoreQuestions} 个核心问题的回答。</p>
+                    <button class="btn" onclick="resetTest()">重新开始测试</button>
+                </div>
+            `;
+        }
+        
+        function resetTest() {
+            currentQuestion = null;
+            answeredCount = 0;
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('question-container').innerHTML = '';
+            showResult('api-result', '测试已重置');
+        }
+        
+        function testFrontendComponent() {
+            showLoading('frontend-result');
+            
+            // 模拟加载CoreProfiling组件
+            setTimeout(() => {
+                if (typeof CoreProfiling === 'undefined') {
+                    showResult('frontend-result', '❌ CoreProfiling组件未定义\n请确保static/js/components/CoreProfiling.js已正确加载', true);
+                } else {
+                    showResult('frontend-result', '✅ CoreProfiling组件已定义\n组件结构正常，可以正常使用');
+                }
+            }, 500);
+        }
+        
+        function openMainPage() {
+            window.open('/', '_blank');
+        }
+        
+        // 页面加载时自动测试API
+        window.addEventListener('load', () => {
+            testCoreProgress();
+        });
+    </script>
+</body>
+</html>

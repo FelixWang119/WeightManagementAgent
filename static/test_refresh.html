@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试刷新按钮</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .suggestion-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .suggestion-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .refresh-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        .refresh-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(180deg);
+        }
+        .refresh-btn.spinning svg {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .suggestion-content {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .log {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+        }
+        .log-entry.success {
+            border-left-color: #4caf50;
+        }
+        .log-entry.error {
+            border-left-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>测试刷新按钮功能</h1>
+        
+        <div class="suggestion-card">
+            <div class="suggestion-header">
+                <span class="suggestion-title">今日建议</span>
+                <button class="refresh-btn" id="refresh-btn" onclick="refreshSuggestion()" title="换一条">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="suggestion-content" id="suggestion-content">
+                加载中...
+            </div>
+        </div>
+
+        <div class="log">
+            <h3>操作日志</h3>
+            <div id="log-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        const TOKEN = 'f9a00fdc0269d382fe1a539d2159b6f8';
+        
+        let logContainer = document.getElementById('log-container');
+        
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        async function loadSuggestion(forceRefresh = false) {
+            const url = forceRefresh
+                ? `${API_BASE}/chat/daily-suggestion?refresh=true`
+                : `${API_BASE}/chat/daily-suggestion`;
+            
+            log(`请求API: ${url}`);
+            
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`
+                    }
+                });
+                
+                log(`响应状态: ${response.status} ${response.statusText}`);
+                const result = await response.json();
+                log(`响应数据: ${JSON.stringify(result, null, 2)}`);
+                
+                if (result.success && result.suggestion) {
+                    document.getElementById('suggestion-content').textContent = result.suggestion.content;
+                    log(`显示建议: ${result.suggestion.content.substring(0, 50)}...`, 'success');
+                    log(`是否缓存: ${result.cached || false}`);
+                } else {
+                    document.getElementById('suggestion-content').textContent = '获取建议失败';
+                    log('获取建议失败', 'error');
+                }
+            } catch (error) {
+                log(`请求失败: ${error.message}`, 'error');
+                document.getElementById('suggestion-content').textContent = '请求失败';
+            }
+        }
+        
+        async function refreshSuggestion() {
+            log('=== 点击刷新按钮 ===');
+            const refreshBtn = document.getElementById('refresh-btn');
+            
+            refreshBtn.disabled = true;
+            refreshBtn.classList.add('spinning');
+            
+            try {
+                await loadSuggestion(true);
+                log('刷新成功', 'success');
+            } catch (error) {
+                log(`刷新失败: ${error.message}`, 'error');
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.classList.remove('spinning');
+            }
+        }
+        
+        // 页面加载时获取建议
+        window.onload = () => {
+            log('页面加载完成，开始获取建议...');
+            loadSuggestion();
+        };
+    </script>
+</body>
+</html>

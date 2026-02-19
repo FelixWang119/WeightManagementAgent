@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>餐食图片显示测试</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --success-color: #2ecc71;
+            --background: #ffffff;
+            --text-primary: #333333;
+            --text-muted: #666666;
+            --border-color: #e0e0e0;
+            --transition-fast: 0.2s;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        /* 上传区域样式（从meal.html复制） */
+        .upload-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            background: var(--background);
+            margin-bottom: 20px;
+        }
+        
+        .upload-zone:hover {
+            border-color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.05);
+        }
+        
+        .upload-zone.has-image {
+            border-style: solid;
+            border-color: var(--success-color);
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+        
+        .upload-text {
+            font-size: 1.125rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .upload-hint {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+        
+        .upload-input {
+            display: none;
+        }
+        
+        /* 修复后的图片预览样式 */
+        .image-preview {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            max-height: 500px;
+            overflow: hidden;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        
+        .image-actions {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .image-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background var(--transition-fast);
+        }
+        
+        .image-action-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        .upload-placeholder {
+            padding: 40px 20px;
+        }
+        
+        /* 测试说明 */
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: var(--text-primary);
+        }
+        
+        .test-images {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .test-image-btn {
+            padding: 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background var(--transition-fast);
+        }
+        
+        .test-image-btn:hover {
+            background: #2980b9;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 餐食图片显示测试</h1>
+        
+        <div class="upload-zone" id="upload-zone">
+            <div class="upload-placeholder" id="upload-placeholder">
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">点击或拖拽上传餐食照片</div>
+                <div class="upload-hint">支持 JPG、PNG 格式</div>
+                <input type="file" id="file-input" class="upload-input" accept="image/*">
+            </div>
+            <div class="image-preview" id="image-preview" style="display: none;">
+                <img id="preview-img" src="" alt="餐食预览">
+                <div class="image-actions">
+                    <button class="image-action-btn" onclick="clearImage()">✕</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>测试说明：</h3>
+            <p>测试修复后的图片显示效果：</p>
+            <ul>
+                <li><strong>之前的问题</strong>：图片被裁剪，只能显示一部分</li>
+                <li><strong>修复方案</strong>：使用 <code>object-fit: contain</code> 保持比例完整显示</li>
+                <li><strong>测试方法</strong>：上传不同尺寸的图片，查看是否完整显示</li>
+            </ul>
+            
+            <div class="test-images">
+                <button class="test-image-btn" onclick="loadTestImage('portrait')">测试竖版图片</button>
+                <button class="test-image-btn" onclick="loadTestImage('landscape')">测试横版图片</button>
+                <button class="test-image-btn" onclick="loadTestImage('square')">测试正方形图片</button>
+                <button class="test-image-btn" onclick="loadTestImage('large')">测试大尺寸图片</button>
+            </div>
+        </div>
+        
+        <div id="status-message" class="status info">
+            请上传图片或点击测试按钮
+        </div>
+    </div>
+    
+    <script>
+        // 初始化上传区域
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadZone = document.getElementById('upload-zone');
+            const fileInput = document.getElementById('file-input');
+            
+            // 点击上传
+            uploadZone.addEventListener('click', function(e) {
+                if (e.target.closest('.image-actions')) return;
+                fileInput.click();
+            });
+            
+            // 文件选择
+            fileInput.addEventListener('change', function(e) {
+                if (this.files.length > 0) {
+                    handleImageSelect(this.files[0]);
+                }
+            });
+            
+            // 拖拽上传
+            uploadZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadZone.classList.add('drag-over');
+            });
+            
+            uploadZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadZone.classList.remove('drag-over');
+            });
+            
+            uploadZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadZone.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0 && files[0].type.startsWith('image/')) {
+                    handleImageSelect(files[0]);
+                }
+            });
+        });
+        
+        // 处理图片选择
+        function handleImageSelect(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('preview-img').src = e.target.result;
+                document.getElementById('upload-placeholder').style.display = 'none';
+                document.getElementById('image-preview').style.display = 'block';
+                document.getElementById('upload-zone').classList.add('has-image');
+                
+                // 显示图片信息
+                const img = document.getElementById('preview-img');
+                img.onload = function() {
+                    updateStatus(`图片已加载: ${file.name}<br>尺寸: ${this.naturalWidth} × ${this.naturalHeight}px`, 'success');
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 清除图片
+        function clearImage() {
+            document.getElementById('upload-placeholder').style.display = 'block';
+            document.getElementById('image-preview').style.display = 'none';
+            document.getElementById('upload-zone').classList.remove('has-image');
+            document.getElementById('preview-img').src = '';
+            document.getElementById('file-input').value = '';
+            updateStatus('图片已清除', 'info');
+        }
+        
+        // 加载测试图片
+        function loadTestImage(type) {
+            let url, name;
+            
+            switch(type) {
+                case 'portrait':
+                    url = 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&h=800&q=80';
+                    name = '竖版餐食图片';
+                    break;
+                case 'landscape':
+                    url = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&h=600&q=80';
+                    name = '横版餐食图片';
+                    break;
+                case 'square':
+                    url = 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&h=600&q=80';
+                    name = '正方形餐食图片';
+                    break;
+                case 'large':
+                    url = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&h=800&q=80';
+                    name = '大尺寸餐食图片';
+                    break;
+            }
+            
+            // 模拟文件上传
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const file = new File([blob], `${name}.jpg`, { type: 'image/jpeg' });
+                    handleImageSelect(file);
+                })
+                .catch(error => {
+                    updateStatus(`加载测试图片失败: ${error.message}`, 'info');
+                });
+        }
+        
+        // 更新状态信息
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status-message');
+            statusEl.innerHTML = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        // 添加一些控制台调试信息
+        console.log('图片显示测试页面已加载');
+        console.log('object-fit 支持检测:', 'objectFit' in document.documentElement.style);
+    </script>
+</body>
+</html>

@@ -28,6 +28,24 @@ const Profiling = {
             return;
         }
         
+        // 检查核心问题是否已完成
+        try {
+            const coreResponse = await fetch(`${API.base}/api/profiling/core-progress`, {
+                headers: {
+                    'Authorization': `Bearer ${Auth.getToken()}`
+                }
+            });
+            
+            const coreResult = await coreResponse.json();
+            
+            // 如果核心问题未完成，不进行随机推送
+            if (coreResult.success && !coreResult.is_completed) {
+                return;
+            }
+        } catch (error) {
+            console.error('检查核心问题进度失败:', error);
+        }
+        
         try {
             const response = await fetch(`${API.base}/api/profiling/next-question`, {
                 headers: {
@@ -318,6 +336,27 @@ const Profiling = {
     
     // 手动触发获取问题（用于测试）
     async forceShowQuestion() {
+        // 检查核心问题是否已完成
+        try {
+            const coreResponse = await fetch(`${API.base}/api/profiling/core-progress`, {
+                headers: {
+                    'Authorization': `Bearer ${Auth.getToken()}`
+                }
+            });
+            
+            const coreResult = await coreResponse.json();
+            
+            // 如果核心问题未完成，显示核心问题收集界面
+            if (coreResult.success && !coreResult.is_completed) {
+                if (typeof coreProfiling !== 'undefined') {
+                    coreProfiling.show();
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('检查核心问题进度失败:', error);
+        }
+        
         try {
             const response = await fetch(`${API.base}/api/profiling/next-question?force_new=true`, {
                 headers: {

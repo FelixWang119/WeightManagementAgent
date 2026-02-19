@@ -9,6 +9,25 @@
   - cargo: Use pre-built binaries when available
   - gem: Avoid compilation when possible
 
+## File Search Preferences
+### Ignore Directories
+搜索文件时应自动忽略以下目录（不包含项目代码）：
+- `__pycache__` - Python 字节码缓存
+- `venv` / `.venv` - Python 虚拟环境
+- `env` / `.env` - 环境目录
+- `archive` - 归档目录
+- `node_modules` - npm 依赖
+- `.git` - Git 仓库
+- `dist` / `build` - 构建输出
+- `.pytest_cache` - 测试缓存
+
+### Search Strategy（重要）
+- **必须指定 path 参数**：使用 glob/grep 时必须指定具体的代码目录
+  - ✅ 正确：`glob(pattern="**/*.py", path="services")`
+  - ❌ 错误：`glob(pattern="**/*.py")` - 会扫描整个目录树
+- 使用具体路径如 `services/`、`models/`、`api/`、`static/js`
+- 避免在根目录 `/Users/felix/open_workdspace` 执行全量搜索
+
 ## Performance Considerations
 - Minimize CPU-intensive operations
 - Avoid long-running compilation tasks

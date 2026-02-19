@@ -1,4 +1,25 @@
-# LangChain 服务模块
-# 用于体重管理助手的智能对话系统
+"""
+LangChain集成服务模块
+提供记忆管理、Agent工厂等核心功能
+"""
 
-__version__ = "1.0.0"
+from .memory import (
+    TypedConversationBufferMemory,
+    EnhancedVectorStoreRetrieverMemory,
+    MemoryManager,
+    CheckinSyncService,
+    MemoryType,
+)
+
+from .agents import AgentFactory, SimpleWeightAgent, BaseAgent
+
+__all__ = [
+    "TypedConversationBufferMemory",
+    "EnhancedVectorStoreRetrieverMemory",
+    "MemoryManager",
+    "CheckinSyncService",
+    "MemoryType",
+    "AgentFactory",
+    "SimpleWeightAgent",
+    "BaseAgent",
+]
